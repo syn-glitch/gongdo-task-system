@@ -34,8 +34,10 @@ function onOpen() {
     .addItem('1단계: 시트 구조 자동 생성', 'setupDatabase')
     .addItem('🔧 드롭다운 메뉴 적용하기', 'applyValidations')
     .addSeparator()
+    .addItem('📊 대시보드 자동 생성 (새로고침)', 'generateDashboard')
+    .addSeparator()
     .addItem('🔔 슬랙 연결 테스트', 'testFirstProjectAlert')
-    .addItem('🐞 현재 행 강제 알림 (디버깅)', 'debugCurrentRow') // ✨ 여기가 핵심입니다!
+    .addItem('🐞 현재 행 강제 알림 (디버깅)', 'debugCurrentRow')
     .addToUi();
 }
 
