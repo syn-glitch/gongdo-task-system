@@ -12,9 +12,24 @@
  */
 
 function doPost(e) {
-  // 1. Interactivity (모달 제출 등 payload가 있는 경우)
+  // 1. Interactivity (모달 제출, 메시지 숏컷 등 payload가 있는 경우)
   if (e.parameter.payload) {
-    return handleModalSubmission(e.parameter.payload);
+    const payloadStr = e.parameter.payload;
+    const payload = JSON.parse(payloadStr);
+    
+    // 1-1. 모달 제출 (veiw_submission)
+    if (payload.type === "view_submission") {
+      return handleModalSubmission(payloadStr);
+    }
+    // 1-2. [옵션 2] 메시지 단축키 (message_action)
+    else if (payload.type === "message_action" && payload.callback_id === "create_task_from_message") {
+      const triggerId = payload.trigger_id;
+      // 메시지 원문과 작성자 추출
+      const messageText = payload.message.text || "";
+      const messageUser = payload.message.user ? `<@${payload.message.user}>` : "누군가";
+      const prefillDesc = `[${messageUser}의 메시지에서 파생됨]\n${messageText}`;
+      return openTaskModal(triggerId, prefillDesc);
+    }
   } 
   // 2. Slash Command (/주디)
   else if (e.parameter.command === '/주디') {
@@ -72,9 +87,19 @@ function doPost(e) {
   return ContentService.createTextOutput("알 수 없는 요청입니다.");
 }
 
-function openTaskModal(triggerId) {
+function openTaskModal(triggerId, prefillDesc = "") {
   const url = "https://slack.com/api/views.open";
   
+  // [옵션 2] 상세 내용 블록 구성 (전달받은 텍스트가 있으면 initial_value로 채움)
+  const descBlock = {
+    type: "input", block_id: "desc_block", optional: true,
+    element: { type: "plain_text_input", multiline: true, action_id: "desc_input", placeholder: { type: "plain_text", text: "상세 내용을 입력하세요 (선택)" } },
+    label: { type: "plain_text", text: "상세 내용" }
+  };
+  if (prefillDesc) {
+    descBlock.element.initial_value = prefillDesc;
+  }
+
   const payload = {
     trigger_id: triggerId,
     view: {
@@ -94,11 +119,7 @@ function openTaskModal(triggerId) {
           element: { type: "plain_text_input", action_id: "title_input", placeholder: { type: "plain_text", text: "업무 제목을 입력하세요" } },
           label: { type: "plain_text", text: "업무 제목" }
         },
-        {
-          type: "input", block_id: "desc_block", optional: true,
-          element: { type: "plain_text_input", multiline: true, action_id: "desc_input", placeholder: { type: "plain_text", text: "상세 내용을 입력하세요 (선택)" } },
-          label: { type: "plain_text", text: "상세 내용" }
-        },
+        descBlock, // 위에서 구성한 동적 입력 블록
         // [NEW] 마감일 입력용 DatePicker 블록 추가
         {
           type: "input", block_id: "date_block", optional: true,
