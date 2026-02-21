@@ -119,12 +119,12 @@ function sendTaskNotification(rowNumber) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const taskSheet = ss.getSheetByName("Tasks");
   
-  // 데이터 읽기 (A:H) -> 0:ID, 1:유형, 2:상태, 3:프로젝트, 4:제목, 5:내용, 6:담당자, 7:요청자
-  const data = taskSheet.getRange(rowNumber, 1, 1, 8).getValues()[0];
+  // 데이터 읽기 (A:I) -> 0:ID, 1:유형, 2:상태, 3:프로젝트, 4:제목, 5:내용, 6:담당자, 7:요청자, 8:마감일
+  const data = taskSheet.getRange(rowNumber, 1, 1, 9).getValues()[0];
   const taskInfo = {
     id: data[0], type: data[1], status: data[2], 
     project: data[3], title: data[4], desc: data[5], 
-    assignee: data[6], requester: data[7]
+    assignee: data[6], requester: data[7], dueDate: data[8]
   };
 
   // 필수 정보 체크
@@ -141,11 +141,23 @@ function buildSlackMessage(info) {
   let icon = "🆕";
   if (info.status === "진행중") icon = "▶️";
   if (info.status === "완료") icon = "✅";
+  
+  // 마감일 포맷팅 (YYYY-MM-DD)
+  let dateStr = "미지정";
+  if (info.dueDate instanceof Date) {
+    const yyyy = info.dueDate.getFullYear();
+    const mm = String(info.dueDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(info.dueDate.getDate()).padStart(2, '0');
+    dateStr = `${yyyy}-${mm}-${dd}`;
+  } else if (info.dueDate) {
+    dateStr = info.dueDate;
+  }
 
   return `${icon} *업무 상태 변경: ${info.status}*\n` +
          `📂 *${info.project}* | 🆔 ${info.id}\n` +
          `📋 <${getInfoUrl(info.id)}|*${info.title}*>\n` + 
          `👤 담당: ${info.assignee} (요청: ${info.requester})\n` + 
+         `📅 마감일: ${dateStr}\n` + 
          `─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n` +
          `${info.desc}`;
 }

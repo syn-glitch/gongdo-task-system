@@ -1,4 +1,4 @@
-// [🚀 최신수정본] 모달 타임아웃 완벽 우회 (비동기 예약 방식 적용)
+// [🚀 최신수정본] 모달에 마감일 추가 + 캘린더 즉시 연동
 /**
  * [기능 설명]: 슬랙 슬래시 커맨드와 모달(Interactivity) 상호작용을 처리합니다.
  */
@@ -40,6 +40,12 @@ function openTaskModal(triggerId) {
           type: "input", block_id: "desc_block", optional: true,
           element: { type: "plain_text_input", multiline: true, action_id: "desc_input", placeholder: { type: "plain_text", text: "상세 내용을 입력하세요 (선택)" } },
           label: { type: "plain_text", text: "상세 내용" }
+        },
+        // [NEW] 마감일 입력용 DatePicker 블록 추가
+        {
+          type: "input", block_id: "date_block", optional: true,
+          element: { type: "datepicker", action_id: "date_input", placeholder: { type: "plain_text", text: "날짜 선택 (선택사항)" } },
+          label: { type: "plain_text", text: "마감일" }
         }
       ]
     }
@@ -68,24 +74,28 @@ function handleModalSubmission(payloadStr) {
     const project = values.project_block.project_input.value;
     const title = values.title_block.title_input.value;
     const desc = values.desc_block.desc_input ? values.desc_block.desc_input.value : "";
-    const username = payload.user.username || payload.user.name || "Slack User";
     
-    // 현재 접속된 스프레드시트의 ID 가져오기
+    // DatePicker에서 선택된 날짜 (형식: "YYYY-MM-DD" 또는 null)
+    let dueDate = "";
+    if (values.date_block && values.date_block.date_input && values.date_block.date_input.selected_date) {
+      dueDate = values.date_block.date_input.selected_date; // "2026-03-01" 형식의 문자열
+    }
+    
+    const username = payload.user.username || payload.user.name || "Slack User";
     const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
     
-    // 1. 시트에 적을 데이터를 'PropertiesService' 임시 공간에 저장
-    const taskData = { project, title, desc, username, ssId };
+    // 1. 임시 공간에 마감일(dueDate)도 함께 저장
+    const taskData = { project, title, desc, username, ssId, dueDate };
     const props = PropertiesService.getScriptProperties();
     const uniqueId = "TASK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
     props.setProperty(uniqueId, JSON.stringify(taskData));
     
-    // 2. 알람(트리거)을 맞춰 1밀리초 뒤(실제로는 1분 이내)에 시트에 기록하게 예약
+    // 2. 알람 예약 (백그라운드에서 시트 기록)
     ScriptApp.newTrigger("processAsyncTasks")
       .timeBased()
       .after(1) 
       .create();
     
-    // 3. 그리고 제일 중요한 것! 슬랙에게 "다 됐어, 창 닫아!" 즉시 응답 (0.1초 컷)
     return ContentService.createTextOutput("");
   }
   
@@ -96,7 +106,6 @@ function handleModalSubmission(payloadStr) {
  * 🕒 백그라운드 처리 함수: 시트 기록을 백그라운드에서 진행합니다.
  */
 function processAsyncTasks(e) {
-  // 1. 일회용 트리거 삭제 (쓰레기 방지)
   if (e && e.triggerUid) {
     const triggers = ScriptApp.getProjectTriggers();
     for (const trigger of triggers) {
@@ -106,7 +115,6 @@ function processAsyncTasks(e) {
     }
   }
 
-  // 2. 임시 저장소에서 대기 중인 데이터를 꺼내옵니다.
   const props = PropertiesService.getScriptProperties();
   const allProps = props.getProperties();
   
@@ -114,22 +122,31 @@ function processAsyncTasks(e) {
     if (key.startsWith("TASK_")) {
       const data = JSON.parse(allProps[key]);
       
-      // 저장해둔 아이디로 시트 정확히 찾아가기
       const ss = SpreadsheetApp.openById(data.ssId);
       const sheet = ss.getSheetByName("Tasks");
       
-      // 여유롭게 시트에 데이터 삽입
-      sheet.appendRow(["", "일반", "대기", data.project, data.title, data.desc, data.username, data.username]);
+      // 시트 구조에 맞게 데이터 배열 생성 (9번째 칸이 마감일)
+      // A: 1(ID), B: 2(일반), C: 3(대기), D: 4(프로젝트), E: 5(제목), F: 6(내용), G: 7(담당자), H: 8(요청자), I: 9(마감일)
+      let rowData = ["", "일반", "대기", data.project, data.title, data.desc, data.username, data.username, data.dueDate];
       
-      // 처리 완료된 데이터는 큐에서 지움
+      sheet.appendRow(rowData);
+      const newRow = sheet.getLastRow();
+      
+      // 🚨 구글 앱스 스크립트 특성상 코드로 시트를 직접 수정하면 onEdit(수동 트리거)가 발동하지 않습니다.
+      // 따라서 캘린더 동기화 함수가 존재한다면 직접 즉시 호출해줍니다!
+      if (typeof syncCalendarEvent === 'function') {
+        try {
+          syncCalendarEvent(sheet, newRow);
+        } catch (err) {
+          console.error("캘린더 즉시 연동 중 에러 발생: ", err);
+        }
+      }
+      
       props.deleteProperty(key);
     }
   }
 }
 
-/**
- * 🛑 [필수 세팅]: 편집기 상단에서 이 함수(authorizeForAsync)를 선택하고 [▶실행] 버튼을 딱 한 번 눌러서 권한을 승인해주세요!
- */
 function authorizeForAsync() {
   Logger.log("백그라운드 트리거 사용 권한 설정이 완료되었습니다!");
 }
