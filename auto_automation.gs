@@ -145,3 +145,27 @@ function generateNewId(sheet, code) {
   
   return `${prefix}-${paddedNum}`;
 }
+
+/**
+ * [Phase 6] ☀️ 모닝 브리핑 자동화 트리거 설치기
+ * 편집기 상단에서 이 함수를 선택하고 한 번만 실행하면 매일 오전 8~9시 사이에 'generateMorningBriefing'이 실행됩니다.
+ */
+function installMorningBriefingTrigger() {
+  // 중복 생성을 막기 위해 기존의 모닝 브리핑 트리거 삭제
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === "generateMorningBriefing") {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  
+  // 매일 오전 8시 ~ 9시 사이에 동작하도록 스케줄링
+  ScriptApp.newTrigger("generateMorningBriefing")
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+    
+  SpreadsheetApp.getUi().alert("✅ 모닝 브리핑 트리거 설치 완료!\n매일 오전 8시~9시 사이에 슬랙으로 브리핑이 전송됩니다.");
+}
+

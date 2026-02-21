@@ -108,3 +108,78 @@ function askClaude(promptText) {
     return `❌ API 호출 중 오류 발생: ${e.message}`;
   }
 }
+
+/**
+ * [Phase 6] ☀️ 모닝 브리핑: 매일 아침 지정된 시간에 트리거(Trigger)로 작동합니다.
+ */
+function generateMorningBriefing() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const taskSheet = ss.getSheetByName("Tasks");
+  const data = taskSheet.getDataRange().getValues();
+  
+  const rows = data.slice(1);
+  
+  let tasksContext = "📋 [현재 켜져있는 업무 (완료 제외)]\n";
+  let hasTasks = false;
+  
+  rows.forEach(row => {
+    const status = row[2];
+    const project = row[3];
+    const title = row[4];
+    const assignee = row[6];
+    const dueDate = row[8];
+    
+    // 모닝 브리핑은 보통 '해야 할 일' 위주로 요약하므로 대기+진행중만 수집
+    if (status === "진행중" || status === "대기") {
+      let dateStr = "미지정";
+      if (dueDate instanceof Date) {
+        dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+      } else if (dueDate) {
+        dateStr = dueDate;
+      }
+      tasksContext += `- [${status}] ${project}: ${title} (담당: ${assignee}, 마감: ${dateStr})\n`;
+      hasTasks = true;
+    }
+  });
+
+  if (!hasTasks) {
+    tasksContext += "현재 대기 중이거나 진행 중인 업무가 없습니다! 🎉";
+  }
+
+  const systemPrompt = "당신은 활기차고 긍정적인 팀의 프로젝트 비서 '주디'입니다. 아침 업무 시각에 맞춰 팀원들이 오늘 하루 집중해야 할 '진행중' 및 '대기' 상태의 업무들을 브리핑해주세요. 마감일이 가까운 항목은 특별히 강조해주시고, 하루를 힘차게 시작할 수 있는 따뜻하고 동기부여되는 인사말을 덧붙여주세요. 마크다운과 이모지를 활용하세요.";
+  
+  const payload = {
+    model: "claude-3-haiku-20240307", 
+    max_tokens: 1500,
+    system: systemPrompt,
+    messages: [
+      { role: "user", content: tasksContext }
+    ]
+  };
+  
+  const options = {
+    method: "post",
+    headers: {
+      "x-api-key": CLAUDE_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
+    const result = JSON.parse(response.getContentText());
+    
+    if (result.content && result.content[0].text) {
+      if (typeof sendSlackMessage === 'function') {
+        const finalMessage = `🌅 *주디의 아침 업무 브리핑*\n\n${result.content[0].text}`;
+        sendSlackMessage(REPORT_CHANNEL_ID, finalMessage);
+      }
+    }
+  } catch (e) {
+    console.error("모닝 브리핑 중 오류: ", e);
+  }
+}
+
