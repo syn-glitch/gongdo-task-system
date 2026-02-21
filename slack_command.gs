@@ -4,12 +4,64 @@
  */
 
 function doPost(e) {
+  // 1. Interactivity (모달 제출 등 payload가 있는 경우)
   if (e.parameter.payload) {
     return handleModalSubmission(e.parameter.payload);
   } 
+  // 2. Slash Command (/주디)
   else if (e.parameter.command === '/주디') {
     return openTaskModal(e.parameter.trigger_id);
-  } 
+  }
+  
+  // 3. Event Subscriptions (JSON 바디로 들어옴)
+  if (e.postData && e.postData.contents) {
+    let eventData;
+    try {
+      eventData = JSON.parse(e.postData.contents);
+    } catch (err) {
+      return ContentService.createTextOutput("Invalid JSON");
+    }
+
+    // 3-1. URL Verification Challenge (슬랙 앱 설정 시 필수)
+    if (eventData.type === "url_verification") {
+      return ContentService.createTextOutput(eventData.challenge);
+    }
+
+    // 3-2. Event Callback (메시지 수신 등)
+    if (eventData.type === "event_callback") {
+      const event = eventData.event;
+      
+      // 봇 자신이 보낸 메시지 무시 (무한루프 방지)
+      if (event.bot_id) {
+        return ContentService.createTextOutput("");
+      }
+
+      // 멘션(app_mention) 이거나 개인 DM(message, 채널 타입이 im) 일 경우
+      if (event.type === "app_mention" || (event.type === "message" && event.channel_type === "im")) {
+        // AI 답변 생성을 위해 텍스트, 사용자, 채널 정보 추출
+        const chatData = {
+          user: event.user,
+          text: event.text,
+          channel: event.channel,
+          ssId: SpreadsheetApp.getActiveSpreadsheet().getId()
+        };
+        
+        // PropertiesService에 임시 저장
+        const props = PropertiesService.getScriptProperties();
+        const uniqueId = "CHAT_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
+        props.setProperty(uniqueId, JSON.stringify(chatData));
+        
+        // 1초 뒤 AI 답변 생성 파이프라인(processAiChatAsync) 실행 예약
+        ScriptApp.newTrigger("processAiChatAsync")
+          .timeBased()
+          .after(1) 
+          .create();
+      }
+      
+      // 3초 타임아웃을 피하기 위해 슬랙에는 즉시 빈 응답 반환
+      return ContentService.createTextOutput("");
+    }
+  }
   
   return ContentService.createTextOutput("알 수 없는 요청입니다.");
 }
