@@ -35,27 +35,25 @@ function doPost(e) {
       if (event.bot_id) {
         return ContentService.createTextOutput("");
       }
+      
+      // 🚀 핵심 기술: 슬랙의 3초 타임아웃 재시도(Retry) 방어 로직
+      // AI 처리에 5초 이상이 걸리면 슬랙이 실패로 착각하고 같은 메시지를 또 보냅니다.
+      // 이를 방지하기 위해 이벤트 ID를 캐시에 저장하고, 재시도 요청이 오면 즉시 빈 응답(200 OK)으로 돌려보냅니다.
+      const eventId = eventData.event_id; 
+      const cache = CacheService.getScriptCache();
+      if (cache.get(eventId)) {
+        return ContentService.createTextOutput(""); // 재시도 요청은 즉각 무시
+      }
+      cache.put(eventId, "true", 600); // 10분간 캐시 저장
 
       // 멘션(app_mention) 이거나 개인 DM(message, 채널 타입이 im) 일 경우
       if (event.type === "app_mention" || (event.type === "message" && event.channel_type === "im")) {
-        // AI 답변 생성을 위해 텍스트, 사용자, 채널 정보 추출
-        const chatData = {
-          user: event.user,
-          text: event.text,
-          channel: event.channel,
-          ssId: SpreadsheetApp.getActiveSpreadsheet().getId()
-        };
         
-        // PropertiesService에 임시 저장
-        const props = PropertiesService.getScriptProperties();
-        const uniqueId = "CHAT_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
-        props.setProperty(uniqueId, JSON.stringify(chatData));
-        
-        // 1초 뒤 AI 답변 생성 파이프라인(processAiChatAsync) 실행 예약
-        ScriptApp.newTrigger("processAiChatAsync")
-          .timeBased()
-          .after(1) 
-          .create();
+        // 1분 대기 트리거를 없애고, 즉시 AI 처리 함수를 호출합니다!
+        const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
+        if (typeof processAiChatSync === 'function') {
+          processAiChatSync(event, ssId);
+        }
       }
       
       // 3초 타임아웃을 피하기 위해 슬랙에는 즉시 빈 응답 반환
