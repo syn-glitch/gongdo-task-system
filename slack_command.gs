@@ -96,6 +96,12 @@ function openTaskModal(triggerId) {
           type: "input", block_id: "date_block", optional: true,
           element: { type: "datepicker", action_id: "date_input", placeholder: { type: "plain_text", text: "날짜 선택 (선택사항)" } },
           label: { type: "plain_text", text: "마감일" }
+        },
+        // [1차 업그레이드] 담당자 선택용 Users Select 블록 추가
+        {
+          type: "input", block_id: "assignee_block", optional: true,
+          element: { type: "users_select", action_id: "assignee_input", placeholder: { type: "plain_text", text: "담당자 선택 (기본값: 본인)" } },
+          label: { type: "plain_text", text: "담당자 배정" }
         }
       ]
     }
@@ -132,11 +138,17 @@ function handleModalSubmission(payloadStr) {
     }
     
     const username = payload.user.username || payload.user.name || "Slack User";
-    const userId = payload.user.id; // DM을 보내기 위한 슬랙 유저 ID
+    const userId = payload.user.id; // DM을 보내기 위한 슬랙 유저 ID (작성자)
     const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
     
-    // 1. 임시 공간에 마감일(dueDate)도 함께 저장
-    const taskData = { project, title, desc, username, ssId, dueDate, userId };
+    // [1차 업그레이드] 담당자 슬랙 ID 추출 (선택 안 했으면 작성자 본인으로)
+    let assignedUserId = userId;
+    if (values.assignee_block && values.assignee_block.assignee_input && values.assignee_block.assignee_input.selected_user) {
+      assignedUserId = values.assignee_block.assignee_input.selected_user;
+    }
+    
+    // 1. 임시 공간에 데이터 저장 (담당자 ID 추가)
+    const taskData = { project, title, desc, username, ssId, dueDate, userId, assignedUserId };
     const props = PropertiesService.getScriptProperties();
     const uniqueId = "TASK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
     props.setProperty(uniqueId, JSON.stringify(taskData));
@@ -176,9 +188,28 @@ function processAsyncTasks(e) {
       const ss = SpreadsheetApp.openById(data.ssId);
       const sheet = ss.getSheetByName("Tasks");
       
+      // [1차 업그레이드] 슬랙 API로 할당된 담당자 이름(Real Name) 가져오기
+      let assigneeName = data.username; // 기본값은 작성자
+      if (data.assignedUserId && data.assignedUserId !== data.userId) {
+        try {
+          const userUrl = `https://slack.com/api/users.info?user=${data.assignedUserId}`;
+          const userRes = UrlFetchApp.fetch(userUrl, {
+            method: "get",
+            headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+            muteHttpExceptions: true
+          });
+          const userJson = JSON.parse(userRes.getContentText());
+          if (userJson.ok && userJson.user && userJson.user.real_name) {
+             assigneeName = userJson.user.real_name;
+          } else if (userJson.ok && userJson.user && userJson.user.name) {
+             assigneeName = userJson.user.name;
+          }
+        } catch(e) { console.error("유저 이름 획득 실패", e); }
+      }
+
       // 시트 구조에 맞게 데이터 배열 생성 (9번째 칸이 마감일)
       // A: 1(ID), B: 2(일반), C: 3(대기), D: 4(프로젝트), E: 5(제목), F: 6(내용), G: 7(담당자), H: 8(요청자), I: 9(마감일)
-      let rowData = ["", "일반", "대기", data.project, data.title, data.desc, data.username, data.username, data.dueDate];
+      let rowData = ["", "일반", "대기", data.project, data.title, data.desc, assigneeName, data.username, data.dueDate];
       
       sheet.appendRow(rowData);
       const newRow = sheet.getLastRow();
@@ -193,12 +224,12 @@ function processAsyncTasks(e) {
         }
       }
 
-      // 사용자에게 '등록 완료' 확인용 DM (Direct Message) 전송
-      if (data.userId) {
+      // [공통 DM 알림 발송 함수]
+      const triggerSlackDM = (targetUserId, messageText) => {
         const url = "https://slack.com/api/chat.postMessage";
         const msgPayload = {
-          channel: data.userId, // 사용자 ID로 DM 전송
-          text: `✅ *[${data.project}] 업무 등록 완료!*\n\`${data.title}\` (담당: ${data.username})\n구글 시트와 캘린더에 성공적으로 등록되었습니다. 🎉`
+          channel: targetUserId,
+          text: messageText
         };
         const options = {
           method: "post",
@@ -208,18 +239,34 @@ function processAsyncTasks(e) {
           muteHttpExceptions: true
         };
         try { 
-          const response = UrlFetchApp.fetch(url, options); 
-          const result = JSON.parse(response.getContentText());
-          if (!result.ok) {
-            // 실패 원인을 시트의 L열(12번째 칸: 슬랙 링크 자리)에 임시로 기록해 디버깅
-            sheet.getRange(newRow, 12).setValue("DM 실패: " + result.error);
-          }
-        } catch (err) {
-          sheet.getRange(newRow, 12).setValue("요청 에러: " + err.toString());
+          const res = UrlFetchApp.fetch(url, options);
+          return JSON.parse(res.getContentText());
+        } catch (e) { return {ok: false, error: e.toString()}; }
+      };
+
+      // 1. 작성자에게 '등록 완료' 확인용 DM 전송
+      if (data.userId) {
+        let confirmMsg = `✅ *[${data.project}] 업무 등록 완료!*\n\`${data.title}\`\n구글 시트와 캘린더에 성공적으로 등록되었습니다. 🎉`;
+        if (data.assignedUserId !== data.userId) {
+           confirmMsg = `✅ *[${data.project}] 업무 할당 완료!*\n\`${data.title}\` 업무를 <@${data.assignedUserId}> 님에게 성공적으로 배정했습니다. 🎉`;
         }
+        
+        const result = triggerSlackDM(data.userId, confirmMsg);
+        if (!result.ok) sheet.getRange(newRow, 12).setValue("작성자DM 실패: " + result.error);
       } else {
-        sheet.getRange(newRow, 12).setValue("DM 실패: 유저 ID 없음");
+        sheet.getRange(newRow, 12).setValue("작성자DM 실패: ID 없음");
       }
+      
+      // 2. [1차 업그레이드] 타인을 담당자로 지정했을 경우 타인에게 '지정 알림' DM 전송
+      if (data.assignedUserId && data.assignedUserId !== data.userId) {
+        const assignMsg = `📣 *새로운 업무가 배정되었습니다!*\n<@${data.userId}> 님이 당신을 담당자로 지정했습니다.\n\n📌 *프로젝트:* ${data.project}\n📝 *제목:* ${data.title}\n📅 *마감일:* ${data.dueDate || "미정"}\n\n화이팅입니다! 💪`;
+        const result2 = triggerSlackDM(data.assignedUserId, assignMsg);
+        if (!result2.ok) {
+           const prevError = sheet.getRange(newRow, 12).getValue();
+           sheet.getRange(newRow, 12).setValue(prevError + " / 담당자DM 실패: " + result2.error);
+        }
+      }
+
 
       props.deleteProperty(key);
     }
