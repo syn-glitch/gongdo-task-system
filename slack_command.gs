@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * [파일명]: slack_command.gs
- * [마지막 업데이트]: 2026년 02월 22일 00:40 (KST)
+ * [마지막 업데이트]: 2026년 02월 22일 00:50 (KST)
  * [현재 설정된 핵심 기능 현황]:
  *   1. 슬랙 '/주디' 슬래시 커맨드 수신 및 팝업 모달창 생성
  *   2. 모달창 내 '프로젝트명', '제목', '내용', '마감일', '담당자 지정' 입력 처리
@@ -25,9 +25,14 @@ function doPost(e) {
     else if (payload.type === "message_action" && payload.callback_id === "create_task_from_message") {
       const triggerId = payload.trigger_id;
       // 메시지 원문과 작성자 추출
-      const messageText = payload.message.text || "";
+      let messageText = payload.message.text || "";
       const userId = payload.message.user;
-      const realName = fetchUserName(userId); // ID 대신 실명 가져오기
+      const realName = fetchUserName(userId); // 작성자 실명 가져오기
+      
+      // 본문 안에 있는 상대방 멘션(<@U...>) 치환
+      messageText = messageText.replace(/<@(U[A-Z0-9]+)>/g, function(match, id) {
+        return "@" + fetchUserName(id);
+      });
       
       const prefillDesc = `[${realName}의 메시지에서 파생됨]\n${messageText}`;
       return openTaskModal(triggerId, prefillDesc);
