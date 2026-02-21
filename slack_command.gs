@@ -82,10 +82,11 @@ function handleModalSubmission(payloadStr) {
     }
     
     const username = payload.user.username || payload.user.name || "Slack User";
+    const userId = payload.user.id; // DM을 보내기 위한 슬랙 유저 ID
     const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
     
     // 1. 임시 공간에 마감일(dueDate)도 함께 저장
-    const taskData = { project, title, desc, username, ssId, dueDate };
+    const taskData = { project, title, desc, username, ssId, dueDate, userId };
     const props = PropertiesService.getScriptProperties();
     const uniqueId = "TASK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
     props.setProperty(uniqueId, JSON.stringify(taskData));
@@ -142,6 +143,22 @@ function processAsyncTasks(e) {
         }
       }
       
+      // 사용자에게 '등록 완료' 확인용 DM (Direct Message) 전송
+      if (data.userId) {
+        const url = "https://slack.com/api/chat.postMessage";
+        const msgPayload = {
+          channel: data.userId, // 사용자 ID로 DM 전송
+          text: `✅ *[${data.project}] 업무 등록 완료!*\n\`${data.title}\` (담당: ${data.username})\n구글 시트와 캘린더에 성공적으로 등록되었습니다. 🎉`
+        };
+        const options = {
+          method: "post",
+          contentType: "application/json",
+          headers: { "Authorization": "Bearer " + SLACK_TOKEN }, 
+          payload: JSON.stringify(msgPayload)
+        };
+        try { UrlFetchApp.fetch(url, options); } catch (err) {}
+      }
+
       props.deleteProperty(key);
     }
   }
