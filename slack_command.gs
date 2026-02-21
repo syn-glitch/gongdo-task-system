@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * [파일명]: slack_command.gs
- * [마지막 업데이트]: 2026년 02월 21일 23:42 (KST)
+ * [마지막 업데이트]: 2026년 02월 22일 00:40 (KST)
  * [현재 설정된 핵심 기능 현황]:
  *   1. 슬랙 '/주디' 슬래시 커맨드 수신 및 팝업 모달창 생성
  *   2. 모달창 내 '프로젝트명', '제목', '내용', '마감일', '담당자 지정' 입력 처리
@@ -26,8 +26,10 @@ function doPost(e) {
       const triggerId = payload.trigger_id;
       // 메시지 원문과 작성자 추출
       const messageText = payload.message.text || "";
-      const messageUser = payload.message.user ? `<@${payload.message.user}>` : "누군가";
-      const prefillDesc = `[${messageUser}의 메시지에서 파생됨]\n${messageText}`;
+      const userId = payload.message.user;
+      const realName = fetchUserName(userId); // ID 대신 실명 가져오기
+      
+      const prefillDesc = `[${realName}의 메시지에서 파생됨]\n${messageText}`;
       return openTaskModal(triggerId, prefillDesc);
     }
   } 
@@ -304,4 +306,24 @@ function processAsyncTasks(e) {
 
 function authorizeForAsync() {
   Logger.log("백그라운드 트리거 사용 권한 설정이 완료되었습니다!");
+}
+
+/**
+ * [헬퍼] 슬랙 유저 ID를 실명(Real Name)으로 변환
+ */
+function fetchUserName(userId) {
+  if (!userId) return "누군가";
+  try {
+    const userUrl = `https://slack.com/api/users.info?user=${userId}`;
+    const userRes = UrlFetchApp.fetch(userUrl, {
+      method: "get",
+      headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+      muteHttpExceptions: true
+    });
+    const userJson = JSON.parse(userRes.getContentText());
+    if (userJson.ok && userJson.user) {
+       return userJson.user.real_name || userJson.user.name || userId;
+    }
+  } catch(e) { console.error("유저 이름 획득 실패", e); }
+  return userId;
 }
