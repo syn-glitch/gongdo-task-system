@@ -1,6 +1,9 @@
 /**
- * [기능 설명]: Tasks 시트에 '마감일'이 입력/수정되거나 업무 정보가 변경될 때 구글 캘린더와 동기화합니다.
- *             수정 시 기존 일정을 찾아 업데이트하며, 삭제 상태 처리도 지원합니다.
+ * [파일명]: calendar_sync.gs
+ * [생성 시간]: 2026년 02월 21일 21:20 (KST)
+ * [추가된 내용 요약]: 구글 시트(Tasks)의 마감일과 상태를 구글 캘린더와 양방향 동기화하는 핵심 로직.
+ *                     사용자의 디버깅 및 권한 승인 편의를 위해 맨 아랫부분에 아무 인자 없이 실행할 수 있는
+ *                     'authorizeCalendar()' 전용 승인 함수를 명시적으로 추가함.
  */
 
 // 사용할 구글 캘린더 ID (기본 캘린더를 쓰려면 'primary' 입력, 공유 캘린더면 해당 이메일 ID 입력)
@@ -70,8 +73,16 @@ function syncCalendarEvent(sheet, row) {
   // -----------------------------------------------------------------
   // 로직 2: 마감일이 존재하고 활성 상태일 때 -> 일정 생성 또는 업데이트
   // -----------------------------------------------------------------
-  // 날짜 형식 확인
-  if (!(dueDate instanceof Date)) return;
+  // 날짜 형식 확인 (문자열로 들어온 경우 Date 객체로 변환 시도)
+  let parseDate = dueDate;
+  if (!(dueDate instanceof Date)) {
+    if (typeof dueDate === 'string' && dueDate.trim() !== '') {
+      parseDate = new Date(dueDate);
+      if (isNaN(parseDate.getTime())) return;
+    } else {
+      return; 
+    }
+  }
   
   // '종일(All Day)' 이벤트로 처리 (마감일 하루 종일)
   if (eventId) {
@@ -81,19 +92,19 @@ function syncCalendarEvent(sheet, row) {
       if (event) {
         event.setTitle(eventTitle);
         event.setDescription(eventDesc);
-        event.setAllDayDate(dueDate);
+        event.setAllDayDate(parseDate);
       } else {
         // ID는 있는데 실제 일정이 없어진 경우 다시 생성
-        createNewEvent(calendar, sheet, row, eventTitle, dueDate, eventDesc);
+        createNewEvent(calendar, sheet, row, eventTitle, parseDate, eventDesc);
       }
     } catch (e) {
        console.error("이벤트 업데이트 실패: ", e);
        // 에러 발생시 새로 생성 시도
-       createNewEvent(calendar, sheet, row, eventTitle, dueDate, eventDesc);
+       createNewEvent(calendar, sheet, row, eventTitle, parseDate, eventDesc);
     }
   } else {
     // 일정이 없으면 새로 생성
-    createNewEvent(calendar, sheet, row, eventTitle, dueDate, eventDesc);
+    createNewEvent(calendar, sheet, row, eventTitle, parseDate, eventDesc);
   }
 }
 
@@ -108,4 +119,13 @@ function createNewEvent(calendar, sheet, row, title, date, desc) {
   } catch (e) {
     console.error("새 이벤트 생성 실패: ", e);
   }
+}
+
+/**
+ * 🛑 [필수 세팅]: 편집기 상단에서 이 함수(authorizeCalendar)를 선택하고 
+ * [▶실행] 버튼을 딱 한 번 눌러서 캘린더 접근 권한을 승인해주세요!
+ */
+function authorizeCalendar() {
+  const calendar = CalendarApp.getCalendarById('primary');
+  Logger.log("캘린더 접근 권한 설정이 완료되었습니다! 이제 시트에서 마감일을 입력해보세요.");
 }

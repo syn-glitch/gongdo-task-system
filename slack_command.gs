@@ -142,7 +142,7 @@ function processAsyncTasks(e) {
           console.error("캘린더 즉시 연동 중 에러 발생: ", err);
         }
       }
-      
+
       // 사용자에게 '등록 완료' 확인용 DM (Direct Message) 전송
       if (data.userId) {
         const url = "https://slack.com/api/chat.postMessage";
@@ -154,9 +154,21 @@ function processAsyncTasks(e) {
           method: "post",
           contentType: "application/json",
           headers: { "Authorization": "Bearer " + SLACK_TOKEN }, 
-          payload: JSON.stringify(msgPayload)
+          payload: JSON.stringify(msgPayload),
+          muteHttpExceptions: true
         };
-        try { UrlFetchApp.fetch(url, options); } catch (err) {}
+        try { 
+          const response = UrlFetchApp.fetch(url, options); 
+          const result = JSON.parse(response.getContentText());
+          if (!result.ok) {
+            // 실패 원인을 시트의 L열(12번째 칸: 슬랙 링크 자리)에 임시로 기록해 디버깅
+            sheet.getRange(newRow, 12).setValue("DM 실패: " + result.error);
+          }
+        } catch (err) {
+          sheet.getRange(newRow, 12).setValue("요청 에러: " + err.toString());
+        }
+      } else {
+        sheet.getRange(newRow, 12).setValue("DM 실패: 유저 ID 없음");
       }
 
       props.deleteProperty(key);
