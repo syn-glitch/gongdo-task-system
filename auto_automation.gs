@@ -75,6 +75,18 @@ function onEdit(e) {
       SpreadsheetApp.getActiveSpreadsheet().toast(`⚠️ '${projectName}'의 코드를 찾을 수 없습니다. Projects 시트를 확인하세요.`);
     }
   }
+
+  // -------------------------------------------------------
+  // 기능 3: 달력 동기화 연동 (상태, 마감일 등 관련 컬럼 수정 시)
+  // -------------------------------------------------------
+  // C열(3:상태), D열(4:프로젝트), E열(5:제목), F열(6:내용), G열(7:담당자), I열(9:마감일) 중 하나라도 변경되면
+  const syncCols = [3, 4, 5, 6, 7, 9];
+  if (syncCols.includes(col)) {
+    // calendar_sync.gs 에 있는 동기화 함수 호출
+    if (typeof syncCalendarEvent === 'function') {
+      syncCalendarEvent(sheet, row);
+    }
+  }
 }
 
 /**
