@@ -97,7 +97,7 @@ function openTaskModal(triggerId, prefillDesc = "") {
     label: { type: "plain_text", text: "상세 내용" }
   };
   if (prefillDesc) {
-    descBlock.element.initial_value = prefillDesc;
+    descBlock.element.initial_value = prefillDesc.substring(0, 2900);
   }
 
   const payload = {
