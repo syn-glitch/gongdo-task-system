@@ -79,15 +79,63 @@ function doPost(e) {
       // 멘션(app_mention) 이거나 개인 DM(message, 채널 타입이 im) 일 경우
       if (event.type === "app_mention" || (event.type === "message" && event.channel_type === "im")) {
         
-        // [NEW] 개인 DM으로 온 메시지라면 구글 드라이브 마크다운 폴더에 일자별 영구 보관 (메모장 아카이브)
+        // --- [NEW] Intent Routing (의도 기반 라우팅) ---
         if (event.channel_type === "im" && event.text) {
           const senderName = fetchUserName(event.user);
-          if (typeof appendMemoToArchive === 'function') {
-            // [디버그] userId를 같이 넘겨서 슬랙으로 실시간 성공여부 브리핑
-            appendMemoToArchive(senderName, event.text, event.user);
+          const text = event.text.trim();
+          
+          // Helper: 슬랙에 메시지 즉시 전송
+          const replyToSlack = (msg) => {
+             const token = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+             if (!token) return;
+             UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+                method: "post", contentType: "application/json", headers: { "Authorization": "Bearer " + token },
+                payload: JSON.stringify({ channel: event.user, text: msg }), muteHttpExceptions: true
+             });
+          };
+
+          // 1. 검색 의도 파악 (Search Intent)
+          const isSearchIntent = text.includes("오늘") && (text.includes("보여") || text.includes("검색") || text.includes("알려") || text.includes("뭐") || text.includes("기록"));
+          
+          if (isSearchIntent) {
+            let todayMemoText = "오늘 기록된 메모가 없습니다.";
+            if (typeof getArchivedMemos === 'function') {
+               const memos = getArchivedMemos(senderName);
+               if (memos && memos.length > 0) {
+                 const latestMonth = memos[0];
+                 const latestDay = latestMonth.days[0];
+                 
+                 const tz = Session.getScriptTimeZone();
+                 const now = new Date();
+                 const dateStr = Utilities.formatDate(now, tz, "yyyy-MM-dd");
+                 
+                 // 첫 번째 블록이 오늘 날짜인지 확인
+                 if (latestDay && latestDay.date.includes(dateStr)) {
+                   let formattedMemos = `📅 *${latestDay.date} 업무 기록 내역입니다:*\n\n`;
+                   const sortedMemos = [...latestDay.memos].reverse(); 
+                   sortedMemos.forEach(m => {
+                     formattedMemos += `• *[${m.time}]* ${m.content}\n`;
+                   });
+                   todayMemoText = formattedMemos;
+                 }
+               }
+            }
+            replyToSlack(todayMemoText);
+            
+            // 검색 결과를 알려주고 완전히 종료 (AI 챗봇 호출 차단)
+            return ContentService.createTextOutput(""); 
           }
+          
+          // 2. 저장 의도 (Save Intent) - 검색 의도가 아니면 단순 메모 저장
+          if (typeof appendMemoToArchive === 'function') {
+            appendMemoToArchive(senderName, text, event.user);
+          }
+          
+          // 저장 후 즉시 종료하여 불필요한 AI 챗봇(processAiChatSync) 답변 스레드 생성을 차단!
+          return ContentService.createTextOutput("");
         }
 
+        // --- 공개 채널 멘션(@주디) 일 경우에만 아래 AI 챗봇 응답 진행 ---
         // 1분 대기 트리거를 없애고, 즉시 AI 처리 함수를 호출합니다!
         const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
         if (typeof processAiChatSync === 'function') {
@@ -327,6 +375,16 @@ function authorizeForAsync() {
  */
 function fetchUserName(userId) {
   if (!userId) return "누군가";
+  
+  // 1. 웹 메모장(주디 노트) 폴더명과 100% 일치시키기 위한 매핑
+  const dict = {
+    "U02S3CN9E6R": "송용남",
+    "U02SK29UVRP": "이지은",
+    "U03QJP45NKH": "김개발"
+  };
+  if (dict[userId]) return dict[userId];
+
+  // 2. 매핑에 없는 사람은 번거롭더라도 슬랙 API 호출
   try {
     const userUrl = `https://slack.com/api/users.info?user=${userId}`;
     const userRes = UrlFetchApp.fetch(userUrl, {

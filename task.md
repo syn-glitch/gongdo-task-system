@@ -49,9 +49,9 @@
 - [x] `web_app.gs` 및 AI 로직 (`summarizeMemoContent`) 추가
 
 ## 8단계: 🚀 향후 고도화 계획 (Future Enhancements)
-- [x] **특정 단어 및 태그 전체 검색 기능 (Global Search)**
+- [x] **특정 단어 및 단어 전체 검색 기능 (Global Search)**
   - 모든 마크다운 파일을 순회하여 키워드 매칭 후 사이드바나 에디터에 결과 표출 (AI RAG 통합 로직 기반)
-- [ ] **슬랙 기반 챗봇 라우팅 및 빠른 검색 (Slack Intent Routing)**
+- [x] **슬랙 기반 챗봇 라우팅 및 빠른 검색 (Slack Intent Routing)**
   - 슬랙 봇 DM 수신 시 메시지 의도 판별(기반: 키워드) 로직 추가
   - 메모 단순 저장 시 불필요한 AI 답변(`processAiChatSync`) 완전 차단
   - "오늘 작성 메모 보여줘" 검색 의도시 금일 날짜의 메모를 조회하여 슬랙으로 깔끔하게 반환
