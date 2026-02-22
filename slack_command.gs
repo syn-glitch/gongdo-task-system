@@ -379,8 +379,11 @@ function fetchUserName(userId) {
   // 1. 웹 메모장(주디 노트) 폴더명과 100% 일치시키기 위한 매핑
   const dict = {
     "U02S3CN9E6R": "송용남",
-    "U02SK29UVRP": "이지은",
-    "U03QJP45NKH": "김개발"
+    "U08SJ3SJQ9W": "이지은",
+    "U02SK29UVRP": "정혜림",
+    "U0749G2SNBE": "문유나",
+    "U04JL09C6DV": "이상호",
+    "U02S3EURC21": "김관수"
   };
   if (dict[userId]) return dict[userId];
 
