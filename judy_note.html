@@ -60,6 +60,7 @@
       display: flex;
       width: 100%;
       height: 100%;
+      position: relative;
     }
 
     /* Sidebar */
@@ -70,7 +71,8 @@
       border-right: 1px solid var(--sidebar-border);
       display: flex;
       flex-direction: column;
-      transition: background-color 0.3s;
+      transition: transform 0.3s ease, background-color 0.3s;
+      z-index: 100;
     }
 
     .sidebar-header {
@@ -246,6 +248,19 @@
       padding: 16px 24px;
       height: 40px;
       gap: 12px;
+    }
+
+    /* Mobile Menu Button */
+    .menu-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      color: var(--text-color);
+      cursor: pointer;
+      margin-right: auto;
+      /* Push other items to the right */
+      padding: 4px;
     }
 
     .theme-btn {
@@ -520,6 +535,88 @@
       background: #4caf50;
       flex-shrink: 0;
     }
+
+    /* Mobile Overlay */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 90;
+      transition: opacity 0.3s;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mobile-overlay.show {
+      display: block;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .menu-btn {
+        display: block;
+      }
+
+      .main-content {
+        width: 100vw;
+      }
+
+      .editor-container {
+        padding: 10px 20px 20px 20px;
+      }
+
+      .editor-header {
+        padding: 0 20px 10px 20px;
+      }
+
+      .footer {
+        padding: 0 20px 20px 20px;
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .footer .hint {
+        display: none;
+        /* Hide keyboard shortcut hints on mobile */
+      }
+
+      .footer-buttons {
+        justify-content: stretch;
+      }
+
+      .save-btn,
+      .extract-btn {
+        flex: 1;
+        padding: 12px 16px;
+        /* Larger touch targets */
+      }
+
+      .summary-overlay {
+        left: 10px;
+        right: 10px;
+        top: 10px;
+        padding: 16px;
+      }
+    }
   </style>
 </head>
 
@@ -543,6 +640,7 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="top-bar">
+        <button id="menuBtn" class="menu-btn" title="메뉴 열기">☰</button>
         <button id="themeToggleBtn" class="theme-btn" title="테마 변경">☀️</button>
         <span id="userBadge" class="user-badge">인증 중...</span>
       </div>
@@ -584,6 +682,8 @@
     <span id="toastMsg">저장되었습니다.</span>
   </div>
 
+  <div id="mobileOverlay" class="mobile-overlay"></div>
+
   <!-- Access Denied Overlay (인증 실패 시 표시) -->
   <div id="accessDeniedOverlay" class="access-denied-overlay" style="display: none;">
     <div class="icon">⛔</div>
@@ -592,419 +692,440 @@
   </div>
 
   <script>
-    const memoInput = document.getElementById('memoInput');
-    const memoViewer = document.getElementById('memoViewer');
+    window.addEventListener('DOMContentLoaded', () => {
+      const memoInput = document.getElementById('memoInput');
+      const memoViewer = document.getElementById('memoViewer');
 
-    // 단축키 설정 (Cmd+Enter / Ctrl+Enter 로 저장)
-    memoInput.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (currentMode === 'write') {
-          saveMemo('saveFromWeb');
+      // 단축키 설정 (Cmd+Enter / Ctrl+Enter 로 저장)
+      memoInput.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault();
+          if (currentMode === 'write') {
+            saveMemo('saveFromWeb');
+          }
         }
+      });
+
+      const saveBtn = document.getElementById('saveBtn');
+      const extractBtn = document.getElementById('extractBtn');
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastStatus = document.getElementById('toastStatus');
+
+      // Theme Elements
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const htmlEl = document.documentElement;
+
+      // Layout Elements
+      const folderList = document.getElementById('folderList');
+      const newMemoBtn = document.getElementById('newMemoBtn');
+      const editorHeader = document.getElementById('editorHeader');
+      const editorFooter = document.getElementById('editorFooter');
+      const viewTitle = document.getElementById('viewTitle');
+      const summarizeBtn = document.getElementById('summarizeBtn');
+      const summaryOverlay = document.getElementById('summaryOverlay');
+      const summaryContent = document.getElementById('summaryContent');
+      const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+      const sidebar = document.getElementById('sidebar');
+      const menuBtn = document.getElementById('menuBtn');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+
+      // Auth Elements
+      const userBadge = document.getElementById('userBadge');
+      const accessDeniedOverlay = document.getElementById('accessDeniedOverlay');
+      const accessDeniedMsg = document.getElementById('accessDeniedMsg');
+
+      // State Variable
+      let currentMode = 'write'; // 'write' or 'read'
+      let currentHtmlTheme = 'dark';
+      let currentUserName = null; // Magic Link 인증 완료 후 확보된 사용자 이름
+      let cachedSidebarData = null; // 검색 취소 시 복구할 원래 폴더 리스트 데이터
+      const searchInput = document.getElementById('searchInput');
+
+      // ==========================================
+      // 0. 테마 관리 & 모바일 UI 컨트롤
+      // ==========================================
+      const savedTheme = localStorage.getItem('judy_note_theme') || 'dark';
+      setTheme(savedTheme);
+
+      themeToggleBtn.addEventListener('click', () => {
+        const newTheme = currentHtmlTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+      });
+
+      function setTheme(theme) {
+        currentHtmlTheme = theme;
+        htmlEl.setAttribute('data-theme', theme);
+        themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        localStorage.setItem('judy_note_theme', theme);
       }
-    });
 
-    const saveBtn = document.getElementById('saveBtn');
-    const extractBtn = document.getElementById('extractBtn');
-    const toast = document.getElementById('toast');
-    const toastMsg = document.getElementById('toastMsg');
-    const toastStatus = document.getElementById('toastStatus');
+      // 모바일 사이드바 토글
+      function toggleMobileMenu() {
+        sidebar.classList.toggle('open');
+        mobileOverlay.classList.toggle('show');
+      }
 
-    // Theme Elements
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    const htmlEl = document.documentElement;
+      function closeMobileMenu() {
+        sidebar.classList.remove('open');
+        mobileOverlay.classList.remove('show');
+      }
 
-    // Layout Elements
-    const folderList = document.getElementById('folderList');
-    const newMemoBtn = document.getElementById('newMemoBtn');
-    const editorHeader = document.getElementById('editorHeader');
-    const editorFooter = document.getElementById('editorFooter');
-    const viewTitle = document.getElementById('viewTitle');
-    const summarizeBtn = document.getElementById('summarizeBtn');
-    const summaryOverlay = document.getElementById('summaryOverlay');
-    const summaryContent = document.getElementById('summaryContent');
-    const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+      menuBtn.addEventListener('click', toggleMobileMenu);
+      mobileOverlay.addEventListener('click', closeMobileMenu);
 
-    // Auth Elements
-    const userBadge = document.getElementById('userBadge');
-    const accessDeniedOverlay = document.getElementById('accessDeniedOverlay');
-    const accessDeniedMsg = document.getElementById('accessDeniedMsg');
+      // ==========================================
+      // 1. [Phase 10] 슬랙 기반 Magic Link (One-Time Token) 검증
+      // ==========================================
+      function showAccessDenied(reason) {
+        accessDeniedMsg.innerHTML = reason;
+        accessDeniedOverlay.style.display = 'flex';
+      }
 
-    // State Variable
-    let currentMode = 'write'; // 'write' or 'read'
-    let currentHtmlTheme = 'dark';
-    let currentUserName = null; // Magic Link 인증 완료 후 확보된 사용자 이름
-    let cachedSidebarData = null; // 검색 취소 시 복구할 원래 폴더 리스트 데이터
-    const searchInput = document.getElementById('searchInput');
+      // 구글 앱스 스크립트 특성상 window.location.search가 작동하지 않으므로,
+      // doGet에서 주입해준 서버 사이드 템플릿 변수(token)를 사용합니다.
+      const magicToken = "<?= token ?>";
 
-    // ==========================================
-    // 0. 테마 관리 (Light / Dark)
-    // ==========================================
-    const savedTheme = localStorage.getItem('judy_note_theme') || 'dark';
-    setTheme(savedTheme);
+      if (!magicToken) {
+        userBadge.textContent = '⛔ 미인가';
+        showAccessDenied('만료되었거나 잘못된 접속 정보입니다.<br>슬랙앱에서 [주디 노트 열어줘] 로 다시 접속하세요.');
+      } else {
+        // 서버를 통해 토큰 유효성 검증
+        google.script.run
+          .withSuccessHandler((result) => {
+            if (result.valid) {
+              // ✅ 인증 통과: 이름 표시 및 본인 데이터 로딩
+              currentUserName = result.name;
+              userBadge.textContent = `👤 ${result.name} 님`;
+              loadSidebarData(result.name);
 
-    themeToggleBtn.addEventListener('click', () => {
-      const newTheme = currentHtmlTheme === 'dark' ? 'light' : 'dark';
-      setTheme(newTheme);
-    });
-
-    function setTheme(theme) {
-      currentHtmlTheme = theme;
-      htmlEl.setAttribute('data-theme', theme);
-      themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
-      localStorage.setItem('judy_note_theme', theme);
-    }
-
-    // ==========================================
-    // 1. [Phase 10] 슬랙 기반 Magic Link (One-Time Token) 검증
-    // ==========================================
-    function showAccessDenied(reason) {
-      accessDeniedMsg.innerHTML = reason;
-      accessDeniedOverlay.style.display = 'flex';
-    }
-
-    // 구글 앱스 스크립트 특성상 window.location.search가 작동하지 않으므로,
-    // doGet에서 주입해준 서버 사이드 템플릿 변수(token)를 사용합니다.
-    const magicToken = "<?= token ?>";
-
-    if (!magicToken) {
-      userBadge.textContent = '⛔ 미인가';
-      showAccessDenied('만료되었거나 잘못된 접속 정보입니다.<br>슬랙앱에서 [주디 노트 열어줘] 로 다시 접속하세요.');
-    } else {
-      // 서버를 통해 토큰 유효성 검증
-      google.script.run
-        .withSuccessHandler((result) => {
-          if (result.valid) {
-            // ✅ 인증 통과: 이름 표시 및 본인 데이터 로딩
-            currentUserName = result.name;
-            userBadge.textContent = `👤 ${result.name} 님`;
-            loadSidebarData(result.name);
-
-            // 보안 목적 + 미관상 URL에서 토큰 숨기기 (pushState 사용)
-            if (window.history.replaceState) {
-              const cleanUrl = window.location.href.split('?')[0];
-              window.history.replaceState({}, document.title, cleanUrl);
+              // 보안 목적 + 미관상 URL에서 토큰 숨기기 (pushState 사용)
+              if (window.history.replaceState) {
+                const cleanUrl = window.location.href.split('?')[0];
+                window.history.replaceState({}, document.title, cleanUrl);
+              }
+            } else {
+              // ❌ 인증 실패 (만료, 없는 토큰, 이미 사용된 토큰)
+              userBadge.textContent = '⛔ 미인가';
+              showAccessDenied(result.reason);
             }
-          } else {
-            // ❌ 인증 실패 (만료, 없는 토큰, 이미 사용된 토큰)
-            userBadge.textContent = '⛔ 미인가';
-            showAccessDenied(result.reason);
+          })
+          .withFailureHandler((err) => {
+            userBadge.textContent = '⛔ 보안 에러';
+            showAccessDenied('인증 서버 연결에 실패했습니다.<br>새로고침 하거나 슬랙에서 다시 접속하세요.');
+          })
+          .validateToken(magicToken);
+      }
+
+      // ==========================================
+      // 2. 모드 전환 (Write <-> Read)
+      // ==========================================
+      newMemoBtn.addEventListener('click', () => {
+        setToWriteMode();
+      });
+
+      function setToWriteMode() {
+        currentMode = 'write';
+        editorHeader.style.display = 'none';
+        editorFooter.style.display = 'flex';
+
+        memoInput.style.display = 'block';
+        memoViewer.style.display = 'none';
+        memoInput.value = '';
+        memoInput.focus();
+        summaryOverlay.classList.remove('show');
+
+        closeMobileMenu(); // 모바일 환경: 쓰기 모드 진입 시 사이드바 닫기
+      }
+
+      function setToReadMode(title, content) {
+        currentMode = 'read';
+        editorHeader.style.display = 'flex';
+        editorFooter.style.display = 'none';
+        viewTitle.textContent = title;
+
+        memoInput.style.display = 'none';
+        memoViewer.style.display = 'block';
+        memoViewer.textContent = content.trim();
+
+        summaryOverlay.classList.remove('show');
+
+        closeMobileMenu(); // 모바일 환경: 읽기 모드 진입 시 사이드바 닫기
+      }
+
+      // ==========================================
+      // 3. 사이드바 렌더링 및 검색 핸들링
+      // ==========================================
+      function loadSidebarData(userName) {
+        folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
+        if (searchInput) searchInput.value = ''; // 초기화
+
+        google.script.run
+          .withSuccessHandler((data) => {
+            try {
+              cachedSidebarData = data;
+              renderSidebar(data);
+            } catch (err) {
+              console.error("Render Error:", err);
+              folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">사이드바 렌더링 중 오류가 발생했습니다.</div>';
+            }
+          })
+          .withFailureHandler((err) => {
+            console.error("Backend Error:", err);
+            folderList.innerHTML = `<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.<br>(${err.message})</div>`;
+          })
+          .getArchivedMemos(userName); // Backend 함수
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const query = e.target.value.trim();
+            const userName = currentUserName;
+            if (!userName) return;
+
+            if (query === '') {
+              renderSidebar(cachedSidebarData);
+              return;
+            }
+
+            // 검색 모드 진입
+            folderList.innerHTML = '<div class="loading-text">검색 중... 🔍</div>';
+            google.script.run
+              .withSuccessHandler((results) => {
+                renderSearchResults(results, query);
+              })
+              .withFailureHandler((err) => {
+                folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">검색 실패</div>';
+                console.error(err);
+              })
+              .searchArchivedMemos(userName, query);
           }
-        })
-        .withFailureHandler((err) => {
-          userBadge.textContent = '⛔ 보안 에러';
-          showAccessDenied('인증 서버 연결에 실패했습니다.<br>새로고침 하거나 슬랙에서 다시 접속하세요.');
-        })
-        .validateToken(magicToken);
-    }
+        });
+      }
 
-    // ==========================================
-    // 2. 모드 전환 (Write <-> Read)
-    // ==========================================
-    newMemoBtn.addEventListener('click', () => {
-      setToWriteMode();
-    });
+      function renderSearchResults(results, query) {
+        folderList.innerHTML = '';
 
-    function setToWriteMode() {
-      currentMode = 'write';
-      editorHeader.style.display = 'none';
-      editorFooter.style.display = 'flex';
+        const clearBtn = document.createElement('div');
+        clearBtn.className = 'loading-text';
+        clearBtn.style.cursor = 'pointer';
+        clearBtn.style.color = 'var(--primary)';
+        clearBtn.style.fontWeight = '500';
+        clearBtn.textContent = '← 폴더 목록으로 돌아가기';
+        clearBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          renderSidebar(cachedSidebarData);
+        });
+        folderList.appendChild(clearBtn);
 
-      memoInput.style.display = 'block';
-      memoViewer.style.display = 'none';
-      memoInput.value = '';
-      memoInput.focus();
-      summaryOverlay.classList.remove('show');
-    }
-
-    function setToReadMode(title, content) {
-      currentMode = 'read';
-      editorHeader.style.display = 'flex';
-      editorFooter.style.display = 'none';
-      viewTitle.textContent = title;
-
-      memoInput.style.display = 'none';
-      memoViewer.style.display = 'block';
-      memoViewer.textContent = content.trim();
-
-      summaryOverlay.classList.remove('show');
-    }
-
-    // ==========================================
-    // 3. 사이드바 렌더링 및 검색 핸들링
-    // ==========================================
-    function loadSidebarData(userName) {
-      folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
-      if (searchInput) searchInput.value = ''; // 초기화
-
-      google.script.run
-        .withSuccessHandler((data) => {
-          try {
-            cachedSidebarData = data;
-            renderSidebar(data);
-          } catch (err) {
-            console.error("Render Error:", err);
-            folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">사이드바 렌더링 중 오류가 발생했습니다.</div>';
-          }
-        })
-        .withFailureHandler((err) => {
-          console.error("Backend Error:", err);
-          folderList.innerHTML = `<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.<br>(${err.message})</div>`;
-        })
-        .getArchivedMemos(userName); // Backend 함수
-    }
-
-    if (searchInput) {
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const query = e.target.value.trim();
-          const userName = currentUserName;
-          if (!userName) return;
-
-          if (query === '') {
-            renderSidebar(cachedSidebarData);
-            return;
-          }
-
-          // 검색 모드 진입
-          folderList.innerHTML = '<div class="loading-text">검색 중... 🔍</div>';
-          google.script.run
-            .withSuccessHandler((results) => {
-              renderSearchResults(results, query);
-            })
-            .withFailureHandler((err) => {
-              folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">검색 실패</div>';
-              console.error(err);
-            })
-            .searchArchivedMemos(userName, query);
+        if (!results || results.length === 0) {
+          const emptyInfo = document.createElement('div');
+          emptyInfo.className = 'loading-text';
+          emptyInfo.textContent = '검색 결과가 없습니다.';
+          folderList.appendChild(emptyInfo);
+          return;
         }
-      });
-    }
 
-    function renderSearchResults(results, query) {
-      folderList.innerHTML = '';
+        results.forEach(res => {
+          const d = document.createElement('div');
+          d.className = 'search-result-item';
 
-      const clearBtn = document.createElement('div');
-      clearBtn.className = 'loading-text';
-      clearBtn.style.cursor = 'pointer';
-      clearBtn.style.color = 'var(--primary)';
-      clearBtn.style.fontWeight = '500';
-      clearBtn.textContent = '← 폴더 목록으로 돌아가기';
-      clearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        renderSidebar(cachedSidebarData);
-      });
-      folderList.appendChild(clearBtn);
+          const dateDiv = document.createElement('div');
+          dateDiv.className = 'search-result-date';
+          dateDiv.textContent = `${res.date} ${res.time}`;
 
-      if (!results || results.length === 0) {
-        const emptyInfo = document.createElement('div');
-        emptyInfo.className = 'loading-text';
-        emptyInfo.textContent = '검색 결과가 없습니다.';
-        folderList.appendChild(emptyInfo);
-        return;
-      }
+          const textDiv = document.createElement('div');
+          textDiv.className = 'search-result-text';
 
-      results.forEach(res => {
-        const d = document.createElement('div');
-        d.className = 'search-result-item';
+          // Highlight The Match
+          const safeQuery = query.replace(/[.*+?^${ }()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(${safeQuery})`, 'gi');
+          // XSS 방어 (간단한 escape 후 highlight 적용)
+          let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
+          textDiv.innerHTML = escapedContent;
 
-        const dateDiv = document.createElement('div');
-        dateDiv.className = 'search-result-date';
-        dateDiv.textContent = `${res.date} ${res.time}`;
+          d.appendChild(dateDiv);
+          d.appendChild(textDiv);
 
-        const textDiv = document.createElement('div');
-        textDiv.className = 'search-result-text';
-
-        // Highlight The Match
-        const safeQuery = query.replace(/[.*+?^${ }()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(${safeQuery})`, 'gi');
-        // XSS 방어 (간단한 escape 후 highlight 적용)
-        let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
-        textDiv.innerHTML = escapedContent;
-
-        d.appendChild(dateDiv);
-        d.appendChild(textDiv);
-
-        d.addEventListener('click', () => {
-          // 검색된 원문을 클릭하면 우측 뷰어에 보여줌
-          setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`);
-        });
-
-        folderList.appendChild(d);
-      });
-    }
-
-    function renderSidebar(data) {
-      // data: [{month: "2026-02", days: [ {date: "2026-02-22 (일)", memos: [ {time: "14:30 PM", content: "..." } ] } ] }]
-      if (!data || data.length === 0) {
-        folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
-        return;
-      }
-
-      folderList.innerHTML = '';
-      data.forEach(monthData => {
-        const folderDiv = document.createElement('div');
-        folderDiv.className = 'folder-item';
-
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'folder-title';
-        titleDiv.innerHTML = `<span class="folder-icon">📁</span> ${monthData.month} 업무일지`;
-
-        const childrenDiv = document.createElement('div');
-        childrenDiv.className = 'folder-children';
-
-        monthData.days.forEach(dayData => {
-          // 하위 폴더: 날짜별 묶음 (또는 파일 리스트)
-          const fileDiv = document.createElement('div');
-          fileDiv.className = 'file-item';
-          fileDiv.textContent = `📄 ${dayData.date}`;
-          fileDiv.addEventListener('click', () => {
-            // 해당 날짜 클릭 시 모든 메모 취합해서 읽기 모드로 진입
-            let combinedContent = "";
-            dayData.memos.forEach(m => {
-              combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`;
-            });
-            setToReadMode(dayData.date, combinedContent);
+          d.addEventListener('click', () => {
+            // 검색된 원문을 클릭하면 우측 뷰어에 보여줌
+            setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`);
           });
-          childrenDiv.appendChild(fileDiv);
+
+          folderList.appendChild(d);
+        });
+      }
+
+      function renderSidebar(data) {
+        // data: [{month: "2026-02", days: [ {date: "2026-02-22 (일)", memos: [ {time: "14:30 PM", content: "..." } ] } ] }]
+        if (!data || data.length === 0) {
+          folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
+          return;
+        }
+
+        folderList.innerHTML = '';
+        data.forEach(monthData => {
+          const folderDiv = document.createElement('div');
+          folderDiv.className = 'folder-item';
+
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'folder-title';
+          titleDiv.innerHTML = `<span class="folder-icon">📁</span> ${monthData.month} 업무일지`;
+
+          const childrenDiv = document.createElement('div');
+          childrenDiv.className = 'folder-children';
+
+          monthData.days.forEach(dayData => {
+            // 하위 폴더: 날짜별 묶음 (또는 파일 리스트)
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'file-item';
+            fileDiv.textContent = `📄 ${dayData.date}`;
+            fileDiv.addEventListener('click', () => {
+              // 해당 날짜 클릭 시 모든 메모 취합해서 읽기 모드로 진입
+              let combinedContent = "";
+              dayData.memos.forEach(m => {
+                combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`;
+              });
+              setToReadMode(dayData.date, combinedContent);
+            });
+            childrenDiv.appendChild(fileDiv);
+          });
+
+          titleDiv.addEventListener('click', () => {
+            folderDiv.classList.toggle('open');
+          });
+
+          folderDiv.appendChild(titleDiv);
+          folderDiv.appendChild(childrenDiv);
+          folderList.appendChild(folderDiv);
         });
 
-        titleDiv.addEventListener('click', () => {
-          folderDiv.classList.toggle('open');
-        });
+        // 첫 번째 폴더는 기본 열어두기
+        if (document.querySelector('.folder-item')) {
+          document.querySelector('.folder-item').classList.add('open');
+        }
+      }
 
-        folderDiv.appendChild(titleDiv);
-        folderDiv.appendChild(childrenDiv);
-        folderList.appendChild(folderDiv);
+      // ==========================================
+      // 4. 새 메모 저장 / 업무 추출 로직
+      // ==========================================
+      // (단축키 리스너는 initEditor() 로 이동됨)
+
+      saveBtn.addEventListener('click', () => saveMemo('saveFromWeb'));
+      extractBtn.addEventListener('click', () => saveMemo('extractFromWeb'));
+
+      function showToast(message, isError = false) {
+        toastMsg.textContent = message;
+        toastStatus.style.background = isError ? '#f44336' : '#4caf50';
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 5000);
+      }
+
+      function saveMemo(actionName) {
+        const text = memoInput ? memoInput.value.trim() : '';
+        const userName = currentUserName;
+        const isExtract = actionName === 'extractFromWeb';
+
+        if (!userName) {
+          showToast('⛔ 인증된 사용자가 없습니다. 새로고침 해주세요.', false);
+          return;
+        }
+
+        if (!text) {
+          if (memoInput) memoInput.focus();
+          return;
+        }
+
+        // UI 상태 변경 (저장 중)
+        saveBtn.disabled = true;
+        extractBtn.disabled = true;
+
+        const prevSaveText = saveBtn.textContent;
+        const prevExtractText = extractBtn.textContent;
+
+        if (isExtract) {
+          extractBtn.textContent = "AI가 분석 중입니다... 🪄";
+        } else {
+          saveBtn.textContent = "저장 중...";
+        }
+
+        const runner = google.script.run
+          .withSuccessHandler((res) => {
+            saveBtn.disabled = false;
+            extractBtn.disabled = false;
+            saveBtn.textContent = prevSaveText;
+            extractBtn.textContent = prevExtractText;
+
+            if (res && res.success) {
+              if (memoInput) memoInput.value = ""; // 입력창 초기화
+              showToast(res.message);
+              if (memoInput) memoInput.focus();
+
+              // 사이드바 실시간 갱신 (저장 즉시 갱신)
+              loadSidebarData(userName);
+            } else {
+              showToast("❌ 에러: " + (res ? res.message : "알 수 없는 에러"), true);
+            }
+          })
+          .withFailureHandler((err) => {
+            saveBtn.disabled = false;
+            extractBtn.disabled = false;
+            saveBtn.textContent = prevSaveText;
+            extractBtn.textContent = prevExtractText;
+            showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+            console.error("Save Error:", err);
+          });
+
+        if (actionName === 'saveFromWeb') {
+          runner.saveFromWeb(userName, text);
+        } else {
+          runner.extractFromWeb(userName, text);
+        }
+      }
+
+      // ==========================================
+      // 5. 모달 형태 AI 요약
+      // ==========================================
+      closeSummaryBtn.addEventListener('click', () => {
+        summaryOverlay.classList.remove('show');
       });
 
-      // 첫 번째 폴더는 기본 열어두기
-      if (document.querySelector('.folder-item')) {
-        document.querySelector('.folder-item').classList.add('open');
-      }
-    }
+      summarizeBtn.addEventListener('click', () => {
+        const text = memoViewer ? memoViewer.textContent.trim() : '';
+        const userName = currentUserName;
 
-    // ==========================================
-    // 4. 새 메모 저장 / 업무 추출 로직
-    // ==========================================
-    // (단축키 리스너는 initEditor() 로 이동됨)
+        if (!text) return;
 
-    saveBtn.addEventListener('click', () => saveMemo('saveFromWeb'));
-    extractBtn.addEventListener('click', () => saveMemo('extractFromWeb'));
+        summarizeBtn.disabled = true;
+        summarizeBtn.textContent = "요약 중... 🪄";
 
-    function showToast(message, isError = false) {
-      toastMsg.textContent = message;
-      toastStatus.style.background = isError ? '#f44336' : '#4caf50';
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 5000);
-    }
+        google.script.run
+          .withSuccessHandler((res) => {
+            summarizeBtn.disabled = false;
+            summarizeBtn.textContent = "✨ AI 내용 요약";
 
-    function saveMemo(actionName) {
-      const text = memoInput ? memoInput.value.trim() : '';
-      const userName = currentUserName;
-      const isExtract = actionName === 'extractFromWeb';
+            if (res.success) {
+              summaryContent.textContent = res.summary;
+              summaryOverlay.classList.add('show');
+            } else {
+              showToast("❌ 요약 실패: " + res.message, true);
+            }
+          })
+          .withFailureHandler((err) => {
+            summarizeBtn.disabled = false;
+            summarizeBtn.textContent = "✨ AI 내용 요약";
+            showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+          })
+          .summarizeMemoContent(text, userName);
+      });
 
-      if (!userName) {
-        showToast('⛔ 인증된 사용자가 없습니다. 새로고침 해주세요.', false);
-        return;
-      }
-
-      if (!text) {
-        if (memoInput) memoInput.focus();
-        return;
-      }
-
-      // UI 상태 변경 (저장 중)
-      saveBtn.disabled = true;
-      extractBtn.disabled = true;
-
-      const prevSaveText = saveBtn.textContent;
-      const prevExtractText = extractBtn.textContent;
-
-      if (isExtract) {
-        extractBtn.textContent = "AI가 분석 중입니다... 🪄";
-      } else {
-        saveBtn.textContent = "저장 중...";
-      }
-
-      const runner = google.script.run
-        .withSuccessHandler((res) => {
-          saveBtn.disabled = false;
-          extractBtn.disabled = false;
-          saveBtn.textContent = prevSaveText;
-          extractBtn.textContent = prevExtractText;
-
-          if (res && res.success) {
-            if (memoInput) memoInput.value = ""; // 입력창 초기화
-            showToast(res.message);
-            if (memoInput) memoInput.focus();
-
-            // 사이드바 실시간 갱신 (저장 즉시 갱신)
-            loadSidebarData(userName);
-          } else {
-            showToast("❌ 에러: " + (res ? res.message : "알 수 없는 에러"), true);
-          }
-        })
-        .withFailureHandler((err) => {
-          saveBtn.disabled = false;
-          extractBtn.disabled = false;
-          saveBtn.textContent = prevSaveText;
-          extractBtn.textContent = prevExtractText;
-          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
-          console.error("Save Error:", err);
-        });
-
-      if (actionName === 'saveFromWeb') {
-        runner.saveFromWeb(userName, text);
-      } else {
-        runner.extractFromWeb(userName, text);
-      }
-    }
-
-    // ==========================================
-    // 5. 모달 형태 AI 요약
-    // ==========================================
-    closeSummaryBtn.addEventListener('click', () => {
-      summaryOverlay.classList.remove('show');
-    });
-
-    summarizeBtn.addEventListener('click', () => {
-      const text = memoViewer ? memoViewer.textContent.trim() : '';
-      const userName = currentUserName;
-
-      if (!text) return;
-
-      summarizeBtn.disabled = true;
-      summarizeBtn.textContent = "요약 중... 🪄";
-
-      google.script.run
-        .withSuccessHandler((res) => {
-          summarizeBtn.disabled = false;
-          summarizeBtn.textContent = "✨ AI 내용 요약";
-
-          if (res.success) {
-            summaryContent.textContent = res.summary;
-            summaryOverlay.classList.add('show');
-          } else {
-            showToast("❌ 요약 실패: " + res.message, true);
-          }
-        })
-        .withFailureHandler((err) => {
-          summarizeBtn.disabled = false;
-          summarizeBtn.textContent = "✨ AI 내용 요약";
-          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
-        })
-        .summarizeMemoContent(text, userName);
-    });
-
-    // 초기 포커스 및 초기화
-    window.onload = () => {
+      // 초기 포커스 및 초기화
       if (memoInput) memoInput.focus();
-    };
+    });
   </script>
 </body>
 
