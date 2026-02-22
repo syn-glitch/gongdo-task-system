@@ -54,12 +54,18 @@ function appendMemoToArchive(userName, memoText, userId) {
     const now = new Date();
     const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}_업무일지.md`;
     
-    // 3. 파일 찾기 (없으면 생성)
+    // 3. 파일 찾기 (Google Doc 중복 방지: MIME 타입으로 필터링)
     let mdFile = null;
     const fileIter = userFolder.getFilesByName(currentMonthStr);
-    if (fileIter.hasNext()) {
-      mdFile = fileIter.next();
-    } else {
+    while (fileIter.hasNext()) {
+      const f = fileIter.next();
+      // "Google 문서로 열기" 시 생성되는 Google Doc은 건너뛰고 원본 텍스트 파일만 사용
+      if (f.getMimeType() !== 'application/vnd.google-apps.document') {
+        mdFile = f;
+        break;
+      }
+    }
+    if (!mdFile) {
       mdFile = userFolder.createFile(currentMonthStr, `# ${userName}의 단기 업무 메모장 (${currentMonthStr.split('_')[0]})\n\n`);
     }
     
@@ -162,10 +168,23 @@ function getArchivedMemos(userName) {
     while(fileIterAll.hasNext()) {
       const file = fileIterAll.next();
       const fileName = file.getName();
-      if (!fileName.endsWith("_업무일지.md")) continue;
+      let content = "";
+      let monthPrefix = "";
       
-      const monthPrefix = fileName.replace("_업무일지.md", ""); // e.g. "2026-02"
-      const content = file.getBlob().getDataAsString();
+      if (file.getMimeType() === 'application/vnd.google-apps.document' && fileName.includes("_업무일지")) {
+        monthPrefix = fileName.replace("_업무일지", "");
+        try {
+          content = DocumentApp.openById(file.getId()).getBody().getText();
+        } catch(e) {
+          console.error("구글 문서 파싱 실패: ", e);
+          continue;
+        }
+      } else if (fileName.endsWith("_업무일지.md")) {
+        monthPrefix = fileName.replace("_업무일지.md", "");
+        content = file.getBlob().getDataAsString();
+      } else {
+        continue;
+      }
       
       const blocks = content.split(/\n## /g);
       const days = [];
@@ -175,30 +194,37 @@ function getArchivedMemos(userName) {
          const lines = dayBlock.split('\n');
          const dateStr = lines[0].trim();
          const memos = [];
+         // 정규식으로 '- **[시간]**' 패턴 매칭 및 컨텐츠 파싱
+         const regex = /\n?- \*\*\[(.*?)\]\*\*\n/g;
+         let match;
+         let lastIndex = 0;
+         let lastTime = null;
+
+         while ((match = regex.exec(dayBlock)) !== null) {
+           if (lastTime !== null) {
+             const rawContent = dayBlock.substring(lastIndex, match.index);
+             const cleanContent = cleanMemoContent(rawContent);
+             if (cleanContent) {
+               memos.push({ time: lastTime, content: cleanContent });
+             }
+           }
+           lastTime = match[1];
+           lastIndex = regex.lastIndex;
+         }
          
-         const memoChunks = dayBlock.split(/\n- \*\*\[/g);
-         for (let j = 1; j < memoChunks.length; j++) {
-            const chunk = memoChunks[j];
-            const endBracketIndex = chunk.indexOf(']**');
-            if (endBracketIndex === -1) continue;
-            
-            const timeStr = chunk.substring(0, endBracketIndex).trim();
-            const rawContent = chunk.substring(endBracketIndex + 3);
-            
-            const cleanContent = rawContent.split('\n').map(l => {
-                if (l.startsWith('  ')) return l.substring(2);
-                return l;
-            }).join('\n').trim();
-            
-            if (cleanContent) {
-              memos.push({ time: timeStr, content: cleanContent });
-            }
+         // 마지막 메모 조각 처리
+         if (lastTime !== null) {
+           const rawContent = dayBlock.substring(lastIndex);
+           const cleanContent = cleanMemoContent(rawContent);
+           if (cleanContent) {
+             memos.push({ time: lastTime, content: cleanContent });
+           }
          }
          
          if (memos.length > 0) {
             days.push({
                date: dateStr,
-               memos: memos.reverse() // 해당 날짜 내림차순(최근게 위로) vs 오름차순(기록순)? 일단 여기선 시간 역순
+               memos: memos.reverse() // 해당 날짜 내림차순(최근게 위로)
             });
          }
       }
@@ -246,9 +272,20 @@ function searchArchivedMemos(userName, query) {
     while(fileIterAll.hasNext()) {
       const file = fileIterAll.next();
       const fileName = file.getName();
-      if (!fileName.endsWith("_업무일지.md")) continue;
+      let content = "";
       
-      const content = file.getBlob().getDataAsString();
+      if (file.getMimeType() === 'application/vnd.google-apps.document' && fileName.includes("_업무일지")) {
+        try {
+          content = DocumentApp.openById(file.getId()).getBody().getText();
+        } catch(e) {
+          console.error("구글 문서 파싱 실패: ", e);
+          continue;
+        }
+      } else if (fileName.endsWith("_업무일지.md")) {
+        content = file.getBlob().getDataAsString();
+      } else {
+        continue;
+      }
       const blocks = content.split(/\n## /g);
       
       // 첫 블록은 스킵 (제목)
@@ -256,30 +293,40 @@ function searchArchivedMemos(userName, query) {
          const dayBlock = blocks[i];
          const lines = dayBlock.split('\n');
          const dateStr = lines[0].trim();
+         // 정규식 매칭을 이용해 개별 메모 내용 추출
+         const regex = /\n?- \*\*\[(.*?)\]\*\*\n/g;
+         let match;
+         let lastIndex = 0;
+         let lastTime = null;
+
+         while ((match = regex.exec(dayBlock)) !== null) {
+           if (lastTime !== null) {
+             const rawContent = dayBlock.substring(lastIndex, match.index);
+             const cleanContent = cleanMemoContent(rawContent);
+             if (cleanContent && cleanContent.toLowerCase().includes(lowerQuery)) {
+               searchResults.push({
+                 date: dateStr,
+                 time: lastTime,
+                 content: cleanContent,
+                 fileName: fileName
+               });
+             }
+           }
+           lastTime = match[1];
+           lastIndex = regex.lastIndex;
+         }
          
-         const memoChunks = dayBlock.split(/\n- \*\*\[/g);
-         for (let j = 1; j < memoChunks.length; j++) {
-            const chunk = memoChunks[j];
-            const endBracketIndex = chunk.indexOf(']**');
-            if (endBracketIndex === -1) continue;
-            
-            const timeStr = chunk.substring(0, endBracketIndex).trim();
-            const rawContent = chunk.substring(endBracketIndex + 3);
-            
-            const cleanContent = rawContent.split('\n').map(l => {
-                if (l.startsWith('  ')) return l.substring(2);
-                return l;
-            }).join('\n').trim();
-            
-            // 검색어 매칭
-            if (cleanContent.toLowerCase().includes(lowerQuery)) {
-              searchResults.push({
-                date: dateStr,
-                time: timeStr,
-                content: cleanContent,
-                fileName: fileName // 출처 정보 (AI용)
-              });
-            }
+         if (lastTime !== null) {
+           const rawContent = dayBlock.substring(lastIndex);
+           const cleanContent = cleanMemoContent(rawContent);
+           if (cleanContent && cleanContent.toLowerCase().includes(lowerQuery)) {
+             searchResults.push({
+               date: dateStr,
+               time: lastTime,
+               content: cleanContent,
+               fileName: fileName
+             });
+           }
          }
       }
     }
@@ -296,4 +343,14 @@ function searchArchivedMemos(userName, query) {
     console.error("아카이브 검색 에러", e);
     return [];
   }
+}
+
+/**
+ * 하위 메모 내용에서 들여쓰기 공백을 제거하고 정리해주는 헬퍼
+ */
+function cleanMemoContent(rawContent) {
+   return rawContent.split('\n').map(l => {
+        if (l.startsWith('  ')) return l.substring(2);
+        return l;
+   }).join('\n').trim();
 }

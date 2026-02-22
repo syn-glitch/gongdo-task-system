@@ -339,26 +339,33 @@
       position: relative;
     }
 
-    textarea {
+    #memoInput {
       flex: 1;
+      width: 100%;
       background: transparent;
       border: none;
       color: var(--text-color);
-      font-size: 18px;
+      font-size: 15px;
       line-height: 1.6;
+      font-family: 'Pretendard', sans-serif;
       resize: none;
       outline: none;
+      padding: 0;
+    }
+
+    #memoInput::placeholder {
+      color: var(--hint-color);
+    }
+
+    #memoViewer {
+      flex: 1;
+      width: 100%;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-color);
+      overflow-y: auto;
+      white-space: pre-wrap;
       font-family: 'Pretendard', sans-serif;
-      caret-color: var(--primary);
-    }
-
-    textarea[readonly] {
-      color: var(--hint-color);
-      /* 약간 흐리게 */
-    }
-
-    textarea::placeholder {
-      color: var(--hint-color);
     }
 
     /* AI Summary Overlay */
@@ -558,6 +565,7 @@
 
         <textarea id="memoInput"
           placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(일반 저장 시 드라이브에만 백업되며, AI 업무 추출 시 엑셀까지 등록됩니다)"></textarea>
+        <div id="memoViewer" style="display:none;"></div>
       </div>
 
       <!-- Footer (Visible when writing new memo) -->
@@ -585,6 +593,18 @@
 
   <script>
     const memoInput = document.getElementById('memoInput');
+    const memoViewer = document.getElementById('memoViewer');
+
+    // 단축키 설정 (Cmd+Enter / Ctrl+Enter 로 저장)
+    memoInput.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (currentMode === 'write') {
+          saveMemo('saveFromWeb');
+        }
+      }
+    });
+
     const saveBtn = document.getElementById('saveBtn');
     const extractBtn = document.getElementById('extractBtn');
     const toast = document.getElementById('toast');
@@ -690,7 +710,9 @@
       currentMode = 'write';
       editorHeader.style.display = 'none';
       editorFooter.style.display = 'flex';
-      memoInput.readOnly = false;
+
+      memoInput.style.display = 'block';
+      memoViewer.style.display = 'none';
       memoInput.value = '';
       memoInput.focus();
       summaryOverlay.classList.remove('show');
@@ -701,9 +723,12 @@
       editorHeader.style.display = 'flex';
       editorFooter.style.display = 'none';
       viewTitle.textContent = title;
-      memoInput.readOnly = true;
-      memoInput.value = content.trim();
-      summaryOverlay.classList.remove('show'); // 혹시 열려있던 요약창 닫기
+
+      memoInput.style.display = 'none';
+      memoViewer.style.display = 'block';
+      memoViewer.textContent = content.trim();
+
+      summaryOverlay.classList.remove('show');
     }
 
     // ==========================================
@@ -792,7 +817,7 @@
         textDiv.className = 'search-result-text';
 
         // Highlight The Match
-        const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const safeQuery = query.replace(/[.*+?^${ }()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${safeQuery})`, 'gi');
         // XSS 방어 (간단한 escape 후 highlight 적용)
         let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -812,7 +837,7 @@
     }
 
     function renderSidebar(data) {
-      // data: [{ month: "2026-02", days: [ { date: "2026-02-22 (일)", memos: [ { time: "14:30 PM", content: "..." } ] } ] }]
+      // data: [{month: "2026-02", days: [ {date: "2026-02-22 (일)", memos: [ {time: "14:30 PM", content: "..." } ] } ] }]
       if (!data || data.length === 0) {
         folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
         return;
@@ -864,14 +889,7 @@
     // ==========================================
     // 4. 새 메모 저장 / 업무 추출 로직
     // ==========================================
-    memoInput.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (currentMode === 'write') {
-          saveMemo('saveFromWeb');
-        }
-      }
-    });
+    // (단축키 리스너는 initEditor() 로 이동됨)
 
     saveBtn.addEventListener('click', () => saveMemo('saveFromWeb'));
     extractBtn.addEventListener('click', () => saveMemo('extractFromWeb'));
@@ -886,7 +904,7 @@
     }
 
     function saveMemo(actionName) {
-      const text = memoInput.value.trim();
+      const text = memoInput ? memoInput.value.trim() : '';
       const userName = currentUserName;
       const isExtract = actionName === 'extractFromWeb';
 
@@ -896,14 +914,13 @@
       }
 
       if (!text) {
-        memoInput.focus();
+        if (memoInput) memoInput.focus();
         return;
       }
 
       // UI 상태 변경 (저장 중)
       saveBtn.disabled = true;
       extractBtn.disabled = true;
-      memoInput.disabled = true;
 
       const prevSaveText = saveBtn.textContent;
       const prevExtractText = extractBtn.textContent;
@@ -920,12 +937,11 @@
           extractBtn.disabled = false;
           saveBtn.textContent = prevSaveText;
           extractBtn.textContent = prevExtractText;
-          memoInput.disabled = false;
 
           if (res && res.success) {
-            memoInput.value = ""; // 입력창 초기화
+            if (memoInput) memoInput.value = ""; // 입력창 초기화
             showToast(res.message);
-            memoInput.focus();
+            if (memoInput) memoInput.focus();
 
             // 사이드바 실시간 갱신 (저장 즉시 갱신)
             loadSidebarData(userName);
@@ -938,7 +954,6 @@
           extractBtn.disabled = false;
           saveBtn.textContent = prevSaveText;
           extractBtn.textContent = prevExtractText;
-          memoInput.disabled = false;
           showToast("❌ 서버 통신 에러가 발생했습니다.", true);
           console.error("Save Error:", err);
         });
@@ -958,7 +973,7 @@
     });
 
     summarizeBtn.addEventListener('click', () => {
-      const text = memoInput.value.trim();
+      const text = memoViewer ? memoViewer.textContent.trim() : '';
       const userName = currentUserName;
 
       if (!text) return;
@@ -986,11 +1001,9 @@
         .summarizeMemoContent(text, userName);
     });
 
-    // 초기 포커스
+    // 초기 포커스 및 초기화
     window.onload = () => {
-      if (document.activeElement !== memoInput) {
-        memoInput.focus();
-      }
+      if (memoInput) memoInput.focus();
     };
   </script>
 </body>
