@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * [파일명]: slack_command.gs
- * [마지막 업데이트]: 2026년 02월 22일 00:50 (KST)
+ * [마지막 업데이트]: 2026년 02월 22일 10:20 (KST)
  * [현재 설정된 핵심 기능 현황]:
  *   1. 슬랙 '/주디' 슬래시 커맨드 수신 및 팝업 모달창 생성
  *   2. 모달창 내 '프로젝트명', '제목', '내용', '마감일', '담당자 지정' 입력 처리
@@ -79,6 +79,14 @@ function doPost(e) {
       // 멘션(app_mention) 이거나 개인 DM(message, 채널 타입이 im) 일 경우
       if (event.type === "app_mention" || (event.type === "message" && event.channel_type === "im")) {
         
+        // [NEW] 개인 DM으로 온 메시지라면 구글 드라이브 마크다운 폴더에 일자별 영구 보관 (메모장 아카이브)
+        if (event.channel_type === "im" && event.text) {
+          const senderName = fetchUserName(event.user);
+          if (typeof appendMemoToArchive === 'function') {
+            appendMemoToArchive(senderName, event.text);
+          }
+        }
+
         // 1분 대기 트리거를 없애고, 즉시 AI 처리 함수를 호출합니다!
         const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
         if (typeof processAiChatSync === 'function') {
