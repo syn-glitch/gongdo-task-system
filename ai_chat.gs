@@ -48,7 +48,8 @@ function processAiChatSync(event, ssId) {
     }
     
     // 3. Claude API 호출
-    const userQuery = event.text.replace(/<@[A-Z0-9]+>/g, "").trim(); // 멘션 태그 제거
+    const rawText = event.text || (event.message && event.message.text) || "";
+    const userQuery = rawText.replace(/<@[A-Z0-9]+>/g, "").trim(); // 멘션 태그 제거
     const aiResponse = askClaudeForChat(dbContext, userQuery);
     
     // 4. 슬랙으로 답변 전송 (slack_notification.gs 의 sendSlackMessage 사용)

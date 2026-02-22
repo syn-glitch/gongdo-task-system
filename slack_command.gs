@@ -83,7 +83,8 @@ function doPost(e) {
         if (event.channel_type === "im" && event.text) {
           const senderName = fetchUserName(event.user);
           if (typeof appendMemoToArchive === 'function') {
-            appendMemoToArchive(senderName, event.text);
+            // [디버그] userId를 같이 넘겨서 슬랙으로 실시간 성공여부 브리핑
+            appendMemoToArchive(senderName, event.text, event.user);
           }
         }
 

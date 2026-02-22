@@ -1,9 +1,9 @@
 // [🚨 복구용] 이 코드를 전체 복사해서 GAS의 'Setup Structure.gs'에 그대로 덮어쓰기 하세요!
 /**
- * [코드 버전]: v1.5 (디버깅 메뉴 추가됨)
+ * [코드 버전]: v1.6 (드라이브 권한 승인 메뉴 추가)
  * [기능 설명]: 1. 시트 구조 생성 (setupDatabase)
  *             2. 드롭다운 메뉴 적용 (applyValidations)
- *             3. 메뉴바 통합 관리 (onOpen - 여기에 디버깅 버튼 추가됨!)
+ *             3. 메뉴바 통합 관리 (onOpen - 권한 승인용 메뉴 추가됨)
  */
 
 const DB_CONFIG = {
@@ -38,6 +38,8 @@ function onOpen() {
     .addSeparator()
     .addItem('🔔 슬랙 연결 테스트', 'testFirstProjectAlert')
     .addItem('🐞 현재 행 강제 알림 (디버깅)', 'debugCurrentRow')
+    .addSeparator()
+    .addItem('🔐 (최종) 구글 드라이브 권한 1초만에 뚫기', 'forceDriveAuth')
     .addToUi();
 }
 
