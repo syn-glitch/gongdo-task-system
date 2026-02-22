@@ -163,6 +163,73 @@
       text-align: center;
     }
 
+    /* Search UI */
+    .sidebar-search {
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+
+    .sidebar-search input {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text-color);
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+
+    .sidebar-search input:focus {
+      border-color: var(--primary);
+    }
+
+    .sidebar-search input::placeholder {
+      color: var(--hint-color);
+    }
+
+    .search-result-item {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--sidebar-border);
+      cursor: pointer;
+    }
+
+    .search-result-item:hover {
+      background-color: var(--folder-hover);
+    }
+
+    .search-result-date {
+      font-size: 12px;
+      color: var(--primary);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .search-result-text {
+      font-size: 13px;
+      color: var(--text-color);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      /* 최대 3줄까지만 보이기 */
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .highlight {
+      background-color: rgba(187, 134, 252, 0.4);
+      color: var(--text-color);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    html[data-theme="light"] .highlight {
+      background-color: rgba(98, 0, 238, 0.2);
+    }
+
     /* Main Content */
     .main-content {
       flex: 1;
@@ -427,6 +494,9 @@
         <h3>내 폴더</h3>
         <button id="newMemoBtn" class="new-btn">+ 새 메모</button>
       </div>
+      <div class="sidebar-search">
+        <input type="text" id="searchInput" placeholder="키워드/태그 검색 (Enter)" autocomplete="off" />
+      </div>
       <div class="sidebar-content" id="folderList">
         <div class="loading-text">사용자를 선택하면 기록이 나타납니다.</div>
       </div>
@@ -507,6 +577,8 @@
     // State Variable
     let currentMode = 'write'; // 'write' or 'read'
     let currentHtmlTheme = 'dark';
+    let cachedSidebarData = null; // 검색 취소 시 복구할 원래 폴더 리스트 데이터
+    const searchInput = document.getElementById('searchInput');
 
     // ==========================================
     // 0. 테마 관리 (Light / Dark)
@@ -570,20 +642,108 @@
     }
 
     // ==========================================
-    // 3. 사이드바 렌더링
+    // 3. 사이드바 렌더링 및 검색 핸들링
     // ==========================================
     function loadSidebarData(userName) {
       folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
+      if (searchInput) searchInput.value = ''; // 초기화
 
       google.script.run
         .withSuccessHandler((data) => {
-          renderSidebar(data);
+          try {
+            cachedSidebarData = data;
+            renderSidebar(data);
+          } catch (err) {
+            console.error("Render Error:", err);
+            folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">사이드바 렌더링 중 오류가 발생했습니다.</div>';
+          }
         })
         .withFailureHandler((err) => {
-          console.error(err);
-          folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.</div>';
+          console.error("Backend Error:", err);
+          folderList.innerHTML = `<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.<br>(${err.message})</div>`;
         })
         .getArchivedMemos(userName); // Backend 함수
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const query = e.target.value.trim();
+          const userName = userSelect.value;
+          if (!userName) return;
+
+          if (query === '') {
+            renderSidebar(cachedSidebarData);
+            return;
+          }
+
+          // 검색 모드 진입
+          folderList.innerHTML = '<div class="loading-text">검색 중... 🔍</div>';
+          google.script.run
+            .withSuccessHandler((results) => {
+              renderSearchResults(results, query);
+            })
+            .withFailureHandler((err) => {
+              folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">검색 실패</div>';
+              console.error(err);
+            })
+            .searchArchivedMemos(userName, query);
+        }
+      });
+    }
+
+    function renderSearchResults(results, query) {
+      folderList.innerHTML = '';
+
+      const clearBtn = document.createElement('div');
+      clearBtn.className = 'loading-text';
+      clearBtn.style.cursor = 'pointer';
+      clearBtn.style.color = 'var(--primary)';
+      clearBtn.style.fontWeight = '500';
+      clearBtn.textContent = '← 폴더 목록으로 돌아가기';
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        renderSidebar(cachedSidebarData);
+      });
+      folderList.appendChild(clearBtn);
+
+      if (!results || results.length === 0) {
+        const emptyInfo = document.createElement('div');
+        emptyInfo.className = 'loading-text';
+        emptyInfo.textContent = '검색 결과가 없습니다.';
+        folderList.appendChild(emptyInfo);
+        return;
+      }
+
+      results.forEach(res => {
+        const d = document.createElement('div');
+        d.className = 'search-result-item';
+
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'search-result-date';
+        dateDiv.textContent = `${res.date} ${res.time}`;
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'search-result-text';
+
+        // Highlight The Match
+        const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${safeQuery})`, 'gi');
+        // XSS 방어 (간단한 escape 후 highlight 적용)
+        let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
+        textDiv.innerHTML = escapedContent;
+
+        d.appendChild(dateDiv);
+        d.appendChild(textDiv);
+
+        d.addEventListener('click', () => {
+          // 검색된 원문을 클릭하면 우측 뷰어에 보여줌
+          setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`);
+        });
+
+        folderList.appendChild(d);
+      });
     }
 
     function renderSidebar(data) {
@@ -690,7 +850,7 @@
         saveBtn.textContent = "저장 중...";
       }
 
-      google.script.run
+      const runner = google.script.run
         .withSuccessHandler((res) => {
           saveBtn.disabled = false;
           extractBtn.disabled = false;
@@ -698,7 +858,7 @@
           extractBtn.textContent = prevExtractText;
           memoInput.disabled = false;
 
-          if (res.success) {
+          if (res && res.success) {
             memoInput.value = ""; // 입력창 초기화
             showToast(res.message);
             memoInput.focus();
@@ -706,7 +866,7 @@
             // 사이드바 실시간 갱신 (저장 즉시 갱신)
             loadSidebarData(userName);
           } else {
-            showToast("❌ 에러: " + (res.message || "알 수 없는 에러"), true);
+            showToast("❌ 에러: " + (res ? res.message : "알 수 없는 에러"), true);
           }
         })
         .withFailureHandler((err) => {
@@ -716,9 +876,14 @@
           extractBtn.textContent = prevExtractText;
           memoInput.disabled = false;
           showToast("❌ 서버 통신 에러가 발생했습니다.", true);
-          console.error(err);
-        })
-      [actionName](userName, text);
+          console.error("Save Error:", err);
+        });
+
+      if (actionName === 'saveFromWeb') {
+        runner.saveFromWeb(userName, text);
+      } else {
+        runner.extractFromWeb(userName, text);
+      }
     }
 
     // ==========================================
