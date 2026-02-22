@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #121212;
+      --text-color: #E0E0E0;
+      --hint-color: #666666;
+      --primary: #bb86fc;
+      --surface: #1e1e1e;
+    }
+    
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Pretendard', sans-serif;
+      overflow: hidden; /* No scrollbars */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 16px 24px;
+      height: 40px;
+    }
+
+    .user-select {
+      background: var(--surface);
+      color: var(--text-color);
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .user-select:focus {
+      border-color: var(--primary);
+    }
+
+    /* Main Editor */
+    .editor-container {
+      flex: 1;
+      padding: 0 40px 40px 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 20px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      font-family: 'Pretendard', sans-serif;
+      caret-color: var(--primary);
+    }
+    textarea::placeholder {
+      color: var(--hint-color);
+    }
+
+    /* Footer / Keyboard Hint */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 40px 20px 40px;
+      color: var(--hint-color);
+      font-size: 13px;
+    }
+
+    .save-btn {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .save-btn:hover {
+      opacity: 0.9;
+    }
+    .save-btn:active {
+      transform: scale(0.97);
+    }
+    .save-btn:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <select id="userSelect" class="user-select">
+      <option value="" disabled selected>작성자 선택</option>
+      <option value="송용남">송용남</option>
+      <option value="이지은">이지은</option>
+      <option value="김개발">김개발</option>
+    </select>
+  </div>
+
+  <div class="editor-container">
+    <textarea id="memoInput" placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(저장 후 구글 드라이브에 안전하게 보관됩니다)"></textarea>
+  </div>
+
+  <div class="footer">
+    <span class="hint">저장: Cmd + Enter (또는 Ctrl + Enter)</span>
+    <button id="saveBtn" class="save-btn">아카이브에 저장</button>
+  </div>
+
+  <div id="toast" class="toast">
+    <div class="status-dot"></div>
+    <span id="toastMsg">저장되었습니다.</span>
+  </div>
+
+  <script>
+    const memoInput = document.getElementById('memoInput');
+    const userSelect = document.getElementById('userSelect');
+    const saveBtn = document.getElementById('saveBtn');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // 1. 유저 정보 로컬 스토리지 연동 (이름 기억)
+    const savedUser = localStorage.getItem('judy_note_user');
+    if (savedUser) {
+      userSelect.value = savedUser;
+    }
+
+    userSelect.addEventListener('change', (e) => {
+      localStorage.setItem('judy_note_user', e.target.value);
+      memoInput.focus();
+    });
+
+    // 2. 단축키 (Cmd + Enter)
+    memoInput.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveMemo();
+      }
+    });
+
+    // 3. 우측 하단 버튼 클릭
+    saveBtn.addEventListener('click', saveMemo);
+
+    function showToast(message, isError = false) {
+      toastMsg.textContent = message;
+      toast.querySelector('.status-dot').style.background = isError ? '#f44336' : '#4caf50';
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function saveMemo() {
+      const text = memoInput.value.trim();
+      const userName = userSelect.value;
+
+      if (!userName) {
+        showToast("우측 상단에서 작성자를 먼저 선택해주세요!", true);
+        userSelect.focus();
+        return;
+      }
+
+      if (!text) {
+        memoInput.focus();
+        return;
+      }
+
+      // UI 상태 변경 (저장 중)
+      saveBtn.disabled = true;
+      saveBtn.textContent = "저장 중...";
+      memoInput.disabled = true;
+
+      // Google Apps Script 백엔드 통신: saveFromWeb 호출
+      google.script.run
+        .withSuccessHandler((res) => {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "아카이브에 저장";
+          memoInput.disabled = false;
+          
+          if (res.success) {
+            memoInput.value = ""; // 입력창 초기화
+            showToast("✨ 드라이브 아카이브에 성공적으로 백업되었습니다!");
+            memoInput.focus();
+          } else {
+            showToast("❌ 에러: " + (res.message || "알 수 없는 에러"), true);
+          }
+        })
+        .withFailureHandler((err) => {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "아카이브에 저장";
+          memoInput.disabled = false;
+          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+          console.error(err);
+        })
+        .saveFromWeb(userName, text);
+    }
+
+    // 초기 포커스
+    window.onload = () => {
+      memoInput.focus();
+    };
+  </script>
+</body>
+</html>
