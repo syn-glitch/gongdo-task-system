@@ -39,3 +39,11 @@
 ## 6단계: 대시보드 및 최적화 <!-- id: 22 -->
 - [x] 구글 스프레드시트 내 시각적 대시보드 및 차트 세팅 가이드 작성 <!-- id: 23 -->
 - [x] 매일 아침 전송되는 "모닝 브리핑" 자동화 코드 및 트리거 스위치 구현 <!-- id: 24 -->
+
+## 7단계: 메모장 (Judy Note) UI/UX 고도화 및 AI 요약
+- [x] `judy_note.html` CSS 구조 개편 (CSS Variables 도입 및 Light Mode/Dark Mode 지원)
+- [x] 좌측 사이드바(폴더 구조) 및 우측 에디터 영역 2단 레이아웃 구현
+- [x] `drive_archive.gs`에 아카이브 트리 파싱 백엔드 함수 (`getArchivedMemos`) 추가
+- [x] 프론트엔드 연동 및 사이드바 내 폴더 목록 클릭 이벤트 구현 (읽기 모드 전환)
+- [x] 메모 조회 영역 상단에 AI 요약 버튼 및 UI 오버레이 구현
+- [x] `web_app.gs` 및 AI 로직 (`summarizeMemoContent`) 추가

@@ -1,8 +1,9 @@
 /**
  * ============================================================================
  * [파일명]: drive_archive.gs
- * [마지막 업데이트]: 2026년 02월 22일 10:15 (KST)
+ * [마지막 업데이트]: 2026-02-22 13:21 (KST)
  * [기능]: 슬랙 DM 텍스트를 구글 드라이브의 유저별/월별 마크다운(.md) 파일에 Append
+ * [최근 개편]: 저장 로직 외에 과거 아카이브 문서를 트리형 JSON으로 변환하는 getArchivedMemos 함수 추가
  * ============================================================================
  */
 
@@ -123,4 +124,83 @@ function forceDriveAuth() {
   tempFolder.setTrashed(true); 
   
   SpreadsheetApp.getUi().alert("✅ 완벽한 드라이브 쓰기/생성 권한 승인이 완료되었습니다!\n이제 앱스 스크립트에서 봇을 '새 버전'으로 딱 한 번만 더 배포해 주세요.");
+}
+
+/**
+ * 프론트엔드에서 사용자 선택 시 기존 메모들을 폴더 트리 구조로 파싱해 반환합니다.
+ */
+function getArchivedMemos(userName) {
+  if (!ARCHIVE_ROOT_FOLDER_ID || ARCHIVE_ROOT_FOLDER_ID === "여기에_루트_폴더_ID를_넣어주세요") {
+    return [];
+  }
+  
+  try {
+    const rootFolder = DriveApp.getFolderById(ARCHIVE_ROOT_FOLDER_ID);
+    const folderIter = rootFolder.getFoldersByName(userName);
+    if (!folderIter.hasNext()) return [];
+    
+    const userFolder = folderIter.next();
+    const fileIterAll = userFolder.getFiles();
+    const result = [];
+    
+    while(fileIterAll.hasNext()) {
+      const file = fileIterAll.next();
+      const fileName = file.getName();
+      if (!fileName.endsWith("_업무일지.md")) continue;
+      
+      const monthPrefix = fileName.replace("_업무일지.md", ""); // e.g. "2026-02"
+      const content = file.getBlob().getDataAsString();
+      
+      const blocks = content.split(/\n## /g);
+      const days = [];
+      
+      for (let i = 1; i < blocks.length; i++) {
+         const dayBlock = blocks[i];
+         const lines = dayBlock.split('\n');
+         const dateStr = lines[0].trim();
+         const memos = [];
+         
+         const memoChunks = dayBlock.split(/\n- \*\*\[/g);
+         for (let j = 1; j < memoChunks.length; j++) {
+            const chunk = memoChunks[j];
+            const endBracketIndex = chunk.indexOf(']**');
+            if (endBracketIndex === -1) continue;
+            
+            const timeStr = chunk.substring(0, endBracketIndex).trim();
+            const rawContent = chunk.substring(endBracketIndex + 3);
+            
+            const cleanContent = rawContent.split('\n').map(l => {
+                if (l.startsWith('  ')) return l.substring(2);
+                return l;
+            }).join('\n').trim();
+            
+            if (cleanContent) {
+              memos.push({ time: timeStr, content: cleanContent });
+            }
+         }
+         
+         if (memos.length > 0) {
+            days.push({
+               date: dateStr,
+               memos: memos.reverse() // 해당 날짜 내림차순(최근게 위로) vs 오름차순(기록순)? 일단 여기선 시간 역순
+            });
+         }
+      }
+      
+      if (days.length > 0) {
+        result.push({
+          month: monthPrefix,
+          days: days.reverse() // 최근 날짜가 위로 오도록
+        });
+      }
+    }
+    
+    // 월별로 가장 최근 달이 위로 오도록 정렬
+    result.sort((a, b) => b.month.localeCompare(a.month));
+    
+    return result;
+  } catch(e) {
+    console.error("아카이브 읽기 실패", e);
+    return [];
+  }
 }

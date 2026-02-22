@@ -1,20 +1,50 @@
 <!DOCTYPE html>
-<html>
+<!-- 
+  * [파일명]: judy_note.html
+  * [마지막 업데이트]: 2026-02-22 13:21 (KST)
+  * [기능]: 웹 기반 메모장 UI. 구글 드라이브 폴더, 다크/라이트 테마 토글, 읽기/쓰기 모드, AI 팝업 요약 기능 포함 
+-->
+<html data-theme="dark">
+
 <head>
   <base target="_top">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
+    /* CSS Variables for Theming */
+    :root[data-theme="dark"] {
       --bg-color: #121212;
+      --sidebar-bg: #1e1e1e;
+      --sidebar-border: #333333;
       --text-color: #E0E0E0;
-      --hint-color: #666666;
+      --hint-color: #888888;
       --primary: #bb86fc;
-      --surface: #1e1e1e;
+      --surface: #2c2c2c;
+      --folder-hover: #3a3a3a;
+      --btn-bg: #333333;
+      --btn-text: #ffffff;
+      --toast-bg: #333333;
+      --toast-text: #ffffff;
     }
-    
-    body, html {
+
+    :root[data-theme="light"] {
+      --bg-color: #f9f9f9;
+      --sidebar-bg: #f0f0f0;
+      --sidebar-border: #e0e0e0;
+      --text-color: #212121;
+      --hint-color: #666666;
+      --primary: #6200ee;
+      --surface: #ffffff;
+      --folder-hover: #e0e0e0;
+      --btn-bg: #e0e0e0;
+      --btn-text: #212121;
+      --toast-bg: #323232;
+      --toast-text: #ffffff;
+    }
+
+    body,
+    html {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -22,24 +52,158 @@
       background-color: var(--bg-color);
       color: var(--text-color);
       font-family: 'Pretendard', sans-serif;
-      overflow: hidden; /* No scrollbars */
+      overflow: hidden;
+      display: flex;
+    }
+
+    .app-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background-color: var(--sidebar-bg);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+
+    .sidebar-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .new-btn {
+      background: transparent;
+      border: 1px solid var(--sidebar-border);
+      color: var(--text-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .new-btn:hover {
+      background: var(--surface);
+      border-color: var(--primary);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0;
+    }
+
+    /* Folder accodion styles */
+    .folder-item {
       display: flex;
       flex-direction: column;
     }
 
-    /* Top Bar */
+    .folder-title {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .folder-title:hover {
+      background-color: var(--folder-hover);
+    }
+
+    .folder-icon {
+      font-size: 16px;
+    }
+
+    .folder-children {
+      display: none;
+      flex-direction: column;
+      padding-left: 20px;
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    .folder-item.open .folder-children {
+      display: flex;
+    }
+
+    .file-item {
+      padding: 8px 20px 8px 30px;
+      font-size: 13px;
+      color: var(--text-color);
+      cursor: pointer;
+    }
+
+    .file-item:hover {
+      background-color: var(--folder-hover);
+      color: var(--primary);
+    }
+
+    .loading-text {
+      padding: 20px;
+      font-size: 13px;
+      color: var(--hint-color);
+      text-align: center;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-color);
+      transition: background-color 0.3s;
+    }
+
     .top-bar {
       display: flex;
       justify-content: flex-end;
       align-items: center;
       padding: 16px 24px;
       height: 40px;
+      gap: 12px;
+    }
+
+    .theme-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      outline: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+
+    .theme-btn:hover {
+      background-color: var(--surface);
     }
 
     .user-select {
       background: var(--surface);
       color: var(--text-color);
-      border: 1px solid #333;
+      border: 1px solid var(--sidebar-border);
       border-radius: 6px;
       padding: 6px 12px;
       font-size: 14px;
@@ -47,16 +211,34 @@
       outline: none;
       transition: border-color 0.2s;
     }
+
     .user-select:focus {
       border-color: var(--primary);
+    }
+
+    /* Editor View Header */
+    .editor-header {
+      padding: 0 40px 10px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid transparent;
+    }
+
+    .editor-header h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-color);
     }
 
     /* Main Editor */
     .editor-container {
       flex: 1;
-      padding: 0 40px 40px 40px;
+      padding: 20px 40px 40px 40px;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     textarea {
@@ -64,15 +246,70 @@
       background: transparent;
       border: none;
       color: var(--text-color);
-      font-size: 20px;
+      font-size: 18px;
       line-height: 1.6;
       resize: none;
       outline: none;
       font-family: 'Pretendard', sans-serif;
       caret-color: var(--primary);
     }
+
+    textarea[readonly] {
+      color: var(--hint-color);
+      /* 약간 흐리게 */
+    }
+
     textarea::placeholder {
       color: var(--hint-color);
+    }
+
+    /* AI Summary Overlay */
+    .summary-overlay {
+      position: absolute;
+      top: 20px;
+      left: 40px;
+      right: 40px;
+      background: var(--surface);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(-10px);
+    }
+
+    .summary-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .summary-title {
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .close-summary {
+      background: transparent;
+      border: none;
+      color: var(--hint-color);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .summary-content {
+      font-size: 15px;
+      line-height: 1.5;
+      white-space: pre-wrap;
     }
 
     /* Footer / Keyboard Hint */
@@ -85,27 +322,66 @@
       font-size: 13px;
     }
 
-    .save-btn {
-      background: var(--primary);
-      color: #000;
+    .footer-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .save-btn,
+    .action-btn {
+      background: var(--btn-bg);
+      color: var(--btn-text);
       border: none;
       border-radius: 20px;
-      padding: 8px 24px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .extract-btn,
+    .action-btn-primary {
+      background: linear-gradient(135deg, #bb86fc, #3700b3);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 20px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 12px rgba(187, 134, 252, 0.3);
     }
-    .save-btn:hover {
+
+    html[data-theme="light"] .extract-btn,
+    html[data-theme="light"] .action-btn-primary {
+      background: linear-gradient(135deg, #6200ee, #3700b3);
+      box-shadow: 0 4px 12px rgba(98, 0, 238, 0.3);
+    }
+
+    .save-btn:hover,
+    .extract-btn:hover,
+    .action-btn:hover,
+    .action-btn-primary:hover {
       opacity: 0.9;
     }
-    .save-btn:active {
+
+    .save-btn:active,
+    .extract-btn:active,
+    .action-btn:active,
+    .action-btn-primary:active {
       transform: scale(0.97);
     }
-    .save-btn:disabled {
-      background: #444;
-      color: #888;
+
+    .save-btn:disabled,
+    .extract-btn:disabled,
+    .action-btn:disabled,
+    .action-btn-primary:disabled {
+      background: var(--btn-bg);
+      color: var(--hint-color);
       cursor: not-allowed;
+      box-shadow: none;
+      opacity: 0.6;
     }
 
     /* Toast Notification */
@@ -114,51 +390,93 @@
       bottom: 40px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      background: #333;
-      color: #fff;
+      background: var(--toast-bg);
+      color: var(--toast-text);
       padding: 12px 24px;
       border-radius: 30px;
       font-size: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       z-index: 1000;
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: pre-wrap;
     }
+
     .toast.show {
       transform: translateX(-50%) translateY(0);
     }
+
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: #4caf50;
+      flex-shrink: 0;
     }
   </style>
 </head>
+
 <body>
 
-  <div class="top-bar">
-    <select id="userSelect" class="user-select">
-      <option value="" disabled selected>작성자 선택</option>
-      <option value="송용남">송용남</option>
-      <option value="이지은">이지은</option>
-      <option value="김개발">김개발</option>
-    </select>
-  </div>
+  <div class="app-container">
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h3>내 폴더</h3>
+        <button id="newMemoBtn" class="new-btn">+ 새 메모</button>
+      </div>
+      <div class="sidebar-content" id="folderList">
+        <div class="loading-text">사용자를 선택하면 기록이 나타납니다.</div>
+      </div>
+    </div>
 
-  <div class="editor-container">
-    <textarea id="memoInput" placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(저장 후 구글 드라이브에 안전하게 보관됩니다)"></textarea>
-  </div>
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="top-bar">
+        <button id="themeToggleBtn" class="theme-btn" title="테마 변경">☀️</button>
+        <select id="userSelect" class="user-select">
+          <option value="" disabled selected>작성자 선택</option>
+          <option value="송용남">송용남</option>
+          <option value="이지은">이지은</option>
+          <option value="김개발">김개발</option>
+        </select>
+      </div>
 
-  <div class="footer">
-    <span class="hint">저장: Cmd + Enter (또는 Ctrl + Enter)</span>
-    <button id="saveBtn" class="save-btn">아카이브에 저장</button>
+      <!-- Editor Header (Visible when viewing past memo) -->
+      <div class="editor-header" id="editorHeader" style="display: none;">
+        <h2 id="viewTitle">읽기 모드</h2>
+        <button id="summarizeBtn" class="action-btn-primary">✨ AI 내용 요약</button>
+      </div>
+
+      <div class="editor-container">
+        <!-- AI Summary Overlay -->
+        <div class="summary-overlay" id="summaryOverlay">
+          <div class="summary-title">
+            <span>✨ AI 요약 결과</span>
+            <button class="close-summary" id="closeSummaryBtn">✕</button>
+          </div>
+          <div class="summary-content" id="summaryContent">요약된 내용이 여기에 나타납니다.</div>
+        </div>
+
+        <textarea id="memoInput"
+          placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(일반 저장 시 드라이브에만 백업되며, AI 업무 추출 시 엑셀까지 등록됩니다)"></textarea>
+      </div>
+
+      <!-- Footer (Visible when writing new memo) -->
+      <div class="footer" id="editorFooter">
+        <span class="hint">저장: Cmd + Enter (또는 Ctrl + Enter)</span>
+        <div class="footer-buttons">
+          <button id="saveBtn" class="save-btn">일반 저장</button>
+          <button id="extractBtn" class="extract-btn">✨ AI 업무 추출</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast">
-    <div class="status-dot"></div>
+    <div class="status-dot" id="toastStatus"></div>
     <span id="toastMsg">저장되었습니다.</span>
   </div>
 
@@ -166,43 +484,186 @@
     const memoInput = document.getElementById('memoInput');
     const userSelect = document.getElementById('userSelect');
     const saveBtn = document.getElementById('saveBtn');
+    const extractBtn = document.getElementById('extractBtn');
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
+    const toastStatus = document.getElementById('toastStatus');
 
-    // 1. 유저 정보 로컬 스토리지 연동 (이름 기억)
+    // Theme Elements
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const htmlEl = document.documentElement;
+
+    // Layout Elements
+    const folderList = document.getElementById('folderList');
+    const newMemoBtn = document.getElementById('newMemoBtn');
+    const editorHeader = document.getElementById('editorHeader');
+    const editorFooter = document.getElementById('editorFooter');
+    const viewTitle = document.getElementById('viewTitle');
+    const summarizeBtn = document.getElementById('summarizeBtn');
+    const summaryOverlay = document.getElementById('summaryOverlay');
+    const summaryContent = document.getElementById('summaryContent');
+    const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+
+    // State Variable
+    let currentMode = 'write'; // 'write' or 'read'
+    let currentHtmlTheme = 'dark';
+
+    // ==========================================
+    // 0. 테마 관리 (Light / Dark)
+    // ==========================================
+    const savedTheme = localStorage.getItem('judy_note_theme') || 'dark';
+    setTheme(savedTheme);
+
+    themeToggleBtn.addEventListener('click', () => {
+      const newTheme = currentHtmlTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+    });
+
+    function setTheme(theme) {
+      currentHtmlTheme = theme;
+      htmlEl.setAttribute('data-theme', theme);
+      themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('judy_note_theme', theme);
+    }
+
+    // ==========================================
+    // 1. 유저 정보 및 사이드바 연동
+    // ==========================================
     const savedUser = localStorage.getItem('judy_note_user');
     if (savedUser) {
       userSelect.value = savedUser;
+      loadSidebarData(savedUser);
     }
 
     userSelect.addEventListener('change', (e) => {
-      localStorage.setItem('judy_note_user', e.target.value);
-      memoInput.focus();
+      const userName = e.target.value;
+      localStorage.setItem('judy_note_user', userName);
+      setToWriteMode(); // 작성 모드로 리셋
+      loadSidebarData(userName);
     });
 
-    // 2. 단축키 (Cmd + Enter)
+    // ==========================================
+    // 2. 모드 전환 (Write <-> Read)
+    // ==========================================
+    newMemoBtn.addEventListener('click', () => {
+      setToWriteMode();
+    });
+
+    function setToWriteMode() {
+      currentMode = 'write';
+      editorHeader.style.display = 'none';
+      editorFooter.style.display = 'flex';
+      memoInput.readOnly = false;
+      memoInput.value = '';
+      memoInput.focus();
+      summaryOverlay.classList.remove('show');
+    }
+
+    function setToReadMode(title, content) {
+      currentMode = 'read';
+      editorHeader.style.display = 'flex';
+      editorFooter.style.display = 'none';
+      viewTitle.textContent = title;
+      memoInput.readOnly = true;
+      memoInput.value = content.trim();
+      summaryOverlay.classList.remove('show'); // 혹시 열려있던 요약창 닫기
+    }
+
+    // ==========================================
+    // 3. 사이드바 렌더링
+    // ==========================================
+    function loadSidebarData(userName) {
+      folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
+
+      google.script.run
+        .withSuccessHandler((data) => {
+          renderSidebar(data);
+        })
+        .withFailureHandler((err) => {
+          console.error(err);
+          folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.</div>';
+        })
+        .getArchivedMemos(userName); // Backend 함수
+    }
+
+    function renderSidebar(data) {
+      // data: [{ month: "2026-02", days: [ { date: "2026-02-22 (일)", memos: [ { time: "14:30 PM", content: "..." } ] } ] }]
+      if (!data || data.length === 0) {
+        folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
+        return;
+      }
+
+      folderList.innerHTML = '';
+      data.forEach(monthData => {
+        const folderDiv = document.createElement('div');
+        folderDiv.className = 'folder-item';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'folder-title';
+        titleDiv.innerHTML = `<span class="folder-icon">📁</span> ${monthData.month} 업무일지`;
+
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'folder-children';
+
+        monthData.days.forEach(dayData => {
+          // 하위 폴더: 날짜별 묶음 (또는 파일 리스트)
+          const fileDiv = document.createElement('div');
+          fileDiv.className = 'file-item';
+          fileDiv.textContent = `📄 ${dayData.date}`;
+          fileDiv.addEventListener('click', () => {
+            // 해당 날짜 클릭 시 모든 메모 취합해서 읽기 모드로 진입
+            let combinedContent = "";
+            dayData.memos.forEach(m => {
+              combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`;
+            });
+            setToReadMode(dayData.date, combinedContent);
+          });
+          childrenDiv.appendChild(fileDiv);
+        });
+
+        titleDiv.addEventListener('click', () => {
+          folderDiv.classList.toggle('open');
+        });
+
+        folderDiv.appendChild(titleDiv);
+        folderDiv.appendChild(childrenDiv);
+        folderList.appendChild(folderDiv);
+      });
+
+      // 첫 번째 폴더는 기본 열어두기
+      if (document.querySelector('.folder-item')) {
+        document.querySelector('.folder-item').classList.add('open');
+      }
+    }
+
+    // ==========================================
+    // 4. 새 메모 저장 / 업무 추출 로직
+    // ==========================================
     memoInput.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
-        saveMemo();
+        if (currentMode === 'write') {
+          saveMemo('saveFromWeb');
+        }
       }
     });
 
-    // 3. 우측 하단 버튼 클릭
-    saveBtn.addEventListener('click', saveMemo);
+    saveBtn.addEventListener('click', () => saveMemo('saveFromWeb'));
+    extractBtn.addEventListener('click', () => saveMemo('extractFromWeb'));
 
     function showToast(message, isError = false) {
       toastMsg.textContent = message;
-      toast.querySelector('.status-dot').style.background = isError ? '#f44336' : '#4caf50';
+      toastStatus.style.background = isError ? '#f44336' : '#4caf50';
       toast.classList.add('show');
       setTimeout(() => {
         toast.classList.remove('show');
-      }, 3000);
+      }, 5000);
     }
 
-    function saveMemo() {
+    function saveMemo(actionName) {
       const text = memoInput.value.trim();
       const userName = userSelect.value;
+      const isExtract = actionName === 'extractFromWeb';
 
       if (!userName) {
         showToast("우측 상단에서 작성자를 먼저 선택해주세요!", true);
@@ -217,38 +678,92 @@
 
       // UI 상태 변경 (저장 중)
       saveBtn.disabled = true;
-      saveBtn.textContent = "저장 중...";
+      extractBtn.disabled = true;
       memoInput.disabled = true;
 
-      // Google Apps Script 백엔드 통신: saveFromWeb 호출
+      const prevSaveText = saveBtn.textContent;
+      const prevExtractText = extractBtn.textContent;
+
+      if (isExtract) {
+        extractBtn.textContent = "AI가 분석 중입니다... 🪄";
+      } else {
+        saveBtn.textContent = "저장 중...";
+      }
+
       google.script.run
         .withSuccessHandler((res) => {
           saveBtn.disabled = false;
-          saveBtn.textContent = "아카이브에 저장";
+          extractBtn.disabled = false;
+          saveBtn.textContent = prevSaveText;
+          extractBtn.textContent = prevExtractText;
           memoInput.disabled = false;
-          
+
           if (res.success) {
             memoInput.value = ""; // 입력창 초기화
-            showToast("✨ 드라이브 아카이브에 성공적으로 백업되었습니다!");
+            showToast(res.message);
             memoInput.focus();
+
+            // 사이드바 실시간 갱신 (저장 즉시 갱신)
+            loadSidebarData(userName);
           } else {
             showToast("❌ 에러: " + (res.message || "알 수 없는 에러"), true);
           }
         })
         .withFailureHandler((err) => {
           saveBtn.disabled = false;
-          saveBtn.textContent = "아카이브에 저장";
+          extractBtn.disabled = false;
+          saveBtn.textContent = prevSaveText;
+          extractBtn.textContent = prevExtractText;
           memoInput.disabled = false;
           showToast("❌ 서버 통신 에러가 발생했습니다.", true);
           console.error(err);
         })
-        .saveFromWeb(userName, text);
+      [actionName](userName, text);
     }
+
+    // ==========================================
+    // 5. 모달 형태 AI 요약
+    // ==========================================
+    closeSummaryBtn.addEventListener('click', () => {
+      summaryOverlay.classList.remove('show');
+    });
+
+    summarizeBtn.addEventListener('click', () => {
+      const text = memoInput.value.trim();
+      const userName = userSelect.value;
+
+      if (!text) return;
+
+      summarizeBtn.disabled = true;
+      summarizeBtn.textContent = "요약 중... 🪄";
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          summarizeBtn.disabled = false;
+          summarizeBtn.textContent = "✨ AI 내용 요약";
+
+          if (res.success) {
+            summaryContent.textContent = res.summary;
+            summaryOverlay.classList.add('show');
+          } else {
+            showToast("❌ 요약 실패: " + res.message, true);
+          }
+        })
+        .withFailureHandler((err) => {
+          summarizeBtn.disabled = false;
+          summarizeBtn.textContent = "✨ AI 내용 요약";
+          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+        })
+        .summarizeMemoContent(text, userName);
+    });
 
     // 초기 포커스
     window.onload = () => {
-      memoInput.focus();
+      if (document.activeElement !== userSelect) {
+        memoInput.focus();
+      }
     };
   </script>
 </body>
+
 </html>
