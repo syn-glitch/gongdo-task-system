@@ -40,6 +40,44 @@ function doPost(e) {
   } 
   // 2. Slash Command (/주디)
   else if (e.parameter.command === '/주디') {
+    const commandText = e.parameter.text ? e.parameter.text.trim() : "";
+    
+    if (commandText === '가이드' || commandText === '도움말') {
+      const guideUrl = "https://github.com/syn-glitch/gongdo-task-system/blob/main/%EC%B2%AB_AI_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8_%ED%8C%80%EC%9B%90_%EC%A3%BC%EB%94%94_%EA%B0%80%EC%9D%B4%EB%93%9C.md";
+      
+      const payload = {
+        "response_type": "ephemeral",
+        "text": "👩‍💻 첫 AI 팀원 주디(Judy) 활용 가이드입니다!",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "👩‍💻 *첫 AI 팀원 주디(Judy) 활용 가이드입니다!*\n\n💡 *핵심 명령어*\n• `/주디` : 새로운 업무를 등록합니다.\n• `/주디 내업무` : 구글 시트에 등록된 내 할 일을 확인합니다.\n• 채팅창에 `노트` 입력 : 내 전용 메모장 접속 링크를 발급받습니다.\n• 메시지 우측 `[점 3개]` ➔ `[주디 - 업무로 가져오기]`\n\n📖 더 자세한 전체 기능과 사용법은 아래 버튼을 눌러 확인해 주세요!"
+            }
+          },
+          {
+            "type": "actions",
+            "elements": [
+              {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "📝 주디 상세 가이드 문서 보기",
+                  "emoji": true
+                },
+                "url": guideUrl,
+                "style": "primary"
+              }
+            ]
+          }
+        ]
+      };
+      
+      return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 그 외는 새 업무 등록 모달 띄우기
     return openTaskModal(e.parameter.trigger_id);
   }
   
