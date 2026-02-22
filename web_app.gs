@@ -10,9 +10,37 @@
  */
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile('judy_note');
+  
+  // GAS 샌드박스 특성상 프론트엔드에서 window.location.search를 읽을 수 없으므로,
+  // 백엔드에서 받은 파라미터를 HTML 템플릿 변수로 주입해줍니다.
+  template.token = e.parameter.token || '';
+
   return template.evaluate()
     .setTitle('Judy Note (공도 주디 메모장)')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * [Phase 10] 매직 링크 토큰 검증 시스템
+ * 프론트엔드에서 페이지 로드 시 호출하여 토큰의 유효성을 검사하고 
+ * 일회용 토큰을 즉시 파기한 후 사용자 이름을 반환합니다.
+ */
+function validateToken(token) {
+  if (!token) {
+    return { valid: false, reason: "토큰이 없습니다. 슬랙에서 다시 접속해주세요." };
+  }
+  
+  const cache = CacheService.getScriptCache();
+  const userName = cache.get("MAGIC_" + token);
+  
+  if (userName) {
+    // 보안을 위해 일회용 토큰 즉시 파기!
+    cache.remove("MAGIC_" + token);
+    return { valid: true, name: userName };
+  } else {
+    // 캐시에 없거나, 만료되었거나, 이미 사용됨
+    return { valid: false, reason: "접근 권한이 없거나 이미 만료/사용된 링크입니다.<br>슬랙에서 '/주디 노트' 명령어로 다시 발급받아주세요." };
+  }
 }
 
 /**

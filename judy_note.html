@@ -267,20 +267,51 @@
       background-color: var(--surface);
     }
 
-    .user-select {
+    .user-badge {
       background: var(--surface);
-      color: var(--text-color);
-      border: 1px solid var(--sidebar-border);
-      border-radius: 6px;
-      padding: 6px 12px;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 20px;
+      padding: 6px 16px;
       font-size: 14px;
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.2s;
+      font-weight: 600;
+      user-select: none;
     }
 
-    .user-select:focus {
-      border-color: var(--primary);
+    /* Access Denied Overlay */
+    /* Access Denied Overlay */
+    .access-denied-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: #fff;
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    .access-denied-overlay .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .access-denied-overlay .title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .access-denied-overlay .desc {
+      font-size: 15px;
+      color: #aaa;
+      text-align: center;
+      line-height: 1.6;
     }
 
     /* Editor View Header */
@@ -506,15 +537,7 @@
     <div class="main-content">
       <div class="top-bar">
         <button id="themeToggleBtn" class="theme-btn" title="테마 변경">☀️</button>
-        <select id="userSelect" class="user-select">
-          <option value="" disabled selected>작성자 선택</option>
-          <option value="송용남">송용남</option>
-          <option value="이지은">이지은</option>
-          <option value="정혜림">정혜림</option>
-          <option value="문유나">문유나</option>
-          <option value="이상호">이상호</option>
-          <option value="김관수">김관수</option>
-        </select>
+        <span id="userBadge" class="user-badge">인증 중...</span>
       </div>
 
       <!-- Editor Header (Visible when viewing past memo) -->
@@ -553,9 +576,15 @@
     <span id="toastMsg">저장되었습니다.</span>
   </div>
 
+  <!-- Access Denied Overlay (인증 실패 시 표시) -->
+  <div id="accessDeniedOverlay" class="access-denied-overlay" style="display: none;">
+    <div class="icon">⛔</div>
+    <div class="title">접근 권한이 없습니다</div>
+    <div class="desc" id="accessDeniedMsg">비정상적인 접근입니다.<br>슬랙에서 다시 링크를 발급받아주세요.</div>
+  </div>
+
   <script>
     const memoInput = document.getElementById('memoInput');
-    const userSelect = document.getElementById('userSelect');
     const saveBtn = document.getElementById('saveBtn');
     const extractBtn = document.getElementById('extractBtn');
     const toast = document.getElementById('toast');
@@ -577,9 +606,15 @@
     const summaryContent = document.getElementById('summaryContent');
     const closeSummaryBtn = document.getElementById('closeSummaryBtn');
 
+    // Auth Elements
+    const userBadge = document.getElementById('userBadge');
+    const accessDeniedOverlay = document.getElementById('accessDeniedOverlay');
+    const accessDeniedMsg = document.getElementById('accessDeniedMsg');
+
     // State Variable
     let currentMode = 'write'; // 'write' or 'read'
     let currentHtmlTheme = 'dark';
+    let currentUserName = null; // Magic Link 인증 완료 후 확보된 사용자 이름
     let cachedSidebarData = null; // 검색 취소 시 복구할 원래 폴더 리스트 데이터
     const searchInput = document.getElementById('searchInput');
 
@@ -602,20 +637,47 @@
     }
 
     // ==========================================
-    // 1. 유저 정보 및 사이드바 연동
+    // 1. [Phase 10] 슬랙 기반 Magic Link (One-Time Token) 검증
     // ==========================================
-    const savedUser = localStorage.getItem('judy_note_user');
-    if (savedUser) {
-      userSelect.value = savedUser;
-      loadSidebarData(savedUser);
+    function showAccessDenied(reason) {
+      accessDeniedMsg.innerHTML = reason;
+      accessDeniedOverlay.style.display = 'flex';
     }
 
-    userSelect.addEventListener('change', (e) => {
-      const userName = e.target.value;
-      localStorage.setItem('judy_note_user', userName);
-      setToWriteMode(); // 작성 모드로 리셋
-      loadSidebarData(userName);
-    });
+    // 구글 앱스 스크립트 특성상 window.location.search가 작동하지 않으므로,
+    // doGet에서 주입해준 서버 사이드 템플릿 변수(token)를 사용합니다.
+    const magicToken = "<?= token ?>";
+
+    if (!magicToken) {
+      userBadge.textContent = '⛔ 미인가';
+      showAccessDenied('만료되었거나 잘못된 접속 정보입니다.<br>슬랙앱에서 [주디 노트 열어줘] 로 다시 접속하세요.');
+    } else {
+      // 서버를 통해 토큰 유효성 검증
+      google.script.run
+        .withSuccessHandler((result) => {
+          if (result.valid) {
+            // ✅ 인증 통과: 이름 표시 및 본인 데이터 로딩
+            currentUserName = result.name;
+            userBadge.textContent = `👤 ${result.name} 님`;
+            loadSidebarData(result.name);
+
+            // 보안 목적 + 미관상 URL에서 토큰 숨기기 (pushState 사용)
+            if (window.history.replaceState) {
+              const cleanUrl = window.location.href.split('?')[0];
+              window.history.replaceState({}, document.title, cleanUrl);
+            }
+          } else {
+            // ❌ 인증 실패 (만료, 없는 토큰, 이미 사용된 토큰)
+            userBadge.textContent = '⛔ 미인가';
+            showAccessDenied(result.reason);
+          }
+        })
+        .withFailureHandler((err) => {
+          userBadge.textContent = '⛔ 보안 에러';
+          showAccessDenied('인증 서버 연결에 실패했습니다.<br>새로고침 하거나 슬랙에서 다시 접속하세요.');
+        })
+        .validateToken(magicToken);
+    }
 
     // ==========================================
     // 2. 모드 전환 (Write <-> Read)
@@ -672,7 +734,7 @@
       searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           const query = e.target.value.trim();
-          const userName = userSelect.value;
+          const userName = currentUserName;
           if (!userName) return;
 
           if (query === '') {
@@ -825,12 +887,11 @@
 
     function saveMemo(actionName) {
       const text = memoInput.value.trim();
-      const userName = userSelect.value;
+      const userName = currentUserName;
       const isExtract = actionName === 'extractFromWeb';
 
       if (!userName) {
-        showToast("우측 상단에서 작성자를 먼저 선택해주세요!", true);
-        userSelect.focus();
+        showToast('⛔ 인증된 사용자가 없습니다. 새로고침 해주세요.', false);
         return;
       }
 
@@ -898,7 +959,7 @@
 
     summarizeBtn.addEventListener('click', () => {
       const text = memoInput.value.trim();
-      const userName = userSelect.value;
+      const userName = currentUserName;
 
       if (!text) return;
 
@@ -927,7 +988,7 @@
 
     // 초기 포커스
     window.onload = () => {
-      if (document.activeElement !== userSelect) {
+      if (document.activeElement !== memoInput) {
         memoInput.focus();
       }
     };

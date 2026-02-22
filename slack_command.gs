@@ -94,6 +94,59 @@ function doPost(e) {
              });
           };
 
+          // 0. 매직 링크 발급 의도 파악 (Magic Link Intent)
+          // "주디 노트", "메모장", "링크" 등 짧은 단독 명령어이거나 명시적으로 "열어"를 포함할 때
+          const isMagicLinkIntent = (text.length < 20 && (text.includes("노트") || text.includes("메모장") || text.includes("링크") || text.includes("웹"))) || 
+                                    text.includes("주디 노트 열어") || text.includes("메모장 열어");
+                                    
+          if (isMagicLinkIntent) {
+             const magicToken = Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+             const cache = CacheService.getScriptCache();
+             cache.put("MAGIC_" + magicToken, senderName, 600); // 10분만 유효한 토큰 캐싱
+             
+             const webAppUrl = ScriptApp.getService().getUrl();
+             const magicLink = webAppUrl + "?token=" + magicToken;
+             
+             // 슬랙 버튼 UI 구성
+             const msgPayload = {
+               channel: event.user,
+               text: "주디 노트 매직 링크가 도착했습니다.",
+               blocks: [
+                 {
+                   "type": "section",
+                   "text": {
+                     "type": "mrkdwn",
+                     "text": `✨ *${senderName}* 님을 위한 전용 주디 노트 접속 링크입니다.\n(보안을 위해 10분 후 만료되며, 1회 클릭 시 즉시 영구 소멸됩니다)`
+                   }
+                 },
+                 {
+                   "type": "actions",
+                   "elements": [
+                     {
+                       "type": "button",
+                       "text": {
+                         "type": "plain_text",
+                         "text": "📖 내 주디 노트 열람하기",
+                         "emoji": true
+                       },
+                       "url": magicLink,
+                       "style": "primary"
+                     }
+                   ]
+                 }
+               ]
+             };
+             
+             const slackToken = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+             if (slackToken) {
+               UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+                  method: "post", contentType: "application/json", headers: { "Authorization": "Bearer " + slackToken },
+                  payload: JSON.stringify(msgPayload), muteHttpExceptions: true
+               });
+             }
+             return ContentService.createTextOutput(""); 
+          }
+
           // 1. 검색 의도 파악 (Search Intent)
           const isSearchIntent = text.includes("오늘") && (text.includes("보여") || text.includes("검색") || text.includes("알려") || text.includes("뭐") || text.includes("기록"));
           
@@ -126,7 +179,7 @@ function doPost(e) {
             return ContentService.createTextOutput(""); 
           }
           
-          // 2. 저장 의도 (Save Intent) - 검색 의도가 아니면 단순 메모 저장
+          // 2. 저장 의도 (Save Intent) - 검색/링크 의도가 아니면 단순 메모 저장
           if (typeof appendMemoToArchive === 'function') {
             appendMemoToArchive(senderName, text, event.user);
           }
