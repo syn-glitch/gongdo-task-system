@@ -65,8 +65,18 @@ function appendMemoToArchive(userName, memoText, userId) {
     
     // 4. 기존 내용 읽어오고 맨 아래 이어붙이기 (Append)
     const existingContent = mdFile.getBlob().getDataAsString();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} (${getDayString(now.getDay())})`;
-    const timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "hh:mm a");
+    const tz = Session.getScriptTimeZone();
+    
+    const year = Utilities.formatDate(now, tz, "yyyy");
+    const month = Utilities.formatDate(now, tz, "MM");
+    const date = Utilities.formatDate(now, tz, "dd");
+    
+    // 날짜 정보를 한국 기준 요일로 정확히 가져옵니다
+    // Utilities.formatDate(now, tz, "E") 는 'Sun', 'Mon' 같은 영문을 반환하므로 한글 변환
+    const dayStr = getDayStringFromDate(now, tz); 
+    
+    const dateStr = `${year}-${month}-${date} (${dayStr})`;
+    const timeStr = Utilities.formatDate(now, tz, "hh:mm a");
     
     // 날짜 헤더(`## 2026-02-22 (일)`)가 오늘 이미 추가되어 있는지 확인
     let newContent = existingContent;
@@ -93,10 +103,16 @@ function appendMemoToArchive(userName, memoText, userId) {
 
 /**
  * 날짜 숫자를 한글 요일로 변환
+ * @param {Date} date
+ * @param {string} tz - Timezone
  */
-function getDayString(dayNum) {
-  const days = ["일", "월", "화", "수", "목", "금", "토"];
-  return days[dayNum];
+function getDayStringFromDate(date, tz) {
+  // 요일만 숫자로 뽑을 때도 TimeZone의 영향을 받을 수 있으니 우회 방식 사용
+  const eStr = Utilities.formatDate(date, tz, "E"); // Sun, Mon, Tue...
+  const daysMap = {
+    "Sun": "일", "Mon": "월", "Tue": "화", "Wed": "수", "Thu": "목", "Fri": "금", "Sat": "토"
+  };
+  return daysMap[eStr] || "일";
 }
 
 /**
@@ -201,6 +217,83 @@ function getArchivedMemos(userName) {
     return result;
   } catch(e) {
     console.error("아카이브 읽기 실패", e);
+    return [];
+  }
+}
+
+/**
+ * [AI 에이전트 및 프론트엔드 공용 검색 API]
+ * 사용자의 모든 아카이브 문서(.md)를 순회하며 특정 키워드나 태그를 포함한 메모를 검색합니다.
+ * 순수 JSON 배열 형태로 반환하여 AI가 RAG(검색 증강 생성) 모델의 툴(Tool)로 바로 활용할 수 있습니다.
+ */
+function searchArchivedMemos(userName, query) {
+  if (!ARCHIVE_ROOT_FOLDER_ID || ARCHIVE_ROOT_FOLDER_ID === "여기에_루트_폴더_ID를_넣어주세요") {
+    return [];
+  }
+  
+  if (!query || query.trim() === "") return [];
+  const lowerQuery = query.toLowerCase();
+  
+  try {
+    const rootFolder = DriveApp.getFolderById(ARCHIVE_ROOT_FOLDER_ID);
+    const folderIter = rootFolder.getFoldersByName(userName);
+    if (!folderIter.hasNext()) return [];
+    
+    const userFolder = folderIter.next();
+    const fileIterAll = userFolder.getFiles();
+    const searchResults = [];
+    
+    while(fileIterAll.hasNext()) {
+      const file = fileIterAll.next();
+      const fileName = file.getName();
+      if (!fileName.endsWith("_업무일지.md")) continue;
+      
+      const content = file.getBlob().getDataAsString();
+      const blocks = content.split(/\n## /g);
+      
+      // 첫 블록은 스킵 (제목)
+      for (let i = 1; i < blocks.length; i++) {
+         const dayBlock = blocks[i];
+         const lines = dayBlock.split('\n');
+         const dateStr = lines[0].trim();
+         
+         const memoChunks = dayBlock.split(/\n- \*\*\[/g);
+         for (let j = 1; j < memoChunks.length; j++) {
+            const chunk = memoChunks[j];
+            const endBracketIndex = chunk.indexOf(']**');
+            if (endBracketIndex === -1) continue;
+            
+            const timeStr = chunk.substring(0, endBracketIndex).trim();
+            const rawContent = chunk.substring(endBracketIndex + 3);
+            
+            const cleanContent = rawContent.split('\n').map(l => {
+                if (l.startsWith('  ')) return l.substring(2);
+                return l;
+            }).join('\n').trim();
+            
+            // 검색어 매칭
+            if (cleanContent.toLowerCase().includes(lowerQuery)) {
+              searchResults.push({
+                date: dateStr,
+                time: timeStr,
+                content: cleanContent,
+                fileName: fileName // 출처 정보 (AI용)
+              });
+            }
+         }
+      }
+    }
+    
+    // 날짜 역순 정렬
+    searchResults.sort((a, b) => {
+       const dateA = a.date.substring(0, 10);
+       const dateB = b.date.substring(0, 10);
+       return dateB.localeCompare(dateA);
+    });
+    
+    return searchResults;
+  } catch(e) {
+    console.error("아카이브 검색 에러", e);
     return [];
   }
 }
