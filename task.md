@@ -62,14 +62,25 @@
   - **설명**: 단순한 '전체 글 요약' 팝업을 넘어서, 본문 내용 중 특정 구역을 지정하거나 하단 채팅창을 통해 AI와 티키타카(질의응답)를 나눌 수 있는 지능형 워크스페이스 기능입니다.
   - **개발 방향**: 에디터 내 동적 질문 API(`askAi`) 신설 및 노션(Notion)의 AI 블록과 유사한 양방향 채팅 버블 UI를 프론트엔드에 추가 구축해야 합니다.
 
-## 9단계: 사용자 전면 동적 관리 및 구글 SSO 보안 강화 (Dynamic User & Auth)
-- [ ] **웹 백엔드 (`web_app.gs`) 인증 시스템 구축**
-  - 접속자의 구글 이메일을 서버에서 안전하게 가져오는(`Session.getActiveUser().getEmail()`) 권한 로직 추가
-  - `Users` 시트에 등록된 이메일과 대조하여 허가된 사용자인지 판별하고, 본인의 이름(Real Name)을 반환하는 함수 개발
-- [ ] **웹 프론트엔드 (`judy_note.html`) 자동 로그인 UI 개편**
-  - 기존의 보안상 취약했던 수동 선택형 `<select id="userSelect">` 드롭다운 UI 완전 제거
-  - 렌더링 시 백엔드 인증을 거쳐 검증된 자신의 이름만 상단에 고정 표시되도록 수정 (타인 메모 열람 및 도용 작성 원천 차단)
-  - 미인가 사용자 접속 시 화면을 가리는 `풀스크린 오버레이 거부 창` 표시
-- [ ] **슬랙 봇 1시간 캐시 및 시트 연동 (`slack_command.gs`)**
-  - `fetchUserName` 함수 내 하드코딩 딕셔너리 완전 제거
-  - 타임아웃 방지를 위해 `CacheService`를 활용하여 `Users` 시트 데이터를 1시간 단위 캐싱 후 맵핑하는 동적 구조 도입
+## 9단계: 동적 유저 관리 및 구글 SSO 보안 강화 (Dynamic User & Auth)
+> 📖 상세 계획: [`implementation_plan_phase9.md`](implementation_plan_phase9.md)
+
+### 사전 준비
+- [ ] GAS 배포 설정 변경: 실행 사용자 → `웹 앱에 액세스하는 사용자`, 액세스 → `Google 계정이 있는 모든 사용자`
+- [ ] `Users` 시트 C열(구글 이메일)에 전 팀원의 이메일 등록 (`@microchool.kr`, `@gongdo.kr`, `@gmail.com` 혼용 지원)
+
+### 개발
+- [ ] **Step 1: `web_app.gs` 백엔드 인증 함수 신설**
+  - `getAuthenticatedUser()` : `Session.getActiveUser().getEmail()`로 접속자 식별 → `Users` 시트 C열 대조 → 인가/거부 판정 후 이름 반환
+- [ ] **Step 2: `judy_note.html` 프론트엔드 자동 로그인 UI 개편**
+  - `<select id="userSelect">` 드롭다운 완전 삭제, `<span id="userBadge">` 읽기전용 배지로 교체
+  - 페이지 로딩 시 `getAuthenticatedUser()` 호출하여 자동 로그인 처리
+  - 미인가 사용자 접속 시 `풀스크린 오버레이 거부 창` 표시
+- [ ] **Step 3: `slack_command.gs` 하드코딩 제거 & CacheService 도입**
+  - `fetchUserName()` 내 `const dict = {...}` 하드코딩 딕셔너리 완전 제거
+  - `CacheService`를 활용하여 `Users` 시트 데이터를 1시간 단위 캐싱 후 슬랙ID→이름 매핑
+
+### 검증
+- [ ] 3개 도메인(`@gmail.com`, `@gongdo.kr`, `@microchool.kr`) 접속 시 각각 본인 이름 자동 표시 확인
+- [ ] 미등록 이메일 접속 시 화면 차단 확인
+- [ ] 슬랙 DM → 신규 팀원 시트 추가 후 코드 수정 없이 이름 매핑 확인
