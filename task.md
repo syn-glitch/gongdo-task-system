@@ -157,3 +157,14 @@
   - 지출 내역 저장 시 '지출결의 필요' 태스크를 `Tasks` 시트에 자동 생성
 - [ ] **통합 검색 및 모바일 지출 관리 UI 최적화**
   - Judy Note 웹 앱 내 지출 내역 조회 탭 신설 및 글로벌 검색 연동
+
+## 16단계: 프로젝트 및 업무 분류 체계 고도화 (Advanced Project & Task Labeling)
+> 📖 상세 계획: [implementation_plan_phase16.md](implementation_plan_phase16.md)
+- [ ] **Projects 시트 속성 확장 및 AI 학습 메타데이터 추가**
+  - 프로젝트 설명(Description), 상태, 우선순위 필드 신설 및 AI 프롬프트 연동
+- [ ] **구조적 업무 ID (Structured Task ID) 시스템 구현**
+  - `[프로젝트코드]-[일련번호]` 형태의 자동 ID 생성 로직 및 기존 데이터 마이그레이션
+- [ ] **입력 UI 통제 및 정형 데이터 확보 (Selection over Collection)**
+  - 슬랙 및 웹 앱 업무 등록 시 프로젝트명을 드롭다운(선택형)으로 강제화
+- [ ] **AI 기반 컨텍스트 업무 분석 및 자동화 워크플로우 연동**
+  - 프로젝트 코드별 맞춤형 자동화 규칙 적용 및 AI 전문 분석 리포트 강화
