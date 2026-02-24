@@ -267,6 +267,8 @@ function getMyTasksForWeb(userId) {
     const assignee = String(data[i][6]).trim();
     const requester= String(data[i][7] || "").trim(); // H열
     const rawDue   = data[i][8];
+    const startTime   = data[i][14]; // P열: 시작 시간
+    const durationMin = data[i][16]; // R열: 소요 시간(분)
     
     if (!title) continue;
     if (assignee !== userName && assignee !== slackUsername) continue;
@@ -288,7 +290,11 @@ function getMyTasksForWeb(userId) {
       }
     }
     
-    myTasks.push({ row: i + 1, id: rowId, title, project, status, dueDate, rawDueStr, desc, dDays, assignee, requester });
+    myTasks.push({ 
+      row: i + 1, id: rowId, title, project, status, dueDate, rawDueStr, desc, dDays, assignee, requester,
+      startTime: startTime instanceof Date ? startTime.getTime() : null,
+      durationMin: !isNaN(parseFloat(durationMin)) ? parseFloat(durationMin) : null
+    });
   }
   
   // 긴급도순 정렬
@@ -310,8 +316,26 @@ function changeTaskStatusFromWeb(rowNum, newStatus) {
     const sheet = ss.getSheetByName("Tasks");
     if (!sheet || isNaN(rowNum)) return { success: false, message: "시트를 찾을 수 없습니다." };
     
-    sheet.getRange(rowNum, 3).setValue(newStatus);
-    sheet.getRange(rowNum, 14).setValue(new Date());
+    const now = new Date();
+    sheet.getRange(rowNum, 3).setValue(newStatus);   // C: 상태
+    sheet.getRange(rowNum, 14).setValue(now);        // N: 최근 수정일
+    
+    // [Phase 21] 타임 트래킹 로직
+    if (newStatus === "진행중") {
+      // 진행중으로 변경 시 시작 시간 기록 (P열: 15)
+      sheet.getRange(rowNum, 15).setValue(now);
+    } else if (newStatus === "완료") {
+      // 완료로 변경 시 종료 시간 기록 (Q열: 16)
+      sheet.getRange(rowNum, 16).setValue(now);
+      
+      // 시작 시간(P열) 가져와서 소요 시간 계산
+      const startTime = sheet.getRange(rowNum, 15).getValue();
+      if (startTime && startTime instanceof Date) {
+        const diffMs = now - startTime;
+        const diffMin = Math.floor(diffMs / (1000 * 60));
+        sheet.getRange(rowNum, 17).setValue(diffMin); // R열: 소요 시간(분)
+      }
+    }
     
     return { success: true };
   } catch (err) {
