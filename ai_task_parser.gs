@@ -104,7 +104,7 @@ function extractTasksWithClaude(text, userName) {
 
   const payload = {
     // 가장 똑똑한 모델 사용하여 구문 분석 정확도 극대화
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     temperature: 0,
     system: systemPrompt,

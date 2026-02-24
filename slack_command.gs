@@ -21,7 +21,28 @@ function doPost(e) {
     if (payload.type === "view_submission") {
       return handleModalSubmission(payloadStr);
     }
-    // 1-2. [옵션 2] 메시지 단축키 (message_action)
+    // 1-2. 인라인 드롭다운 상태 변경 (block_actions)
+    else if (payload.type === "block_actions") {
+      const action = payload.actions && payload.actions[0];
+      
+      // [20단계 UX 개선] 인라인 드롭다운에서 상태 변경
+      if (action && action.action_id && action.action_id.startsWith("status_select_")) {
+        const rowNum = parseInt(action.action_id.replace("status_select_", ""), 10);
+        const newStatus = action.selected_option.value;
+        return handleInlineStatusChange(rowNum, newStatus, payload.user.id);
+      }
+      
+      // 기존 버튼 방식 호환 (필요시)
+      if (action && action.action_id === "change_status_action") {
+        const parts = action.value.split("|");
+        const rowNum = parseInt(parts[0], 10);
+        const taskId = parts[1] || "";
+        const taskTitle = parts[2] || "업무";
+        return openStatusChangeModal(payload.trigger_id, rowNum, taskId, taskTitle);
+      }
+      return ContentService.createTextOutput("");
+    }
+    // 1-3. [옵션 2] 메시지 단축키 (message_action)
     else if (payload.type === "message_action" && payload.callback_id === "create_task_from_message") {
       const triggerId = payload.trigger_id;
       // 메시지 원문과 작성자 추출
@@ -41,6 +62,55 @@ function doPost(e) {
   // 2. Slash Command (/주디)
   else if (e.parameter.command === '/주디') {
     const commandText = e.parameter.text ? e.parameter.text.trim() : "";
+    
+    // [20단계] /주디 내업무 — 웹 대시보드 링크 반환 (즉시 응답)
+    if (commandText === '내업무' || commandText === '내 업무') {
+      try {
+        const userId = e.parameter.user_id || "unknown";
+        const userName = fetchUserName(userId);
+        
+        // ScriptApp.getService().getUrl() 이 권한 문제나 캐시 문제로 에러를 던질 수 있는지 확인
+        const webAppUrl = ScriptApp.getService().getUrl();
+        const dashboardUrl = webAppUrl + "?page=tasks&user=" + encodeURIComponent(userId) + "&name=" + encodeURIComponent(userName);
+        
+        const payload = {
+          response_type: "ephemeral",
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "📋 *" + userName + "님의 업무 현황*을 확인하세요!\n마감일 경고, 상태 변경을 한 화면에서 관리할 수 있습니다."
+              }
+            },
+            {
+              type: "actions",
+              elements: [
+                {
+                  type: "button",
+                  text: { type: "plain_text", text: "📊 내 업무 대시보드 열기", emoji: true },
+                  url: dashboardUrl,
+                  style: "primary"
+                }
+              ]
+            }
+          ]
+        };
+        return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput("에러 발생: " + err.message + "\\nStack: " + err.stack);
+      }
+    }
+    
+    // ⚡ Slack 재시도(Retry) 방어 (모달 관련 명령어에만 적용)
+    const triggerId = e.parameter.trigger_id;
+    if (triggerId) {
+      const retryCache = CacheService.getScriptCache();
+      if (retryCache.get("TRIGGER_" + triggerId)) {
+        return ContentService.createTextOutput(""); // 재시도 요청 무시
+      }
+      retryCache.put("TRIGGER_" + triggerId, "1", 30);
+    }
     
     if (commandText === '가이드' || commandText === '도움말') {
       const guideUrl = "https://github.com/syn-glitch/gongdo-task-system/blob/main/%EC%B2%AB_AI_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8_%ED%8C%80%EC%9B%90_%EC%A3%BC%EB%94%94_%EA%B0%80%EC%9D%B4%EB%93%9C.md";
@@ -154,7 +224,7 @@ function doPost(e) {
                    "type": "section",
                    "text": {
                      "type": "mrkdwn",
-                     "text": `✨ *${senderName}* 님을 위한 전용 주디 노트 접속 링크입니다.\n(보안을 위해 10분 후 만료되며, 1회 클릭 시 즉시 영구 소멸됩니다)`
+                     "text": `✨ *${senderName}* 님을 위한 전용 주디 접속 링크입니다.\n(보안을 위해 10분 후 만료되며, 1회 클릭 시 즉시 영구 소멸됩니다)`
                    }
                  },
                  {
@@ -164,7 +234,7 @@ function doPost(e) {
                        "type": "button",
                        "text": {
                          "type": "plain_text",
-                         "text": "📖 내 주디 노트 열람하기",
+                         "text": "🐰 내 주디 워크스페이스 열기",
                          "emoji": true
                        },
                        "url": magicLink,
@@ -242,6 +312,81 @@ function doPost(e) {
   return ContentService.createTextOutput("알 수 없는 요청입니다.");
 }
 
+// [16단계 - 속도 개선] Projects 시트에서 프로젝트 목록을 슬랙 드롭다운 옵션으로 반환
+// ⚡ CacheService로 1시간 캐싱 → Slack 3초 타임아웃 방어 + GAS 콜드스타트 대응
+// ⚠️ Slack static_select는 options가 빈 배열이면 모달 자체가 열리지 않으므로 반드시 1개 이상 보장
+function getProjectOptions() {
+  try {
+    const CACHE_KEY = "PROJECT_OPTIONS_CACHE";
+    const cache = CacheService.getScriptCache();
+    
+    // 1. 캐시 확인 (캐시 히트 시 시트 읽기 생략 → 즉시 반환)
+    const cached = cache.get(CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.length > 0) return parsed;
+    }
+    
+    // 2. 캐시 미스 시 시트에서 직접 읽기
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Projects");
+    if (!sheet || sheet.getLastRow() < 2) {
+      return [{ text: { type: "plain_text", text: "기본 프로젝트" }, value: "DEFAULT" }];
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const options = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      const name = String(data[i][0]).trim();
+      const code = String(data[i][1]).trim();
+      const active = String(data[i][2]).trim();
+      
+      if (name && code && active !== "미사용") {
+        options.push({
+          text: { type: "plain_text", text: name },
+          value: code
+        });
+      }
+    }
+    
+    const result = options.length > 0
+      ? options
+      : [{ text: { type: "plain_text", text: "기본 프로젝트" }, value: "DEFAULT" }];
+    
+    // 3. 캐시에 저장 (1시간 = 3600초, clearProjectCache로 수동 무효화 가능)
+    cache.put(CACHE_KEY, JSON.stringify(result), 3600);
+    
+    return result;
+  } catch (e) {
+    console.error("getProjectOptions 에러:", e);
+    return [{ text: { type: "plain_text", text: "기본 프로젝트" }, value: "DEFAULT" }];
+  }
+}
+
+// [캐시 무효화] 프로젝트를 추가/수정했을 때 캐시를 즉시 삭제하여 최신 데이터 반영
+function clearProjectCache() {
+  CacheService.getScriptCache().remove("PROJECT_OPTIONS_CACHE");
+}
+
+// [16단계 NEW] 프로젝트 코드 기반 구조적 ID 생성 (예: GONG-001)
+function generateTaskId(sheet, projectCode) {
+  if (!projectCode) return "";
+  
+  const data = sheet.getDataRange().getValues();
+  let maxNum = 0;
+  
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][0]); // A열: 업무 ID
+    if (id.startsWith(projectCode + "-")) {
+      const num = parseInt(id.split("-")[1], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  
+  return projectCode + "-" + String(maxNum + 1).padStart(3, "0");
+}
+
 function openTaskModal(triggerId, prefillDesc = "") {
   const url = "https://slack.com/api/views.open";
   
@@ -266,7 +411,12 @@ function openTaskModal(triggerId, prefillDesc = "") {
       blocks: [
         {
           type: "input", block_id: "project_block",
-          element: { type: "plain_text_input", action_id: "project_input", placeholder: { type: "plain_text", text: "예: 공도 개발" } },
+          element: { 
+            type: "static_select", 
+            action_id: "project_input", 
+            placeholder: { type: "plain_text", text: "프로젝트를 선택하세요" },
+            options: getProjectOptions()
+          },
           label: { type: "plain_text", text: "프로젝트명" }
         },
         {
@@ -309,9 +459,16 @@ function openTaskModal(triggerId, prefillDesc = "") {
 function handleModalSubmission(payloadStr) {
   const payload = JSON.parse(payloadStr);
 
+  // [20단계] 상태 변경 모달 제출은 handleStatusChange로 라우팅
+  if (payload.type === "view_submission" && payload.view.callback_id === "status_change_modal") {
+    return handleStatusChange(payloadStr);
+  }
+
   if (payload.type === "view_submission" && payload.view.callback_id === "task_registration_modal") {
     const values = payload.view.state.values;
-    const project = values.project_block.project_input.value;
+    // [16단계] static_select에서 선택된 프로젝트 코드와 이름 추출
+    const projectCode = values.project_block.project_input.selected_option.value;  // 코드 (예: "GONG")
+    const project = values.project_block.project_input.selected_option.text.text;  // 이름 (예: "공도 업무 관리")
     const title = values.title_block.title_input.value;
     const desc = values.desc_block.desc_input ? values.desc_block.desc_input.value : "";
     
@@ -332,7 +489,7 @@ function handleModalSubmission(payloadStr) {
     }
     
     // 1. 임시 공간에 데이터 저장 (담당자 ID 추가)
-    const taskData = { project, title, desc, username, ssId, dueDate, userId, assignedUserId };
+    const taskData = { project, projectCode, title, desc, username, ssId, dueDate, userId, assignedUserId };
     const props = PropertiesService.getScriptProperties();
     const uniqueId = "TASK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
     props.setProperty(uniqueId, JSON.stringify(taskData));
@@ -373,7 +530,8 @@ function processAsyncTasks(e) {
       const sheet = ss.getSheetByName("Tasks");
       
       // [1차 업그레이드] 슬랙 API로 할당된 담당자 이름(Real Name) 가져오기
-      let assigneeName = data.username; // 기본값은 작성자
+      // ⚡ 본인 업무도 실명으로 저장 (fetchUserName 활용)
+      let assigneeName = fetchUserName(data.assignedUserId || data.userId);
       if (data.assignedUserId && data.assignedUserId !== data.userId) {
         try {
           const userUrl = `https://slack.com/api/users.info?user=${data.assignedUserId}`;
@@ -391,9 +549,26 @@ function processAsyncTasks(e) {
         } catch(e) { console.error("유저 이름 획득 실패", e); }
       }
 
-      // 시트 구조에 맞게 데이터 배열 생성 (9번째 칸이 마감일)
-      // A: 1(ID), B: 2(일반), C: 3(대기), D: 4(프로젝트), E: 5(제목), F: 6(내용), G: 7(담당자), H: 8(요청자), I: 9(마감일)
-      let rowData = ["", "일반", "대기", data.project, data.title, data.desc, assigneeName, data.username, data.dueDate];
+      // 시트 구조: A(ID), B(업무유형), C(상태), D(프로젝트), E(제목), F(내용), G(담당자), H(요청자), I(마감일), J~M(선행/우선순위/멘션/캘린더), N(수정일), O(등록시간)
+      const taskId = generateTaskId(sheet, data.projectCode);
+      const today = new Date();
+      let rowData = [
+        taskId,       // A: ID
+        "일반",        // B: 업무 유형
+        "대기",        // C: 상태
+        data.project, // D: 프로젝트 (project 명칭)
+        data.title,   // E: 제목
+        data.desc,    // F: 상세 내용
+        assigneeName, // G: 담당자
+        data.username,// H: 요청자
+        data.dueDate, // I: 마감일
+        "",           // J: 선행 업무
+        "",           // K: 우선순위
+        "",           // L: 슬랙 멘션
+        "",           // M: 캘린더 ID
+        today,        // N: 최근 수정일
+        today         // O: 업무 등록시간
+      ];
       
       sheet.appendRow(rowData);
       const newRow = sheet.getLastRow();
@@ -492,4 +667,264 @@ function fetchUserName(userId) {
     }
   } catch(e) { console.error("유저 이름 획득 실패", e); }
   return userId;
+}
+
+/**
+ * [20단계] 내업무 비동기 처리 함수 (response_url로 전송)
+ */
+function processMyTasksAsync(e) {
+  // 트리거 정리
+  if (e && e.triggerUid) {
+    const triggers = ScriptApp.getProjectTriggers();
+    for (const trigger of triggers) {
+      if (trigger.getUniqueId() === e.triggerUid) ScriptApp.deleteTrigger(trigger);
+    }
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const allProps = props.getProperties();
+  
+  for (const key in allProps) {
+    if (!key.startsWith("MYTASK_")) continue;
+    try {
+      const data = JSON.parse(allProps[key]);
+      props.deleteProperty(key);
+      
+      const userName = fetchUserName(data.userId);
+      const payload = buildMyTasksPayload(data.userId, userName, data.slackUsername, data.ssId);
+      
+      // response_url로 업무 리스트 전송 (replace_original로 로딩 메시지 교체)
+      UrlFetchApp.fetch(data.responseUrl, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+    } catch (err) {
+      console.error("processMyTasksAsync 에러:", err);
+      props.deleteProperty(key);
+    }
+  }
+}
+
+/**
+ * [20단계 UX 개선] 업무 리스트 페이로드 생성 (인라인 드롭다운 + 요약 카운터 + 마감일 경고)
+ */
+function buildMyTasksPayload(userId, userName, slackUsername, ssId) {
+  const ss = SpreadsheetApp.openById(ssId);
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet) {
+    return { response_type: "ephemeral", text: "Tasks 시트를 찾을 수 없습니다." };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const myTasks = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const rowId    = data[i][0];
+    const status   = String(data[i][2]).trim();
+    const project  = String(data[i][3]).trim();
+    const title    = String(data[i][4]).trim();
+    const assignee = String(data[i][6]).trim();
+    const rawDue   = data[i][8];
+
+    if (!title) continue;
+    if (status === "완료") continue;
+    if (assignee !== userName && assignee !== slackUsername) continue;
+
+    // 마감일 파싱 및 D-Day 계산
+    let dueDate = "";
+    let dDays = null;
+    if (rawDue) {
+      const d = new Date(rawDue);
+      if (!isNaN(d.getTime())) {
+        d.setHours(0, 0, 0, 0);
+        dDays = Math.round((d - today) / 86400000);
+        dueDate = (d.getMonth() + 1) + "/" + d.getDate();
+      }
+    }
+
+    myTasks.push({ row: i + 1, id: rowId, title, project, status, dueDate, dDays });
+  }
+
+  if (myTasks.length === 0) {
+    return {
+      response_type: "ephemeral",
+      text: "📋 " + userName + "님의 진행 중인 업무가 없습니다. 🎉"
+    };
+  }
+
+  // 긴급도순 정렬: 기한초과 → 오늘 → 내일 → 나머지 → 마감일 없음
+  myTasks.sort((a, b) => {
+    const aPri = a.dDays !== null ? a.dDays : 9999;
+    const bPri = b.dDays !== null ? b.dDays : 9999;
+    return aPri - bPri;
+  });
+
+  // 상태별 카운트
+  const counts = { "진행중": 0, "대기": 0, "보류": 0 };
+  myTasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+
+  // 상단 요약 카운터
+  const summary = "▶️ 진행중 " + counts["진행중"] + "  ·  ⏸️ 대기 " + counts["대기"] + "  ·  🔴 보류 " + counts["보류"];
+
+  const blocks = [
+    { type: "section", text: { type: "mrkdwn", text: "📋 *" + userName + "님의 업무 현황*\n" + summary } },
+    { type: "divider" }
+  ];
+
+  // 상태 드롭다운 옵션 (공통)
+  const statusOptions = [
+    { text: { type: "plain_text", text: "▶️ 진행중" }, value: "진행중" },
+    { text: { type: "plain_text", text: "⏸️ 대기" },  value: "대기"  },
+    { text: { type: "plain_text", text: "🔴 보류" },  value: "보류"  },
+    { text: { type: "plain_text", text: "✅ 완료" },  value: "완료"  }
+  ];
+
+  for (const task of myTasks) {
+    // 마감일 경고 이모지
+    let dueTag = "";
+    if (task.dDays !== null) {
+      if (task.dDays < 0)       dueTag = "  ·  🚨 *" + Math.abs(task.dDays) + "일 초과!*";
+      else if (task.dDays === 0) dueTag = "  ·  🔥 *오늘 마감!*";
+      else if (task.dDays === 1) dueTag = "  ·  ⚠️ *내일 마감*";
+      else                      dueTag = "  ·  📅 " + task.dueDate;
+    }
+
+    const idTag = task.id ? "*[" + task.id + "]* " : "";
+
+    // 현재 상태를 initial_option으로 설정
+    const currentOption = statusOptions.find(o => o.value === task.status);
+
+    const sectionBlock = {
+      type: "section",
+      text: { type: "mrkdwn", text: idTag + task.title + "\n_" + task.project + dueTag + "_" },
+      accessory: {
+        type: "static_select",
+        action_id: "status_select_" + task.row,
+        options: statusOptions
+      }
+    };
+    // initial_option 설정 (현재 상태 미리 선택)
+    if (currentOption) {
+      sectionBlock.accessory.initial_option = currentOption;
+    }
+
+    blocks.push(sectionBlock);
+  }
+
+  return {
+    response_type: "ephemeral",
+    blocks
+  };
+}
+
+/**
+ * [20단계] 인라인 드롭다운에서 상태 변경 시 즉시 시트 반영 + DM 알림
+ */
+function handleInlineStatusChange(rowNum, newStatus, userId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet || isNaN(rowNum)) return ContentService.createTextOutput("");
+
+  sheet.getRange(rowNum, 3).setValue(newStatus);       // C열: 상태
+  sheet.getRange(rowNum, 14).setValue(new Date());     // N열: 최근 수정일
+
+  const taskTitle = sheet.getRange(rowNum, 5).getValue();
+  const taskId    = sheet.getRange(rowNum, 1).getValue();
+  const idTag     = taskId ? "[" + taskId + "] " : "";
+
+  const msg = "✅ *업무 상태 변경 완료!*\n`" + idTag + taskTitle + "`\n→ 새 상태: *" + newStatus + "*";
+  UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+    payload: JSON.stringify({ channel: userId, text: msg }),
+    muteHttpExceptions: true
+  });
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * [20단계] 업무 상태 변경 모달 열기
+ */
+function openStatusChangeModal(triggerId, rowNum, taskId, taskTitle) {
+  const modalPayload = {
+    trigger_id: triggerId,
+    view: {
+      type: "modal",
+      callback_id: "status_change_modal",
+      private_metadata: String(rowNum),
+      title: { type: "plain_text", text: "업무 상태 변경" },
+      submit: { type: "plain_text", text: "변경 완료" },
+      close: { type: "plain_text", text: "취소" },
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: (taskId ? "*[" + taskId + "]* " : "") + taskTitle }
+        },
+        {
+          type: "input", block_id: "status_block",
+          element: {
+            type: "static_select",
+            action_id: "status_input",
+            placeholder: { type: "plain_text", text: "변경할 상태를 선택하세요" },
+            options: [
+              { text: { type: "plain_text", text: "▶️ 진행중" }, value: "진행중" },
+              { text: { type: "plain_text", text: "⏸️ 대기" },  value: "대기"  },
+              { text: { type: "plain_text", text: "🔴 보류" },  value: "보류"  },
+              { text: { type: "plain_text", text: "✅ 완료" },  value: "완료"  }
+            ]
+          },
+          label: { type: "plain_text", text: "새로운 상태" }
+        }
+      ]
+    }
+  };
+
+  UrlFetchApp.fetch("https://slack.com/api/views.open", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+    payload: JSON.stringify(modalPayload)
+  });
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * [20단계] 상태 변경 모달 제출 처리 — Tasks 시트에 상태 반영
+ */
+function handleStatusChange(payloadStr) {
+  const payload = JSON.parse(payloadStr);
+  if (payload.view.callback_id !== "status_change_modal") return ContentService.createTextOutput("");
+
+  const rowNum    = parseInt(payload.view.private_metadata, 10);
+  const newStatus = payload.view.state.values.status_block.status_input.selected_option.value;
+  const userId    = payload.user.id;
+
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet || isNaN(rowNum)) return ContentService.createTextOutput("");
+
+  sheet.getRange(rowNum, 3).setValue(newStatus);       // C열: 상태
+  sheet.getRange(rowNum, 14).setValue(new Date());     // N열: 최근 수정일
+
+  const taskTitle = sheet.getRange(rowNum, 5).getValue();
+  const taskId    = sheet.getRange(rowNum, 1).getValue();
+  const idTag     = taskId ? "[" + taskId + "] " : "";
+
+  const msg = "✅ *업무 상태 변경 완료!*\n`" + idTag + taskTitle + "`\n→ 새 상태: *" + newStatus + "*";
+  UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+    payload: JSON.stringify({ channel: userId, text: msg }),
+    muteHttpExceptions: true
+  });
+
+  return ContentService.createTextOutput("");
 }

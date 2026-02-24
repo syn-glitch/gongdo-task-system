@@ -6,7 +6,7 @@
  */
 
 // 🛑 [필수 세팅] Claude API 키를 발급받아 아래에 입력하세요.
-const CLAUDE_API_KEY = "여기에_CLAUDE_API_KEY_입력";
+var CLAUDE_API_KEY = "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";
 
 // 🛑 [필수 세팅] AI 리포트를 보낼 슬랙 채널 ID를 입력하세요. (예: C0123456789)
 const REPORT_CHANNEL_ID = "여기에_채널_ID_입력";
@@ -74,7 +74,7 @@ function askClaude(promptText) {
   const systemPrompt = "당신은 팀의 유능하고 친절한 프로젝트 관리 비서 '주디'입니다. 제공된 업무 현황 데이터를 바탕으로, 오늘 팀이 어떤 일들을 진행했고 완료했는지 명쾌하고 읽기 좋게 요약해주세요. 슬랙(Slack)에서 보기 좋도록 약간의 이모지와 마크다운 형식을 적극 활용하여 요점만 간결하게 작성해주세요.";
   
   const payload = {
-    model: "claude-3-haiku-20240307", // 응답 속도가 빠르고 저렴한 모델 추천
+    model: "claude-sonnet-4-20250514", // 응답 속도가 빠르고 저렴한 모델 추천
     max_tokens: 1000,
     system: systemPrompt,
     messages: [
@@ -149,7 +149,7 @@ function generateMorningBriefing() {
   const systemPrompt = "당신은 활기차고 긍정적인 팀의 프로젝트 비서 '주디'입니다. 아침 업무 시각에 맞춰 팀원들이 오늘 하루 집중해야 할 '진행중' 및 '대기' 상태의 업무들을 브리핑해주세요. 마감일이 가까운 항목은 특별히 강조해주시고, 하루를 힘차게 시작할 수 있는 따뜻하고 동기부여되는 인사말을 덧붙여주세요. 마크다운과 이모지를 활용하세요.";
   
   const payload = {
-    model: "claude-3-haiku-20240307", 
+    model: "claude-sonnet-4-20250514", 
     max_tokens: 1500,
     system: systemPrompt,
     messages: [
