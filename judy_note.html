@@ -625,6 +625,152 @@
         padding: 16px;
       }
     }
+
+    /* V2 Memo Block */
+    .memo-block {
+      padding: 16px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 8px;
+      border: 1px solid var(--sidebar-border);
+      position: relative;
+    }
+
+    html[data-theme="dark"] .memo-block {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .memo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .memo-time {
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .memo-block:hover .action-buttons,
+    .memo-block.touched .action-buttons {
+      opacity: 1;
+    }
+
+    .action-buttons button {
+      background: transparent;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      transition: all 0.2s;
+    }
+
+    .action-buttons button:hover {
+      background: var(--surface);
+    }
+
+    .action-buttons button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .action-delete.danger {
+      color: #dc3545;
+      border-color: rgba(220, 53, 69, 0.3);
+    }
+
+    .action-delete.danger:hover {
+      background-color: #dc3545;
+      color: white;
+      border-color: #dc3545;
+    }
+
+    .memo-content {
+      font-size: 15px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      /* Ensure multiline fits well */
+      word-break: break-all;
+    }
+
+    .memo-edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .edit-input {
+      width: 100%;
+      min-height: 100px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-save-sm,
+    .btn-cancel-sm {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .btn-save-sm {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-save-sm:hover {
+      opacity: 0.9;
+    }
+
+    .btn-cancel-sm {
+      background: transparent;
+      color: var(--hint-color);
+      border: 1px solid var(--sidebar-border);
+    }
+
+    .btn-cancel-sm:hover {
+      background: var(--surface);
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons button {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 18px;
+      }
+    }
   </style>
 </head>
 
@@ -699,8 +845,31 @@
     <div class="desc" id="accessDeniedMsg">비정상적인 접근입니다.<br>슬랙에서 다시 링크를 발급받아주세요.</div>
   </div>
 
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="access-denied-overlay" style="display: none; z-index: 10000; padding: 20px;">
+    <div
+      style="background: var(--surface); padding: 24px; border-radius: 12px; width: 100%; max-width: 320px; color: var(--text-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <div class="title"
+        style="color: #dc3545; margin-bottom: 12px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+        <span>⚠️</span> 메모 삭제
+      </div>
+      <div class="desc" id="confirmMsg"
+        style="margin-bottom: 24px; color: var(--text-color); font-size: 14px; text-align: left; white-space: pre-wrap; word-break: break-all;">
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="confirmCancelBtn"
+          style="padding: 10px 16px; border-radius: 6px; border: 1px solid var(--sidebar-border); background: transparent; color: var(--text-color); cursor: pointer; font-family: inherit; font-size: 14px;">취소</button>
+        <button id="confirmOkBtn"
+          style="padding: 10px 16px; border-radius: 6px; border: none; background: #dc3545; color: white; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;">삭제</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     window.addEventListener('DOMContentLoaded', () => {
+      // Feature Flag for Edit/Delete actions
+      const FEATURE_MEMO_EDIT_ENABLED_USERS = ["송용남", "정혜림"];
+
       const memoInput = document.getElementById('memoInput');
       const memoViewer = document.getElementById('memoViewer');
 
@@ -846,19 +1015,28 @@
         closeMobileMenu(); // 모바일 환경: 쓰기 모드 진입 시 사이드바 닫기
       }
 
-      function setToReadMode(title, content) {
+      function setToReadMode(title, contentOrMemos, dateStr) {
         currentMode = 'read';
         editorHeader.style.display = 'flex';
         editorFooter.style.display = 'none';
         viewTitle.textContent = title;
 
         memoInput.style.display = 'none';
-        memoViewer.style.display = 'block';
-        memoViewer.textContent = content.trim();
+        memoViewer.style.display = 'flex';
+        memoViewer.style.flexDirection = 'column';
+        memoViewer.innerHTML = '';
+
+        if (Array.isArray(contentOrMemos)) {
+          contentOrMemos.forEach(m => {
+            const block = createMemoBlock(dateStr, m.time, m.content);
+            memoViewer.appendChild(block);
+          });
+        } else {
+          memoViewer.textContent = contentOrMemos.trim();
+        }
 
         summaryOverlay.classList.remove('show');
-
-        closeMobileMenu(); // 모바일 환경: 읽기 모드 진입 시 사이드바 닫기
+        closeMobileMenu();
       }
 
       // ==========================================
@@ -959,7 +1137,7 @@
 
           d.addEventListener('click', () => {
             // 검색된 원문을 클릭하면 우측 뷰어에 보여줌
-            setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`);
+            setToReadMode(res.date + " 검색 결과", [{ time: res.time, content: res.content }], res.date);
           });
 
           folderList.appendChild(d);
@@ -992,11 +1170,7 @@
             fileDiv.textContent = `📄 ${dayData.date}`;
             fileDiv.addEventListener('click', () => {
               // 해당 날짜 클릭 시 모든 메모 취합해서 읽기 모드로 진입
-              let combinedContent = "";
-              dayData.memos.forEach(m => {
-                combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`;
-              });
-              setToReadMode(dayData.date, combinedContent);
+              setToReadMode(dayData.date, dayData.memos, dayData.date);
             });
             childrenDiv.appendChild(fileDiv);
           });
@@ -1103,7 +1277,12 @@
       });
 
       summarizeBtn.addEventListener('click', () => {
-        const text = memoViewer ? memoViewer.textContent.trim() : '';
+        let text = '';
+        if (memoViewer && memoViewer.querySelector('.memo-content')) {
+          text = Array.from(memoViewer.querySelectorAll('.memo-content')).map(el => el.textContent).join('\n\n');
+        } else if (memoViewer) {
+          text = memoViewer.textContent.trim();
+        }
         const userName = currentUserName;
 
         if (!text) return;
@@ -1129,6 +1308,242 @@
             showToast("❌ 서버 통신 에러가 발생했습니다.", true);
           })
           .summarizeMemoContent(text, userName);
+      });
+
+      // ==========================================
+      // 6. 주디 노트 V2: 액션 버튼 및 모달 로직 (수정, 완료, 삭제)
+      // ==========================================
+      function createMemoBlock(dateStr, timeStr, originalContent) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'memo-block';
+
+        let currentContent = originalContent;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'memo-header';
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'memo-time';
+        timeSpan.textContent = `[${timeStr}]`;
+        headerDiv.appendChild(timeSpan);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'action-buttons';
+
+        const btnEdit = document.createElement('button');
+        btnEdit.className = 'action-edit';
+        btnEdit.innerHTML = '✏️';
+        btnEdit.title = '수정';
+
+        const btnDone = document.createElement('button');
+        btnDone.className = 'action-done';
+        btnDone.innerHTML = '✓';
+        btnDone.title = '완료(취소선)';
+
+        const btnDel = document.createElement('button');
+        btnDel.className = 'action-delete danger';
+        btnDel.innerHTML = '🗑️';
+        btnDel.title = '삭제';
+
+        actionsDiv.appendChild(btnEdit);
+        actionsDiv.appendChild(btnDone);
+        actionsDiv.appendChild(btnDel);
+        headerDiv.appendChild(actionsDiv);
+
+        // Feature Flag Check
+        if (!FEATURE_MEMO_EDIT_ENABLED_USERS.includes(currentUserName)) {
+          actionsDiv.style.display = 'none';
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'memo-content';
+        contentDiv.textContent = currentContent;
+
+        if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+          contentDiv.style.textDecoration = 'line-through';
+          contentDiv.style.color = 'var(--hint-color)';
+        }
+
+        const editForm = document.createElement('div');
+        editForm.className = 'memo-edit-form';
+        editForm.style.display = 'none';
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-input';
+
+        const editActions = document.createElement('div');
+        editActions.className = 'edit-actions';
+
+        const btnSaveEdit = document.createElement('button');
+        btnSaveEdit.className = 'btn-save-sm';
+        btnSaveEdit.textContent = '저장';
+
+        const btnCancelEdit = document.createElement('button');
+        btnCancelEdit.className = 'btn-cancel-sm';
+        btnCancelEdit.textContent = '취소';
+
+        editActions.appendChild(btnCancelEdit);
+        editActions.appendChild(btnSaveEdit);
+        editForm.appendChild(textarea);
+        editForm.appendChild(editActions);
+
+        wrapper.appendChild(headerDiv);
+        wrapper.appendChild(contentDiv);
+        wrapper.appendChild(editForm);
+
+        // Edit Mode Toggle
+        btnEdit.addEventListener('click', () => {
+          contentDiv.style.display = 'none';
+          editForm.style.display = 'flex';
+          let editableText = currentContent;
+          if (editableText.startsWith('~~') && editableText.endsWith('~~')) {
+            editableText = editableText.substring(2, editableText.length - 2);
+          }
+          textarea.value = editableText;
+          textarea.focus();
+        });
+
+        btnCancelEdit.addEventListener('click', () => {
+          contentDiv.style.display = 'block';
+          editForm.style.display = 'none';
+        });
+
+        btnSaveEdit.addEventListener('click', () => {
+          const newText = textarea.value.trim();
+          if (!newText || newText === currentContent) {
+            btnCancelEdit.click();
+            return;
+          }
+          btnSaveEdit.disabled = true;
+          btnSaveEdit.textContent = '저장 중...';
+
+          google.script.run
+            .withSuccessHandler(res => {
+              btnSaveEdit.disabled = false;
+              btnSaveEdit.textContent = '저장';
+              if (res.success) {
+                currentContent = res.newContent;
+                contentDiv.textContent = currentContent;
+                if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                  contentDiv.style.textDecoration = 'line-through';
+                  contentDiv.style.color = 'var(--hint-color)';
+                } else {
+                  contentDiv.style.textDecoration = 'none';
+                  contentDiv.style.color = '';
+                }
+                btnCancelEdit.click();
+                showToast('메모가 수정되었습니다.');
+                cachedSidebarData = null; // force reload next time
+              } else {
+                showToast('❌ 수정 실패: ' + res.message, true);
+              }
+            })
+            .withFailureHandler(err => {
+              btnSaveEdit.disabled = false;
+              btnSaveEdit.textContent = '저장';
+              showToast('❌ 서버 통신 에러', true);
+            })
+            .editArchivedMemo({
+              userName: currentUserName,
+              dateStr: dateStr,
+              timeStr: timeStr,
+              originalContent: currentContent,
+              newContent: newText
+            });
+        });
+
+        btnDone.addEventListener('click', () => {
+          btnDone.disabled = true;
+          google.script.run
+            .withSuccessHandler(res => {
+              btnDone.disabled = false;
+              if (res.success) {
+                currentContent = res.newContent;
+                contentDiv.textContent = currentContent;
+                if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                  contentDiv.style.textDecoration = 'line-through';
+                  contentDiv.style.color = 'var(--hint-color)';
+                } else {
+                  contentDiv.style.textDecoration = 'none';
+                  contentDiv.style.color = '';
+                }
+                showToast('상태가 변경되었습니다.');
+                cachedSidebarData = null; // expire cache
+              } else {
+                showToast('❌ 실패: ' + res.message, true);
+              }
+            })
+            .withFailureHandler(err => {
+              btnDone.disabled = false;
+              showToast('❌ 통신 에러', true);
+            })
+            .toggleStrikethroughMemo({
+              userName: currentUserName,
+              dateStr: dateStr,
+              timeStr: timeStr,
+              originalContent: currentContent
+            });
+        });
+
+        btnDel.addEventListener('click', () => {
+          executeDeleteFlow(wrapper, currentUserName, dateStr, timeStr, currentContent);
+        });
+
+        // 모바일 터치 노출
+        wrapper.addEventListener('touchstart', () => {
+          wrapper.classList.add('touched');
+          setTimeout(() => wrapper.classList.remove('touched'), 3000);
+        });
+
+        return wrapper;
+      }
+
+      let currentDeleteAction = null;
+      const confirmModal = document.getElementById('confirmModal');
+      const confirmMsg = document.getElementById('confirmMsg');
+      const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+      const confirmOkBtn = document.getElementById('confirmOkBtn');
+
+      function executeDeleteFlow(memoBlock, userName, dateStr, timeStr, originalContent) {
+        const preview = originalContent.length > 50 ? originalContent.substring(0, 50) + "..." : originalContent;
+        confirmMsg.innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
+
+        currentDeleteAction = () => {
+          confirmModal.style.display = 'none';
+          const btnDel = memoBlock.querySelector('.action-delete');
+          if (btnDel) btnDel.disabled = true;
+
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                memoBlock.style.transition = 'opacity 0.3s';
+                memoBlock.style.opacity = '0';
+                setTimeout(() => memoBlock.remove(), 300);
+                showToast('🗑️ 메모가 삭제되었습니다.');
+                cachedSidebarData = null;
+              } else {
+                if (btnDel) btnDel.disabled = false;
+                showToast('❌ 삭제 실패: ' + res.message, true);
+              }
+            })
+            .withFailureHandler(err => {
+              if (btnDel) btnDel.disabled = false;
+              showToast('❌ 통신 에러', true);
+            })
+            .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
+        };
+
+        confirmModal.style.display = 'flex';
+        confirmCancelBtn.focus();
+      }
+
+      confirmCancelBtn.addEventListener('click', () => {
+        confirmModal.style.display = 'none';
+        currentDeleteAction = null;
+      });
+
+      confirmOkBtn.addEventListener('click', () => {
+        if (currentDeleteAction) currentDeleteAction();
       });
 
       // 초기 포커스 및 초기화

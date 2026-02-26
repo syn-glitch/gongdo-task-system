@@ -38,7 +38,14 @@ function appendMemoToArchive(userName, memoText, userId) {
     return false;
   }
 
+  const lock = LockService.getUserLock();
   try {
+    const hasLock = lock.tryLock(10000); // 10초 대기
+    if (!hasLock) {
+      sendDebugLog("⏱️ `[대기 초과]` 다른 작업이 진행 중입니다. 잠시 후 다시 시도해주세요.");
+      return false;
+    }
+
     const rootFolder = DriveApp.getFolderById(ARCHIVE_ROOT_FOLDER_ID);
     
     // 1. 유저별 폴더 찾기 (없으면 생성)
@@ -104,6 +111,8 @@ function appendMemoToArchive(userName, memoText, userId) {
     console.error("🔥 구글 드라이브 아카이브 에러: ", error);
     sendDebugLog("🔥 `[치명적 에러]` 폴더 스크립트 도중 폭발함: " + error.toString());
     return false;
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -353,4 +362,263 @@ function cleanMemoContent(rawContent) {
         if (l.startsWith('  ')) return l.substring(2);
         return l;
    }).join('\n').trim();
+}
+
+/**
+ * ============================================================================
+ * 주디 노트 v2 업데이트 (편집, 삭제, 완료 기능 지원)
+ * ============================================================================
+ */
+
+/**
+ * 정규식 특수문자 이스케이프
+ */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * 무결성 검증 함수
+ */
+function validateFileIntegrity(original, updated) {
+  if (updated.trim().length < 10) {
+    throw new Error("ERR_FILE_TOO_SHORT: 업데이트 후 내용이 비정상적으로 짧습니다.");
+  }
+
+  const originalDateCount = (original.match(/^## \d{4}-\d{2}-\d{2}/gm) || []).length;
+  const updatedDateCount = (updated.match(/^## \d{4}-\d{2}-\d{2}/gm) || []).length;
+
+  if (updatedDateCount < originalDateCount) {
+    throw new Error(`ERR_DATE_HEADER_LOST: 날짜 헤더가 ${originalDateCount}개에서 ${updatedDateCount}개로 유실됨.`);
+  }
+
+  if (!updated.includes('# ') && original.includes('# ')) {
+    throw new Error("ERR_STRUCTURE_BROKEN: 파일의 전체 타이틀 등 기본 구조가 손상되었습니다.");
+  }
+}
+
+/**
+ * 단일 매칭 강제 파서 (정확히 1건일 때만 치환 허용)
+ */
+function findExactMemo(fullText, dateStr, timeStr, originalContent) {
+  const dateBlockRegex = new RegExp(`## ${escapeRegex(dateStr)}\\n([\\s\\S]*?)(?=\\n## |$)`, 'g');
+  const dateMatch = dateBlockRegex.exec(fullText);
+
+  if (!dateMatch) {
+    return { success: false, errorCode: "ERR_DATE_NOT_FOUND", matches: 0 };
+  }
+
+  const dateBlockContent = dateMatch[1];
+  const timeBlockRegex = new RegExp(
+    `- \\*\\*\\[${escapeRegex(timeStr)}\\]\\*\\*\\n((?:  .*\\n?)*?)(?=\\n- \\*\\*\\[|$)`,
+    'g'
+  );
+
+  const matches = [];
+  let match;
+  while ((match = timeBlockRegex.exec(dateBlockContent)) !== null) {
+    matches.push({
+      fullMatch: match[0],
+      content: match[1].trim().replace(/^  /gm, ''), // 들여쓰기 제거
+      index: match.index
+    });
+  }
+
+  // originalContent 비교 정규화
+  const normalizedOriginal = originalContent.trim().replace(/^  /gm, '');
+  const exactMatches = matches.filter(m => m.content === normalizedOriginal);
+
+  if (exactMatches.length === 0) {
+    return { success: false, errorCode: "ERR_CONTENT_NOT_FOUND", matches: 0 };
+  }
+
+  if (exactMatches.length > 1) {
+    return { success: false, errorCode: "ERR_DUPLICATE_CONTENT", matches: exactMatches.length };
+  }
+
+  const dateBlockStartInFull = dateMatch.index + dateMatch[0].indexOf(dateBlockContent);
+  return {
+    success: true,
+    match: exactMatches[0],
+    startIndex: dateBlockStartInFull + exactMatches[0].index,
+    endIndex: dateBlockStartInFull + exactMatches[0].index + exactMatches[0].fullMatch.length
+  };
+}
+
+/**
+ * 유저의 해당 월 파일 가져오기 (Helper)
+ */
+function getMonthlyMemoFile(userName, dateStr) {
+  const rootFolder = DriveApp.getFolderById(ARCHIVE_ROOT_FOLDER_ID);
+  const folderIter = rootFolder.getFoldersByName(userName);
+  if (!folderIter.hasNext()) throw new Error("User folder not found");
+  const userFolder = folderIter.next();
+  
+  // dateStr format: "2026-02-26 (목)" => extract "2026-02"
+  const monthMatch = dateStr.match(/^(\d{4}-\d{2})/);
+  if (!monthMatch) throw new Error("Invalid dateStr format");
+  const currentMonthStr = `${monthMatch[1]}_업무일지.md`;
+  
+  const fileIter = userFolder.getFilesByName(currentMonthStr);
+  while (fileIter.hasNext()) {
+     const f = fileIter.next();
+     if (f.getMimeType() !== 'application/vnd.google-apps.document') {
+       return f;
+     }
+  }
+  throw new Error("ERR_DATE_NOT_FOUND");
+}
+
+/**
+ * [Phase 3] 로깅 모니터링 시스템
+ * 작업 결과를 (타임스탬프, 사용자, 동작, 대상시간, 성공여부, 에러코드) 등으로 시트에 기록
+ */
+function logMemoEditAction(userName, action, dateStr, timeStr, success, errorCode) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const logSheetId = props.getProperty("MEMO_EDIT_LOG_SHEET_ID");
+    if (!logSheetId) {
+      console.warn("로깅 시트 ID가 설정되지 않아 MemoEditLog에 기록할 수 없습니다.");
+      return;
+    }
+    const ss = SpreadsheetApp.openById(logSheetId);
+    let sheet = ss.getSheetByName("MemoEditLog");
+    if (!sheet) {
+      sheet = ss.insertSheet("MemoEditLog");
+      sheet.appendRow(["Timestamp", "User", "Action", "Date", "Time", "Success", "ErrorCode"]);
+      sheet.getRange("A1:G1").setFontWeight("bold").setBackground("#f3f3f3");
+    }
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    sheet.appendRow([timestamp, userName, action, dateStr, timeStr, success, errorCode || ""]);
+  } catch (e) {
+    console.error("MemoEditLog 기록 실패:", e);
+  }
+}
+
+/**
+ * 안전한 아카이브 덮어쓰기 (LockService + 2-Phase Commit 백업 + Logging)
+ */
+function safeUpdateArchivedMemo(userName, actionName, dateStr, timeStr, originalContent, operationCallback) {
+  const lock = LockService.getUserLock();
+  let backupFile = null;
+
+  try {
+    const hasLock = lock.tryLock(10000);
+    if (!hasLock) {
+      logMemoEditAction(userName, actionName, dateStr, timeStr, false, "ERR_LOCK_TIMEOUT");
+      return { success: false, errorCode: "ERR_LOCK_TIMEOUT", message: "다른 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요." };
+    }
+
+    const mdFile = getMonthlyMemoFile(userName, dateStr);
+    const originalFullContent = mdFile.getBlob().getDataAsString();
+
+    // 1. 매칭 검사
+    const matchResult = findExactMemo(originalFullContent, dateStr, timeStr, originalContent);
+    if (!matchResult.success) {
+      logMemoEditAction(userName, actionName, dateStr, timeStr, false, matchResult.errorCode);
+      return matchResult; // 에러 반환
+    }
+
+    // 2. 2-Phase Commit 백업 생성
+    const timestamp = new Date().getTime();
+    const backupFileName = mdFile.getName().replace('.md', `_backup_${timestamp}.md`);
+    backupFile = mdFile.getParents().next().createFile(backupFileName, originalFullContent);
+
+    // 3. 작업 수행
+    const updatedContent = operationCallback(originalFullContent, matchResult);
+
+    // 4. 무결성 검증
+    validateFileIntegrity(originalFullContent, updatedContent);
+
+    // 5. 실제 파일 덮어쓰기
+    mdFile.setContent(updatedContent);
+
+    // 6. 성공 시 백업 삭제 (1초 대기 후)
+    Utilities.sleep(1000);
+    backupFile.setTrashed(true);
+
+    logMemoEditAction(userName, actionName, dateStr, timeStr, true, null);
+    return { success: true, backupId: backupFileName };
+
+  } catch (error) {
+    console.error("safeUpdateArchivedMemo Error:", error);
+    if (backupFile) {
+      // 실패 시 백업 유지
+      const failedName = backupFile.getName().replace('_backup_', '_FAILED_backup_');
+      backupFile.setName(failedName);
+    }
+    const msg = error.message || "";
+    const errorCode = msg.startsWith("ERR_") ? msg.split(":")[0] : "ERR_UNKNOWN";
+    logMemoEditAction(userName, actionName, dateStr, timeStr, false, errorCode);
+    return { success: false, errorCode: errorCode, message: msg };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * (API) 문서 수정
+ */
+function editArchivedMemo(params) {
+  const { userName, dateStr, timeStr, originalContent, newContent } = params;
+  
+  const result = safeUpdateArchivedMemo(userName, 'EDIT', dateStr, timeStr, originalContent, (fullContent, matchResult) => {
+    // 새 내용 포맷팅
+    const formattedNewContent = `- **[${timeStr}]**\n  ${newContent.replace(/\n/g, '\n  ')}\n`;
+    return fullContent.substring(0, matchResult.startIndex) + 
+           formattedNewContent + 
+           fullContent.substring(matchResult.endIndex);
+  });
+  
+  if (result.success) {
+    result.newContent = newContent;
+  }
+  return result;
+}
+
+/**
+ * (API) 문서 삭제
+ */
+function deleteArchivedMemo(params) {
+  const { userName, dateStr, timeStr, originalContent } = params;
+  
+  return safeUpdateArchivedMemo(userName, 'DELETE', dateStr, timeStr, originalContent, (fullContent, matchResult) => {
+    // 단순히 해당 블록 전체를 공백으로 치환
+    return fullContent.substring(0, matchResult.startIndex) + fullContent.substring(matchResult.endIndex);
+  });
+}
+
+/**
+ * (API) 문서 취소선 토글
+ */
+function toggleStrikethroughMemo(params) {
+  const { userName, dateStr, timeStr, originalContent } = params;
+  
+  let toggledContent = "";
+  
+  const result = safeUpdateArchivedMemo(userName, 'STRIKETHROUGH', dateStr, timeStr, originalContent, (fullContent, matchResult) => {
+    let contentToToggle = matchResult.match.content;
+    
+    const strikeRegex = /^~~([\s\S]*)~~$/;
+    const strikeMatch = contentToToggle.match(strikeRegex);
+    
+    if (strikeMatch) {
+      // 이미 취소선이 있다면 제거
+      toggledContent = strikeMatch[1];
+    } else {
+      // 취소선 추가
+      toggledContent = "~~" + contentToToggle + "~~";
+    }
+    
+    const formattedNewContent = `- **[${timeStr}]**\n  ${toggledContent.replace(/\n/g, '\n  ')}\n`;
+    
+    return fullContent.substring(0, matchResult.startIndex) + 
+           formattedNewContent + 
+           fullContent.substring(matchResult.endIndex);
+  });
+  
+  if (result.success) {
+    result.newContent = toggledContent;
+  }
+  return result;
 }
