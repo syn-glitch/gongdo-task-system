@@ -36,13 +36,13 @@ function jarvis_AutoDevelopmentTrigger() {
       if (status === "대기중") {
         Logger.log(`[자비스] 신규 Task 감지: ${taskId} - 개발 시작`);
         
-        // Phase 2: Claude 기반 요구사항 분석 및 로컬(구글 드라이브) 문서 생성 처리 로직
+        // Phase 2: OpenAI (GPT) 기반 요구사항 분석 및 로컬(구글 드라이브) 문서 생성 처리 로직
         try {
           const reqContent = data[i][1];
           const sysPrompt = "당신은 구글 앱스 스크립트 특급 개발자 에이전트 자비스(Jarvis)입니다. 사용자의 요구사항을 받아 완벽한 구조의 코드를 작성하고 마크다운 문서로 보고서를 제출합니다.";
           const usrPrompt = "요청 사항:\n" + reqContent + "\n\n요구사항을 분석하여 개발된 코드 및 기획서를 마크다운으로 작성해주세요.";
           
-          const devDocContent = callClaudeAPI(usrPrompt, sysPrompt);
+          const devDocContent = callOpenAIAPI(usrPrompt, sysPrompt);
           const fileUrl = createDriveFile(taskId + "_Jarvis_Dev_Doc", devDocContent);
           
           sheet.getRange(rowNum, 5).setValue(fileUrl);  // 개발_문서_링크 (E)
@@ -81,7 +81,7 @@ function jarvis_AutoDevelopmentTrigger() {
           const sysPrompt = "당신은 구글 앱스 스크립트 특급 개발자 자비스(Jarvis)입니다. QA 피드백을 반영하여 디버깅된 최종 코드로 기획서를 보완하세요.";
           const usrPrompt = "이전 QA 피드백 내용:\n" + qaContent + "\n\n결과를 바탕으로 버그를 고치고 수정된 문서를 산출하세요.";
           
-          const devDocContent = callClaudeAPI(usrPrompt, sysPrompt);
+          const devDocContent = callOpenAIAPI(usrPrompt, sysPrompt);
           const fileUrl = createDriveFile(taskId + `_Jarvis_Dev_Fix_v${newPingPong}`, devDocContent);
           
           sheet.getRange(rowNum, 5).setValue(fileUrl);
@@ -132,7 +132,7 @@ function kimQA_AutoReviewTrigger() {
           const sysPrompt = "당신은 최고의 QA 팀장 김감사입니다. 제출된 코드를 읽고 매우 꼼꼼한 코드 에러 검수와 리뷰 분석 보고서를 작성하세요. 맨 마지막 줄에 JSON 형태로 에러 갯수를 표기하세요! (예: {\"errorCount\": 2})";
           const qaPrompt = `개발 문서 내용: \n${devContent}\n\n이 문서를 철저히 QA하여 버그를 검출하세요.`;
           
-          const qaResultText = callClaudeAPI(qaPrompt, sysPrompt);
+          const qaResultText = callOpenAIAPI(qaPrompt, sysPrompt);
           
           // 에러 갯수 추출 시도 (JSON 파싱 정규식)
           let errorCount = 0;
@@ -214,38 +214,36 @@ function initAgentTasksSheet() {
  */
 
 /**
- * Claude API 연결 (Properties의 CLAUDE_API_KEY 사용 권장, 미등록 시 에러)
+ * OpenAI API 연결 (Properties의 OPENAI_API_KEY 적용 완료)
  */
-function callClaudeAPI(userPrompt, systemPrompt) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty("CLAUDE_API_KEY");
-  if (!apiKey) {
-    throw new Error("환경 변수에 CLAUDE_API_KEY가 등록되지 않았습니다.");
-  }
+function callOpenAIAPI(userPrompt, systemPrompt) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("OPENAI_API_KEY") || "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";
   
   const payload = {
-    model: "claude-3-5-sonnet-20241022",
-    max_tokens: 4000,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }]
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]
   };
   
   const options = {
     method: "post",
     contentType: "application/json",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
+      "Authorization": "Bearer " + apiKey
     },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
   
-  const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
+  const response = UrlFetchApp.fetch("https://api.openai.com/v1/chat/completions", options);
   const json = JSON.parse(response.getContentText());
+  
   if (json.error) {
     throw new Error("AI 호출 실패: " + json.error.message);
   }
-  return json.content[0].text;
+  return json.choices[0].message.content;
 }
 
 /**
