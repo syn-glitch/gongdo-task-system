@@ -156,7 +156,14 @@ function kimQA_AutoReviewTrigger() {
           } else {
             sheet.getRange(rowNum, 3).setValue("최종_승인");
             sheet.getRange(rowNum, 11).setValue(new Date()); // K열 완료 시간
-            // TODO: Phase 3에서 슬랙 알람 발송 연동
+            
+            // Phase 3: 슬랙 알람 발송 연동
+            try {
+              sendSlackNotification(taskId, rowNum, sheet);
+              Logger.log(`[김감사] ${taskId} QA 완료 → 최종 결재 슬랙 알림 전송`);
+            } catch(e) {
+              Logger.log(`[WARN] 슬랙 알림 전송 실패: ${e.message}`);
+            }
           }
         } catch(e) {
           sheet.getRange(rowNum, 12).setValue("김감사 QA 에러: " + e.message);
@@ -270,4 +277,43 @@ function createDriveFile(fileName, content) {
   // 외부 열람이 가능하도록 권한 수정
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return file.getUrl();
+}
+
+/**
+ * ============================================================================
+ * [헬퍼 함수] Phase 3 슬랙 웹훅 알람
+ * ============================================================================
+ */
+function sendSlackNotification(taskId, rowNum, sheet) {
+  const webhookUrl = PropertiesService.getScriptProperties().getProperty("SLACK_WEBHOOK_URL");
+  if (!webhookUrl) {
+    throw new Error("SLACK_WEBHOOK_URL 스크립트 속성이 설정되지 않았습니다.");
+  }
+  
+  const reqContent = sheet.getRange(rowNum, 2).getValue();
+  const pingPong = sheet.getRange(rowNum, 9).getValue() || 0;
+  const devDoc = sheet.getRange(rowNum, 5).getValue();
+  const qaDoc = sheet.getRange(rowNum, 6).getValue();
+  
+  const message = `🚀 *[Agent Sync] 자동화 검수 완료:* 승인 대기 중 🚀\n\n` +
+                  `*▪️ Task ID:* ${taskId}\n` +
+                  `*▪️ 요청 내용:* ${reqContent}\n` +
+                  `*▪️ 에이전트 간 핑퐁 횟수:* ${pingPong}회\n\n` +
+                  `📄 *산출물 링크:*\n` +
+                  `- [자비스 개발 기획서](${devDoc})\n` +
+                  `- [김감사 QA 리포트](${qaDoc})\n\n` +
+                  `👉 <https://docs.google.com/spreadsheets/d/${AGENT_SHEET_ID}/edit|시트 열어서 확인 후 최종 배포하기>`;
+                  
+  const payload = {
+    "text": message
+  };
+  
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  UrlFetchApp.fetch(webhookUrl, options);
 }
