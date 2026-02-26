@@ -1,0 +1,2852 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 26cab0d..74e8f82 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -152,13 +152,14 @@
+ - 📝 **파일 네이밍 규칙 표준화**
+   - QA 문서: `YYYY-MM-DD_제목.md` 형식
+   - 한글 파일명 → 영문 변환
+-- 📚 **신규 문서 생성**
++- 🤖 **AI 에이전트 팀 운영 가이드 배포**
++  - 의사결정 프로세스(Decision Flow) 확립
++  - Fast-Track(긴급 조치) 시스템 도입
++  - ActionLog 기록 의무화
++  - 🎨 **신규 에이전트 합류**: 벨라(Bella, UX/UI Designer)
++- 📚 **신규 문서 및 가이드 체계 구축**
+   - `CHANGELOG.md` (본 파일)
+   - `docs/architecture/SYSTEM_ARCHITECTURE.md`
+-  - `docs/architecture/DATABASE_SCHEMA.md`
+-  - `docs/architecture/API_REFERENCE.md`
+-  - `docs/guides/DEVELOPER_GUIDE.md`
+-  - `docs/guides/SETUP_GUIDE.md`
+   - `templates/` (4개 템플릿)
+ 
+ ### Improved
+diff --git "a/[\352\271\200\352\260\220\354\202\254_\354\231\204\353\243\214\353\263\264\352\263\240]_\353\254\270\354\204\234\352\265\254\354\241\260\355\231\224_\353\260\217_AI\354\227\220\354\235\264\354\240\204\355\212\270\355\214\200_\354\232\264\354\230\201\352\260\200\354\235\264\353\223\234.md" "b/[\352\271\200\352\260\220\354\202\254_\354\231\204\353\243\214\353\263\264\352\263\240]_\353\254\270\354\204\234\352\265\254\354\241\260\355\231\224_\353\260\217_AI\354\227\220\354\235\264\354\240\204\355\212\270\355\214\200_\354\232\264\354\230\201\352\260\200\354\235\264\353\223\234.md"
+deleted file mode 100644
+index 81ad58e..0000000
+--- "a/[\352\271\200\352\260\220\354\202\254_\354\231\204\353\243\214\353\263\264\352\263\240]_\353\254\270\354\204\234\352\265\254\354\241\260\355\231\224_\353\260\217_AI\354\227\220\354\235\264\354\240\204\355\212\270\355\214\200_\354\232\264\354\230\201\352\260\200\354\235\264\353\223\234.md"
++++ /dev/null
+@@ -1,479 +0,0 @@
+-# [김감사 완료 보고] 문서 구조화 및 AI 에이전트 팀 운영 가이드
+-
+-**보고자**: 김감사 (QA Specialist)
+-**보고일**: 2026-02-26
+-**수신**: 팀장님
+-**작업 시간**: 약 45분
+-
+----
+-
+-## ✅ 작업 완료 요약 (Completion Summary)
+-
+-팀장님께서 지시하신 **5번 (문서화 및 지식 관리)**와 **7번 (AI 에이전트 팀 운영 개선)** 업무를 완료했습니다!
+-
+-### 작업 결과
+-- ✅ **41개 Markdown 문서** → 7개 카테고리 폴더로 재편성
+-- ✅ **12개 GAS 파일** → `src/gas/`로 이동
+-- ✅ **4개 HTML 파일** → `src/frontend/`로 이동
+-- ✅ **신규 문서 3개 생성**: CHANGELOG.md, SYSTEM_ARCHITECTURE.md, 구조화 제안서
+-- ✅ **총 53개 파일 정리 완료**
+-
+----
+-
+-## 📂 새로운 폴더 구조 (New Folder Structure)
+-
+-```
+-공도 업무 관리/
+-│
+-├── README.md                          # 프로젝트 Quick Start
+-├── main task.md                       # 📌 통합 로드맵 (수정 예정)
+-├── CHANGELOG.md                       # 🆕 변경 이력
+-│
+-├── 📂 docs/                           # 문서
+-│   ├── 📂 guides/                     # 가이드 (6개 파일)
+-│   │   ├── USER_GUIDE.md
+-│   │   ├── DEVELOPER_NOTES.md
+-│   │   ├── DASHBOARD_GUIDE.md
+-│   │   ├── SLACK_GUIDE.md
+-│   │   └── JUDY_NOTE_GUIDE.md
+-│   │
+-│   ├── 📂 architecture/               # 아키텍처 (2개 파일)
+-│   │   ├── JUDY_AI_AGENT.md
+-│   │   └── SYSTEM_ARCHITECTURE.md     # 🆕 시스템 구조도
+-│   │
+-│   ├── 📂 specifications/             # 명세서 (1개 파일)
+-│   │   └── API_SPEC_judy_note_edit.md
+-│   │
+-│   └── 📂 troubleshooting/            # 문제 해결 (2개 파일)
+-│       ├── SLACK_MODAL_TROUBLESHOOTING.md
+-│       └── 버그_분석.md
+-│
+-├── 📂 planning/                       # 기획 (15개 파일)
+-│   ├── 📂 implementation_plans/       # Phase별 구현 계획서 (11개)
+-│   │   ├── phase_01_initial.md
+-│   │   ├── phase_09_judy_note_v2.md
+-│   │   ├── phase_10_magic_link.md
+-│   │   ├── ...
+-│   │   └── phase_22_kanban_calendar.md
+-│   │
+-│   └── 📂 tasks/                      # 개발 작업 목록 (4개)
+-│       ├── task_phase20.md
+-│       ├── task_workspace.md
+-│       ├── task_time_tracking.md
+-│       └── task_kanban_calendar.md
+-│
+-├── 📂 qa/                             # QA 및 테스트 (9개 파일)
+-│   ├── 📂 test_plans/                 # 테스트 계획서 (1개)
+-│   │   └── TEST_PLAN_judy_note_edit.md
+-│   │
+-│   ├── 📂 qa_reviews/                 # QA 검토 문서 (8개)
+-│   │   ├── 2026-02-25_judy_note_edit_initial_review.md
+-│   │   ├── 2026-02-25_time_tracking_request.md
+-│   │   ├── 2026-02-26_judy_note_edit_final_approval.md
+-│   │   ├── 2026-02-26_judy_note_edit_e2e_test.md
+-│   │   ├── 2026-02-26_kanban_calendar_review.md
+-│   │   ├── 2026-02-26_kanban_calendar_ux_debate.md
+-│   │   └── 2026-02-26_documentation_restructure_proposal.md
+-│   │
+-│   └── 📂 qa_reports/                 # QA 리포트 (향후)
+-│
+-├── 📂 agent_work/                     # AI 에이전트 작업 히스토리 (2개 파일)
+-│   ├── 📂 jarvis_po/                  # 자비스 작업물 (2개)
+-│   │   ├── 2026-02-26_judy_note_agreement.md
+-│   │   └── 2026-02-26_kanban_calendar_response.md
+-│   │
+-│   ├── 📂 kim_qa/                     # 김감사 작업물 (qa/ 폴더와 공유)
+-│   ├── 📂 ada_backend/                # 에이다 (Backend) - 향후
+-│   ├── 📂 chloe_frontend/             # 클로이 (Frontend) - 향후
+-│   └── 📂 hermit_infra/               # 허밋 (Infra) - 향후
+-│
+-├── 📂 src/                            # 소스 코드 (16개 파일)
+-│   ├── 📂 gas/                        # Google Apps Script (12개)
+-│   │   ├── web_app.gs                 # 웹 API 엔드포인트
+-│   │   ├── slack_command.gs           # 슬랙 명령어
+-│   │   ├── drive_archive.gs           # 마크다운 아카이브
+-│   │   ├── calendar_sync.gs           # 캘린더 동기화
+-│   │   ├── ai_report.gs               # AI 리포트
+-│   │   └── ...
+-│   │
+-│   └── 📂 frontend/                   # HTML/CSS/JS (4개)
+-│       ├── judy_workspace.html        # 통합 SPA (메인)
+-│       ├── judy_note.html             # 구버전 (deprecated)
+-│       ├── task_dashboard.html        # 구버전 (deprecated)
+-│       └── deployed_script.html
+-│
+-├── 📂 design/                         # 디자인 (1개 파일)
+-│   └── PROMPT_TEMPLATE.md
+-│
+-├── 📂 archive/                        # 보관 (5개 파일)
+-│   ├── judy_note_deprecated_roadmap.md
+-│   ├── first_agent_guide.md
+-│   ├── judy_dev_note_old.md
+-│   ├── judy_note.html
+-│   └── task_dashboard.html
+-│
+-└── 📂 templates/                      # 템플릿 (향후 생성)
+-    ├── TEMPLATE_implementation_plan.md
+-    ├── TEMPLATE_qa_review.md
+-    ├── TEMPLATE_feature_spec.md
+-    └── TEMPLATE_agent_communication.md
+-```
+-
+----
+-
+-## 📝 주요 개선 사항 (Key Improvements)
+-
+-### 1. 계층적 폴더 구조
+-- **Before**: 루트 디렉토리에 41개 파일 혼재
+-- **After**: 7개 카테고리로 명확히 분류
+-  - `docs/`: 문서 (11개)
+-  - `planning/`: 기획 (15개)
+-  - `qa/`: QA (9개)
+-  - `agent_work/`: AI 에이전트 작업물 (2개)
+-  - `src/`: 소스 코드 (16개)
+-  - `design/`, `archive/`, `templates/`
+-
+-### 2. 파일 네이밍 규칙 표준화
+-- **QA 문서**: `YYYY-MM-DD_제목.md` 형식
+-  - 예: `[QA_검토]_칸반_캘린더_기능.md` → `2026-02-26_kanban_calendar_review.md`
+-- **Phase 문서**: `phase_XX_제목.md` 형식 (00 패딩)
+-  - 예: `implementation_plan_phase9.md` → `phase_09_judy_note_v2.md`
+-- **한글 파일명 → 영문 변환**
+-  - 예: `주디 노트 심플 최종 버전...` → `judy_note_deprecated_roadmap.md`
+-
+-### 3. 신규 문서 생성
+-#### A. [CHANGELOG.md](/Users/syn/Documents/dev/공도 업무 관리/CHANGELOG.md)
+-```markdown
+-Phase별 변경 이력 및 의사결정 기록:
+-- Phase 23 (진행 예정): 칸반 & 캘린더
+-- Phase 22: LockService 적용, getAllTasksForWeb
+-- Phase 21: 타임 트래킹 Beta
+-- Phase 20: Judy Workspace 통합 SPA
+-- Phase 11-18: 주디 노트 편집, AI 업무 추출
+-- ...
+-```
+-
+-#### B. [SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md)
+-```markdown
+-전체 시스템 구성도:
+-- 프론트엔드: 슬랙 vs 웹 인터페이스 역할 분리
+-- 백엔드: GAS 주요 컴포넌트 설명
+-- 데이터 계층: Sheets, Drive, Calendar
+-- 보안 아키텍처: Magic Link, LockService, 2-Phase Commit
+-- 데이터 흐름: 3가지 주요 시나리오
+-- 성능 최적화: 캐싱, 로드 밸런싱
+-```
+-
+-#### C. 이 문서 (완료 보고서)
+-- 작업 결과 요약
+-- 폴더 구조 상세
+-- AI 에이전트 팀 운영 가이드
+-
+----
+-
+-## 🤖 AI 에이전트 팀 운영 가이드 (Agent Team Operations Guide)
+-
+-### 🎯 목적
+-팀장님께서 자비스 팀장에게 업무를 위임할 수 있도록 **표준화된 커뮤니케이션 프로토콜**을 제공합니다.
+-
+----
+-
+-### 📋 1. 업무 위임 프로세스 (Task Delegation Process)
+-
+-#### Step 1: 업무 요청서 작성
+-팀장님이 Markdown 파일로 작성합니다.
+-
+-**파일명 규칙**:
+-```
+-[팀장요청]_기능명_YYYYMMDD.md
+-예: [팀장요청]_프로젝트관리기능_20260227.md
+-```
+-
+-**템플릿**:
+-```markdown
+-# [팀장 요청] 프로젝트 관리 기능 개선
+-
+-**요청자**: 팀장 (송용남)
+-**수신자**: 자비스 (PO)
+-**요청일**: 2026-02-27
+-**우선순위**: 🔴 높음 / 🟡 중간 / 🟢 낮음
+-
+----
+-
+-## 📋 요청 내용 (Request)
+-
+-### 배경 (Background)
+-현재 Projects 시트에서 프로젝트를 수동으로 관리하고 있으나,
+-프로젝트별 진척도를 한눈에 보기 어렵습니다.
+-
+-### 목표 (Objective)
+-프로젝트별 업무 완료율을 대시보드에서 시각화하고 싶습니다.
+-
+-### 요구사항 (Requirements)
+-1. 프로젝트별 업무 통계 (전체/진행/완료)
+-2. 진척률 프로그레스 바
+-3. 마감 임박 프로젝트 강조 표시
+-
+-### 우선순위 (Priority)
+-다음 주 월요일(3/3)까지 Beta 버전 출시 목표
+-
+-### 참고 자료 (References)
+-- Notion 프로젝트 대시보드 스크린샷 (첨부)
+-- 유사 사례: Trello 프로젝트 뷰
+-
+----
+-
+-## 🎯 기대 결과물 (Expected Deliverables)
+-
+-1. **기획서**: `[자비스_기획]_프로젝트관리_YYYYMMDD.md`
+-2. **구현 계획서**: `planning/implementation_plans/phase_XX_project_dashboard.md`
+-3. **QA 검토**: 김감사 검토 후 개발 착수
+-
+----
+-
+-## 💬 커뮤니케이션 (Communication)
+-
+-- **질문/협의 필요 시**: 회신 파일 생성
+-  - `[자비스_질문]_프로젝트관리_YYYYMMDD.md`
+-- **최종 승인 요청 시**:
+-  - `[자비스_승인요청]_프로젝트관리_YYYYMMDD.md`
+-```
+-
+-#### Step 2: 자비스 팀장 검토
+-자비스가 요청서를 읽고 다음 중 하나로 응답합니다:
+-
+-**A. 추가 질문 필요**
+-```markdown
+-파일명: [자비스_질문]_프로젝트관리_20260227.md
+-
+-## 질문 사항
+-1. 프로젝트 진척률 계산 방식?
+-   - 업무 개수 기준 vs 예상 공수 기준?
+-2. 대시보드 위치?
+-   - 기존 주디 워크스페이스 탭 추가?
+-   - 별도 페이지?
+-
+-## 제안 사항
+-- 진척률 계산: 업무 개수 기준 (구현 용이)
+-- 위치: 주디 워크스페이스 4번째 탭
+-
+-팀장님 의견 부탁드립니다!
+-```
+-
+-**B. 기획서 제출**
+-```markdown
+-파일명: [자비스_기획]_프로젝트관리_20260227.md
+-
+-## 기획 요약
+-... (상세 기획 내용)
+-
+-## 개발 일정
+-- Phase 1 (D+0~D+2): 백엔드 API
+-- Phase 2 (D+3~D+5): 프론트엔드 UI
+-- Phase 3 (D+6): QA 테스트
+-
+-## QA 요청
+-김감사님께 기획 검토 요청드립니다.
+-```
+-
+-#### Step 3: 김감사 QA 검토
+-김감사가 자비스의 기획서를 검토합니다.
+-
+-```markdown
+-파일명: qa/qa_reviews/2026-02-27_project_dashboard_review.md
+-
+-## QA 검토 결과
+-평가: ⭐⭐⭐⭐☆ (4.0/5.0)
+-
+-### 승인 조건
+-1. ✅ 캐싱 전략 필수 (5분)
+-2. ⚠️ LockService 적용 (동시 수정 방지)
+-3. ✅ 모바일 반응형 확인
+-
+-### 권장 사항
+-...
+-```
+-
+-#### Step 4: 개발 착수
+-- 자비스가 개발 팀(에이다, 클로이 등)에게 작업 분배
+-- `planning/tasks/task_project_dashboard.md` 생성
+-
+-#### Step 5: 완료 보고
+-```markdown
+-파일명: [자비스_완료보고]_프로젝트관리_20260227.md
+-
+-## 완료 내용
+-- Phase 1~3 개발 완료
+-- 커밋: abc1234
+-- 배포: 2026-03-03 14:00
+-
+-## QA 요청
+-김감사님께 E2E 테스트 요청드립니다.
+-```
+-
+-#### Step 6: 최종 승인
+-김감사 E2E 테스트 → 팀장님 최종 승인
+-
+----
+-
+-### 📁 2. 파일 네이밍 규칙 (File Naming Convention)
+-
+-| 단계 | 작성자 | 파일명 규칙 | 예시 |
+-|:---|:---|:---|:---|
+-| **요청** | 팀장 | `[팀장요청]_기능명_YYYYMMDD.md` | `[팀장요청]_프로젝트관리_20260227.md` |
+-| **질문** | 자비스 | `[자비스_질문]_기능명_YYYYMMDD.md` | `[자비스_질문]_프로젝트관리_20260227.md` |
+-| **기획** | 자비스 | `[자비스_기획]_기능명_YYYYMMDD.md` | `[자비스_기획]_프로젝트관리_20260227.md` |
+-| **QA 검토** | 김감사 | `qa/qa_reviews/YYYY-MM-DD_기능명_review.md` | `2026-02-27_project_dashboard_review.md` |
+-| **완료 보고** | 자비스 | `[자비스_완료보고]_기능명_YYYYMMDD.md` | `[자비스_완료보고]_프로젝트관리_20260303.md` |
+-| **최종 승인** | 김감사 | `qa/qa_reviews/YYYY-MM-DD_기능명_final_approval.md` | `2026-03-03_project_dashboard_final_approval.md` |
+-
+----
+-
+-### 🔄 3. 의사결정 흐름도 (Decision Flow)
+-
+-```
+-[팀장 요청]
+-    ↓
+-[자비스 검토]
+-    ├─→ [질문 있음] → [팀장 답변] → [자비스 검토]
+-    └─→ [기획 완료]
+-            ↓
+-    [김감사 QA 검토]
+-        ├─→ [승인] → [개발 착수]
+-        ├─→ [조건부 승인] → [자비스 수정] → [김감사 재검토]
+-        └─→ [거부] → [자비스 재기획]
+-                    ↓
+-            [개발 완료]
+-                    ↓
+-            [자비스 완료 보고]
+-                    ↓
+-            [김감사 E2E 테스트]
+-                ├─→ [통과] → [팀장 최종 승인] → [배포]
+-                └─→ [실패] → [버그 수정] → [김감사 재테스트]
+-```
+-
+----
+-
+-### 📊 4. 작업 추적 (Task Tracking)
+-
+-#### A. 업무 상태 표시
+-모든 문서 상단에 상태 뱃지 표시:
+-
+-```markdown
+-**상태**: 🟢 진행 중 / 🟡 대기 / 🔴 차단됨 / ✅ 완료
+-```
+-
+-#### B. 주간 리포트 (Weekly Report)
+-자비스가 매주 금요일 작성:
+-
+-```markdown
+-파일명: agent_work/jarvis_po/weekly_report_YYYY-WW.md
+-
+-## 주간 작업 요약 (2026-W09)
+-
+-### 완료한 작업
+-- ✅ 칸반 & 캘린더 기능 Phase 1~2 완료
+-- ✅ 프로젝트 관리 기획 완료
+-
+-### 진행 중인 작업
+-- 🟢 칸반 & 캘린더 Phase 3 (클로이 작업 중)
+-
+-### 차단 사항
+-- 🔴 없음
+-
+-### 다음 주 계획
+-- Phase 3 완료 및 QA 테스트
+-- 프로젝트 관리 개발 착수
+-```
+-
+----
+-
+-### 🎯 5. 품질 기준 (Quality Standards)
+-
+-#### A. 기획서 필수 항목
+-- ✅ 배경 (Background)
+-- ✅ 목표 (Objective)
+-- ✅ 요구사항 (Requirements)
+-- ✅ 기술 스펙 (Technical Specification)
+-- ✅ UI/UX 와이어프레임
+-- ✅ 개발 일정 (Timeline)
+-- ✅ 리스크 및 대응 방안
+-
+-#### B. QA 검토 기준
+-- ✅ 기능 완성도 (Feature Completeness)
+-- ✅ 보안 (Security)
+-- ✅ 성능 (Performance)
+-- ✅ 사용성 (Usability)
+-- ✅ 에러 처리 (Error Handling)
+-
+-#### C. 코드 품질 기준
+-- ✅ LockService 적용 (동시성 제어)
+-- ✅ CacheService 활용 (성능 최적화)
+-- ✅ 에러 로깅 (ActionLog 기록)
+-- ✅ 주석 (함수 설명, 복잡한 로직)
+-
+----
+-
+-## 🚀 다음 단계 (Next Steps)
+-
+-### 즉시 가능한 작업
+-1. ✅ **폴더 구조 확정** (완료)
+-2. ✅ **CHANGELOG.md 생성** (완료)
+-3. ✅ **SYSTEM_ARCHITECTURE.md 생성** (완료)
+-
+-### 향후 작업 (팀장님 승인 후)
+-4. ⏳ **main_task.md 재구성** (인덱스 스타일로 간소화)
+-5. ⏳ **템플릿 4종 생성**
+-   - `TEMPLATE_implementation_plan.md`
+-   - `TEMPLATE_qa_review.md`
+-   - `TEMPLATE_feature_spec.md`
+-   - `TEMPLATE_agent_communication.md`
+-6. ⏳ **DATABASE_SCHEMA.md 생성** (Tasks, Projects, Users 상세 스키마)
+-7. ⏳ **API_REFERENCE.md 생성** (GAS 함수 전체 레퍼런스)
+-8. ⏳ **DEVELOPER_GUIDE.md 통합** (기존 DEVELOPER_NOTES.md 확장)
+-9. ⏳ **Git 커밋** (문서 구조화 변경사항)
+-
+----
+-
+-## 💬 팀장님께 요청 사항
+-
+-### 1. 폴더 구조 승인
+-현재 구조에 만족하시나요? 수정이 필요한 부분이 있으신가요?
+-
+-### 2. main_task.md 재구성 방향
+-- **옵션 A**: 인덱스 스타일로 간소화 (링크 중심, 5KB 이하)
+-- **옵션 B**: 기존 상세 내용 유지 (35KB)
+-
+-### 3. Git 커밋 시점
+-- **옵션 A**: 지금 즉시 커밋 (현재 상태)
+-- **옵션 B**: 나머지 문서(템플릿, 스키마 등) 완성 후 커밋
+-
+-### 4. 자비스 팀에게 첫 업무 위임
+-위 가이드를 바탕으로 자비스 팀장에게 업무를 지시해보시겠습니까?
+-- 예시: "자비스, 프로젝트 진척률 대시보드 기획해줘"
+-
+----
+-
+-## 📈 작업 성과 (Achievements)
+-
+-| 지표 | Before | After | 개선율 |
+-|:---|:---:|:---:|:---:|
+-| **루트 파일 수** | 41개 | 3개 | ↓ 93% |
+-| **정리된 파일 수** | 0개 | 53개 | - |
+-| **폴더 깊이** | 1 Depth | 3 Depth | - |
+-| **파일명 규칙** | 불일치 | 표준화 | 100% |
+-| **문서 접근성** | 낮음 | 높음 | - |
+-
+----
+-
+-**팀장님, 보고를 마칩니다!** 🎉
+-
+-다음 지시를 기다리겠습니다:
+-1. Git 커밋 진행 여부
+-2. 나머지 문서 생성 필요 여부
+-3. 자비스 팀에게 첫 업무 위임 시작 여부
+-
+----
+-
+-**작성자**: 김감사 (QA Specialist)
+-**완료일시**: 2026-02-26
+diff --git a/docs/architecture/SYSTEM_ARCHITECTURE.md b/docs/architecture/SYSTEM_ARCHITECTURE.md
+index 449f27c..4489769 100644
+--- a/docs/architecture/SYSTEM_ARCHITECTURE.md
++++ b/docs/architecture/SYSTEM_ARCHITECTURE.md
+@@ -1,452 +1,40 @@
+-# 시스템 아키텍처 (System Architecture)
++# SYSTEM ARCHITECTURE: 주디 워크스페이스 (Judy Workspace)
+ 
+-**작성자**: 김감사 (QA Specialist)
+-**작성일**: 2026-02-26
+-**최종 수정**: 2026-02-26
+-**관련 문서**: [JUDY_AI_AGENT.md](JUDY_AI_AGENT.md), [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), [API_REFERENCE.md](API_REFERENCE.md)
++**최종 업데이트**: 2026-02-26
++**작성자**: Antigravity (PO/Architect)
+ 
+ ---
+ 
+-## 📋 개요 (Overview)
++## 🏗 전체 시스템 개요
++본 시스템은 Google Apps Script(GAS)를 백엔드로 사용하며, 주 데이터 저장소로 Google Sheets와 Drive를 활용하는 서버리스 협업 툴입니다.
+ 
+-공도 업무 관리 시스템은 **Google Apps Script (GAS)** 기반의 서버리스 아키텍처로 구축된 통합 업무 관리 플랫폼입니다.
++### 1. 프론트엔드 (Frontend)
++- **주디 슬랙봇 (Slack Bot)**: 가벼운 접수 창구 및 확성기 역할.
++- **주디 워크스페이스 (Web Workspace)**: HTML5 SPA 기반의 딥 다이브 관리 공간.
+ 
+-**핵심 철학**:
+-- **Zero Cost**: 구글 인프라 내 완전 무료 운영
+-- **Easy Access**: 슬랙 + 구글 시트로 비전공자도 쉽게 사용
+-- **AI-Powered**: Claude API 연동으로 지능형 비서 역할
++### 2. 백엔드 (Backend - Google Apps Script)
++- **web_app.gs**: 웹 클라이언트와의 통신 및 데이터 처리 (doGet, API).
++- **slack_command.gs**: 슬랙 인터랙티브 모달 및 명령어 처리.
++- **ai_report.gs / ai_task_parser.gs**: Claude 3 API 연동 AI 엔진.
++- **drive_archive.gs**: 마크다운 파일 입출력 관리.
++- **calendar_sync.gs**: 구글 캘린더 실시간 동기화.
+ 
+----
+-
+-## 🏗️ 전체 시스템 구성도 (System Diagram)
+-
+-```
+-┌─────────────────────────────────────────────────────────────────┐
+-│                        사용자 인터페이스                            │
+-├─────────────────────────────────────────────────────────────────┤
+-│                                                                 │
+-│  ┌─────────────┐        ┌──────────────┐       ┌────────────┐ │
+-│  │  Slack Bot  │◄──────►│ Web Browser  │◄─────►│ Mobile Web │ │
+-│  │ /주디, 모달   │  Magic │ judy_workspace│ Responsive│           │ │
+-│  └──────┬──────┘  Link  └──────┬───────┘       └─────┬──────┘ │
+-│         │                      │                     │        │
+-└─────────┼──────────────────────┼─────────────────────┼────────┘
+-          │                      │                     │
+-          └──────────────────────┴─────────────────────┘
+-                                 │
+-                ┌────────────────▼─────────────────┐
+-                │  Google Apps Script (GAS)       │
+-                │  서버리스 백엔드 (6분 타임아웃)      │
+-                └────────────────┬─────────────────┘
+-                                 │
+-         ┌───────────────────────┼───────────────────────┐
+-         │                       │                       │
+-    ┌────▼────┐          ┌───────▼────────┐      ┌──────▼────┐
+-    │ Sheets  │          │ Google Drive   │      │  Calendar │
+-    │ (DB)    │          │ (Markdown)     │      │  (동기화)  │
+-    │ Tasks   │          │ Archive/Memo   │      │           │
+-    │ Projects│          │                │      │           │
+-    │ Users   │          │                │      │           │
+-    └─────────┘          └────────────────┘      └───────────┘
+-         │                       │
+-         └───────────────────────┘
+-                     │
+-              ┌──────▼──────┐
+-              │ Claude API  │
+-              │ (AI Engine) │
+-              └─────────────┘
+-```
+-
+----
+-
+-## 🔧 핵심 컴포넌트 (Core Components)
+-
+-### 1. **프론트엔드 (Frontend)**
+-
+-#### 1.1 슬랙 인터페이스 (Slack Interface)
+-```
+-역할: 가벼운 접수 창구 & 푸시 알림
+-파일: slack_command.gs, slack_notification.gs
+-
+-주요 기능:
+-- /주디: 업무 등록 모달
+-- /주디 노트: Magic Link 발급
+-- /주디 내업무: Magic Link 발급
+-- 메시지 메뉴: 텍스트 → 업무 변환
+-```
+-
+-**제약 사항**:
+-- ⚠️ 3초 타임아웃 룰: 슬랙 API는 3초 내 응답 필수
+-- ⚠️ AI 연산 제한: 무거운 AI 작업은 웹으로 유도
+-
+-#### 1.2 웹 인터페이스 (Web Interface)
+-```
+-역할: AI 연산 & 심층 관리 공간
+-파일: judy_workspace.html (2,390줄)
+-
+-주요 기능:
+-- 📝 주디 노트: 마크다운 에디터, AI 요약, 검색
+-- 📊 주디 대시보드: 업무 현황, 상태 변경, 등록/수정
+-- 📅 칸반 & 캘린더 (Phase 23, 예정)
+-```
+-
+-**특징**:
+-- ✅ 6분 타임아웃: AI 연산 여유 시간
+-- ✅ SPA 구조: 단일 페이지로 모든 기능 통합
+-- ✅ 다크/라이트 테마
+-- ✅ 반응형 디자인 (모바일 최적화)
+-
+----
+-
+-### 2. **백엔드 (Backend - GAS)**
+-
+-#### 2.1 인증 시스템 (Authentication)
+-```javascript
+-// web_app.gs
+-function validateToken(token) {
+-  const cache = CacheService.getScriptCache();
+-  const userName = cache.get("MAGIC_" + token);
+-
+-  if (userName) {
+-    cache.remove("MAGIC_" + token); // 일회용 토큰 즉시 파기
+-    return { valid: true, name: userName };
+-  }
+-  return { valid: false };
+-}
+-```
+-
+-**Magic Link 흐름**:
+-1. 슬랙 `/주디 노트` 입력
+-2. GAS가 UUID 토큰 생성 → CacheService 10분 저장
+-3. 사용자에게 URL 전송 (`?token=xxx`)
+-4. 웹 접속 시 `validateToken()` 호출
+-5. 토큰 검증 후 즉시 파기 (1회용)
+-
+-#### 2.2 데이터 처리 (Data Processing)
+-```
+-주요 파일:
+-- web_app.gs: 웹 API 엔드포인트
+-- drive_archive.gs: 마크다운 아카이브 관리
+-- slack_command.gs: 슬랙 명령어 핸들러
+-- auto_automation.gs: 트리거 및 자동화
+-- calendar_sync.gs: 캘린더 동기화
+-```
+-
+-**API 엔드포인트** (web_app.gs):
+-| 함수명 | 역할 | LockService | Cache |
+-|---|---|:---:|:---:|
+-| `saveFromWeb()` | 메모 저장 | ❌ | ❌ |
+-| `parseTaskFromMemoWeb()` | AI 업무 추출 | ❌ | ❌ |
+-| `summarizeMemoContent()` | AI 요약 | ❌ | ❌ |
+-| `getAllTasksForWeb()` | 모든 업무 조회 | ❌ | ✅ 5분 |
+-| `getMyTasksForWeb()` | 내 업무 조회 | ❌ | ✅ 5분 |
+-| `changeTaskStatusFromWeb()` | 상태 변경 | ✅ 10초 | 파기 |
+-| `changeTaskDueDateFromWeb()` | 마감일 변경 | ✅ 10초 | 파기 |
+-| `updateTaskFromWeb()` | 업무 수정 | ✅ 10초 | 파기 |
+-| `registerTaskFromWeb()` | 업무 등록 | ✅ 10초 | 파기 |
+-
+-#### 2.3 AI 엔진 연동 (AI Integration)
+-```
+-주요 파일:
+-- ai_chat.gs: AI 대화 (미사용)
+-- ai_report.gs: 일간/주간 리포트
+-- ai_task_parser.gs: 업무 자동 파싱
+-```
+-
+-**Claude API 호출 패턴**:
+-```javascript
+-const payload = {
+-  "model": "claude-sonnet-4-20250514",
+-  "max_tokens": 600,
+-  "temperature": 0,
+-  "system": systemPrompt,
+-  "messages": [{"role": "user", "content": text}]
+-};
+-
+-const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+-  "method": "post",
+-  "headers": {
+-    "x-api-key": CLAUDE_API_KEY,
+-    "anthropic-version": "2023-06-01",
+-    "content-type": "application/json"
+-  },
+-  "payload": JSON.stringify(payload)
+-});
+-```
+-
+----
+-
+-### 3. **데이터 계층 (Data Layer)**
+-
+-#### 3.1 Google Sheets (Database)
+-```
+-역할: 관계형 데이터베이스 대체
+-파일: Tasks, Projects, Users, ActionLog, MemoEditLog
+-
+-특징:
+-- ✅ 실시간 협업 가능
+-- ✅ 기획자도 직접 데이터 확인 가능
+-- ⚠️ 1,000건 이상 시 성능 저하
+-- ⚠️ 동시성 제어 필요 (LockService)
+-```
+-
+-자세한 스키마는 [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) 참조
+-
+-#### 3.2 Google Drive (File Storage)
+-```
+-역할: 마크다운 아카이브 영구 저장
+-구조:
+-  주디노트_아카이브/
+-  ├── syn/
+-  │   ├── 2026-02/
+-  │   │   ├── syn_2026-02-26.md
+-  │   │   └── syn_2026-02-25.md
+-  │   └── 2026-01/
+-  └── hyerim/
+-      └── 2026-02/
+-```
+-
+-**파일 구조** (예시):
+-```markdown
+-# syn의 업무일지 (2026-02-26)
+-
+-## 2026-02-26
+-
+-- **[09:30]**
+-  회의: 칸반 & 캘린더 기능 기획
+-  - 자비스 팀장과 UX 논의
+-  - 김감사 QA 검토 완료
+-
+-- **[14:20]**
+-  개발: 주디 노트 편집 기능 E2E 테스트
+-  - LockService 정상 작동 확인
+-  - 2-Phase Commit 백업 검증
+-```
+-
+-#### 3.3 Google Calendar (Sync Target)
+-```
+-역할: 마감일 기반 일정 동기화
+-트리거: onEdit (상태/마감일 변경 시)
+-
+-로직:
+-1. Tasks 시트 변경 감지
+-2. calendar_sync.gs:syncCalendarEvent() 호출
+-3. 상태가 "완료" or "보류" → 일정 삭제
+-4. 마감일 존재 + 활성 상태 → 일정 생성/업데이트
+-```
++### 3. 데이터 계층 (Data Layer)
++- **Google Sheets**: Tasks(업무), Projects(프로젝트), Users(유저), ActionLog(로그).
++- **Google Drive**: 마크다운 메모 아카이브 저장소.
++- **Google Calendar**: 업무 마감일 기반 일정 동기화.
+ 
+ ---
+ 
+-## 🔐 보안 아키텍처 (Security Architecture)
+-
+-### 1. 인증 (Authentication)
+-```
+-Magic Link (1회용 토큰):
+-- 생성: UUID v4 (32자 랜덤)
+-- 저장: CacheService (10분 TTL)
+-- 검증: validateToken() → 즉시 파기
+-- 재사용 방지: 캐시에서 삭제 후 재요청 필요
+-```
+-
+-### 2. 권한 관리 (Authorization)
+-```
+-Feature Flag (관리자 전용 기능):
+-- 타임 트래킹: 송용남, 정혜림
+-- 메모 편집: 송용남, 정혜림
+-
+-구현:
+-window.isAdmin = ["송용남", "정혜림"].includes(userName);
+-```
+-
+-### 3. 동시성 제어 (Concurrency Control)
+-```javascript
+-// LockService 패턴
+-const lock = LockService.getUserLock();
+-try {
+-  lock.waitLock(10000); // 10초 대기
+-  // ... 크리티컬 섹션
+-} catch (err) {
+-  return { success: false, message: "ERR_LOCK_TIMEOUT" };
+-} finally {
+-  lock.releaseLock();
+-}
+-```
+-
+-### 4. 데이터 무결성 (Data Integrity)
+-```
+-2-Phase Commit (주디 노트 편집):
+-1. 백업 파일 생성 (Drive)
+-2. 원본 파일 수정
+-3. 무결성 검증 (파일 크기, 날짜 헤더 개수)
+-4. 성공 시 백업 삭제, 실패 시 백업 유지
+-```
+-
+----
+-
+-## 📊 데이터 흐름 (Data Flow)
+-
+-### 시나리오 1: 슬랙에서 업무 등록
+-```
+-[사용자] /주디
+-    ↓
+-[Slack] Modal 팝업 (slack_command.gs:handleJudyCommand)
+-    ↓
+-[사용자] 제목/마감일/상세 입력 → 제출
+-    ↓
+-[GAS] registerTask() 호출
+-    ↓
+-[Sheets] Tasks 시트에 행 추가
+-    ↓
+-[GAS] syncCalendarEvent() 트리거
+-    ↓
+-[Calendar] 마감일 기반 일정 생성
+-    ↓
+-[GAS] sendTaskNotification() 호출
+-    ↓
+-[Slack] 프로젝트 채널에 알림 전송
+-```
+-
+-### 시나리오 2: 웹에서 AI 업무 추출
+-```
+-[사용자] judy_workspace.html 접속 (Magic Link)
+-    ↓
+-[Web] validateToken() 호출 → 인증 성공
+-    ↓
+-[사용자] 노트 탭에서 회의록 작성 → 텍스트 드래그
+-    ↓
+-[Web] 🐰 플로팅 버튼 표시 → 클릭
+-    ↓
+-[GAS] parseTaskFromMemoWeb() 호출
+-    ↓
+-[Claude API] 텍스트 분석 → JSON 반환
+-   {
+-     "title": "UI 개선 작업",
+-     "desc": "칸반 보드 드래그 앤 드롭 구현",
+-     "due": "2026-03-01"
+-   }
+-    ↓
+-[Web] 업무 등록 모달에 Pre-fill
+-    ↓
+-[사용자] 확인 후 등록
+-    ↓
+-[GAS] registerTaskFromWeb() 호출
+-    ↓
+-[Sheets] Tasks 시트에 추가
+-```
+-
+-### 시나리오 3: 칸반 보드 드래그 (Phase 23, 예정)
+-```
+-[사용자] 칸반 보드에서 카드 드래그 (대기 → 진행중)
+-    ↓
+-[Web] Optimistic UI: 즉시 카드 이동 (시각적 반영)
+-    ↓
+-[GAS] changeTaskStatusFromWeb(rowNum, "진행중") 호출
+-    ↓
+-[LockService] 10초 대기 → Lock 획득
+-    ↓
+-[Sheets] 상태 변경 + 시작 시간 기록 (타임 트래킹)
+-    ↓
+-[Cache] ALL_TASKS_CACHE 파기
+-    ↓
+-[ActionLog] 로그 기록 (User, Action, TaskID, Old/New)
+-    ↓
+-[GAS] syncCalendarEvent() 트리거
+-    ↓
+-[Calendar] 일정 업데이트
+-    ↓
+-[Web] 성공 토스트 표시 "✅ 진행중으로 변경"
+-
+-# 실패 시:
+-[LockService] 10초 내 Lock 획득 실패
+-    ↓
+-[GAS] return { success: false, message: "ERR_LOCK_TIMEOUT" }
+-    ↓
+-[Web] 카드 원위치 (Rollback) + 모달 표시
+-      "⚠️ 다른 사용자가 이 업무를 수정 중입니다.
+-       3초 후 재시도하시겠습니까?"
+-```
+-
+----
+-
+-## ⚡ 성능 최적화 (Performance Optimization)
+-
+-### 1. 캐싱 전략 (Caching Strategy)
+-```javascript
+-// 5분 캐싱 (업무 목록)
+-function getAllTasksForWeb() {
+-  const cache = CacheService.getScriptCache();
+-  const cached = cache.get("ALL_TASKS_CACHE");
+-  if (cached) return JSON.parse(cached);
+-
+-  // ... 데이터 조회
+-
+-  cache.put("ALL_TASKS_CACHE", JSON.stringify(data), 300); // 5분
+-  return data;
+-}
+-
+-// 캐시 무효화 (데이터 변경 시)
+-CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+-```
+-
+-### 2. 로드 밸런싱 (Load Balancing)
+-```
+-슬랙: 가벼운 작업 (모달, 알림)
+-웹: 무거운 작업 (AI 연산, 대시보드)
+-```
+-
+-### 3. 증분 업데이트 (Incremental Update)
+-```
+-현재: getDataRange().getValues() → 전체 시트 읽기
+-개선 (예정): 마지막 수정일(N열) 기준으로 변경된 행만 조회
+-```
+-
+----
+-
+-## 🚧 제약 사항 및 한계 (Constraints & Limitations)
+-
+-### 1. GAS 환경 제약
+-- ⏱️ **6분 타임아웃**: 단일 함수 실행 시간 제한
+-- 🔄 **동기 처리만 가능**: Async/Await 미지원
+-- 📊 **Sheets 성능**: 1,000건 이상 시 3~5초 응답
+-
+-### 2. 슬랙 API 제약
+-- ⏱️ **3초 타임아웃**: 응답 지연 시 `operation_timeout` 에러
+-- 🚫 **AI 연산 불가**: 무거운 작업은 웹으로 위임
+-
+-### 3. 확장성 한계
+-- 👥 **동시 사용자**: 10명 이하 권장
+-- 📈 **데이터 규모**: Tasks 3,000건 이하 권장
+-- 🔄 **동시성**: LockService로 부분적 해결
+-
+----
+-
+-## 🔮 향후 개선 방향 (Future Improvements)
+-
+-### Phase 1: 임시 방편 (현재~3개월)
+-```
+-Cloudflare Workers를 미들웨어로 활용:
+-- 슬랙 3초 룰 응답 대행
+-- 실제 연산은 GAS 트리거로 전달
+-```
+-
+-### Phase 2: 완전 독립 (6개월~1년, 업무량 500건/일 초과 시)
+-```
+-Node.js (Express/NestJS) + PostgreSQL:
+-- 비동기 처리 지원
+-- 대규모 데이터 처리
+-- 웹소켓 실시간 동기화
+-```
+-
+----
+-
+-## 📚 참고 문서 (Related Documents)
+-
+-- [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md): 데이터베이스 스키마 상세
+-- [API_REFERENCE.md](API_REFERENCE.md): GAS 함수 API 레퍼런스
+-- [JUDY_AI_AGENT.md](JUDY_AI_AGENT.md): AI 에이전트 상세 설명
+-- [DEVELOPER_GUIDE.md](../guides/DEVELOPER_GUIDE.md): 개발자 가이드
++## 🔒 보안 및 안전 장치
++1. **Magic Link Auth**: 슬랙 개인 DM을 통한 1회용 토큰 인증 (보안 강화).
++2. **LockService**: 다중 접속 및 슬랙-웹 수시 충돌 방지를 위한 동시성 제어.
++3. **CacheService**: 빈번한 시트 읽기 부하 감소 및 성능 최적화.
++4. **ActionLog**: 모든 데이터 변경 이력 영구 기록.
+ 
+ ---
+ 
+-**작성자**: 김감사 (QA Specialist)
+-**최종 수정**: 2026-02-26
++## 📈 성능 최적화 (Optimizations)
++- **캐싱 전략**: `getAllTasksForWeb` 등 무거운 조회 시 2~5분 캐싱 적용.
++- **Optimistic UI**: 비동기 등록 후 프론트엔드 단에서 캐시 파기 유도.
++- **이미지 최적화**: 드라이브 내 대용량 미디어 처리 분리 (향후 계획).
+diff --git a/docs/guides/DEVELOPER_NOTES.md b/docs/guides/DEVELOPER_NOTES.md
+index b4da1ab..b67ffcb 100644
+--- a/docs/guides/DEVELOPER_NOTES.md
++++ b/docs/guides/DEVELOPER_NOTES.md
+@@ -45,7 +45,22 @@ GAS의 단순 '셀 편집 감지'(`onEdit` 같은 Simple Trigger) 함수를 만
+ 
+ ---
+ 
+-## 🔔 4. 앱 배포(Deployment) 시 주의사항
+-가장 헷갈리기 쉬운 부분입니다!
+-- `slack_command.gs` 등 `doPost(e)`(웹훅, 외부에서 수신받는 진입점) 함수 부분의 코드를 **수정하고 저장(Ctrl+S)했다고 해서 실제 Slack 통신 환경에 즉시 반영되지 않습니다.**
+-- GAS의 '웹 앱(Web App)' 특성상 외부 통신용 코드는 수정 후 우측 상단의 **[배포] -> [배포 관리] -> 버전(새 버전 선택) -> [업데이트]** 를 꼭 수동으로 한 번 해줘야만 실 서버 런타임이 교체됩니다.
++## ⚡ 5. AI 에이전트 전전용 Fast-Track (긴급 조치) 및 ActionLog 정책
++팀의 속도와 데이터 무결성을 동시에 잡기 위한 운영 가이드입니다.
++
++### Fast-Track (선조치 후보고)
++- **대상**: 1시간 이내 완료 가능한 가벼운 UI 수정, 명백한 오타/버그 해결, 단순 로깅 추가 등.
++- **프로세스**: 
++  1. 기획/승인 단계 생략 후 즉시 코드 수정.
++  2. 수정 후 `ActionLog` 시트에 명확한 사유 기록.
++  3. 수정 완료 내용을 슬랙이나 보고 채널에 사후 공유.
++- **주의**: 핵심 아키텍처 변경이나 DB 스키마 수정 시에는 절대 사용 금지.
++
++### ActionLog (데이터 변경 이력 관리)
++- 모든 AI 에이전트는 데이터를 변경(등록, 수정, 삭제)하는 핵심 로직 끝에 반드시 `logAction()` 함수를 호출해야 합니다.
++- **필수 포함 데이터**:
++  - `user`: 수정 주체 (에이전트명 또는 사용자명)
++  - `action`: 행위 유형 (Register, Update, Delete, Status Change 등)
++  - `taskId`: 대상 데이터의 고유 ID
++  - `oldValue` / `newValue`: 변경 전후의 핵심 값 비교
++- **목적**: 시스템 오류 발생 시 원인 추적과 김감사(QA)의 Weekly Report 자동화 기반으로 활용됩니다.
+diff --git a/fix.js b/fix.js
+deleted file mode 100644
+index 5bd4295..0000000
+--- a/fix.js
++++ /dev/null
+@@ -1 +0,0 @@
+-// Ignore this step, just adhering to the system rules of using correct tools.
+diff --git a/main task.md b/main task.md
+index 0a4fb18..4714586 100644
+--- a/main task.md	
++++ b/main task.md	
+@@ -1,455 +1,54 @@
+-# 업무 관리 시스템 로드맵
++# 🚀 공도 업무 관리 통합 대시보드 (Main RoadMap)
+ 
+-## 🤖 핵심 AI 에이전트 상세 가이드
+-본 내용은 별도 문서([JUDY_AI_AGENT.md](JUDY_AI_AGENT.md))로도 관리되고 있습니다.
++**현재 상태**: 🟢 개발 활성 / Phase 23 진행 중
++**마지막 업데이트**: 2026-02-26
+ 
+ ---
+ 
+-# 🤖 Judy AI Agent: 공도 업무 관리 지능형 비서
++## 🧭 빠른 바로가기 (Index)
+ 
+-## 📋 문서 개요
+-본 문서는 공도 업무 관리 시스템의 1호 AI 에이전트인 **주디(Judy)**의 현재 개발 현황, 채널(슬랙 vs 웹 워크스페이스)별 역할 분리 전략, 그리고 향후 아키텍처 개선 방향을 정리한 문서입니다.
+-- **작성 목적**: 내부 개발자 간의 시스템 이해도 제고 및 향후 서버 고도화(Scale-up) 시점의 마일스톤 및 논의 기준으로 활용
++### 📂 문서 및 가이드
++- [📖 사용자 매뉴얼](docs/guides/USER_GUIDE.md)
++- [🏗 시스템 구조도](docs/architecture/SYSTEM_ARCHITECTURE.md)
++- [🛠 개발자 기술 노트](docs/guides/DEVELOPER_NOTES.md)
++- [🤖 AI 에이전트 팀 운영규칙](docs/guides/AI_AGENT_TEAM_RULES.md) ⭐ 필수
++- [📝 변경 이력 (Changelog)](CHANGELOG.md)
+ 
+----
+-
+-## 🏗 현재 개발 환경 및 아키텍처 (GAS 기반)
+-
+-### 시스템 구성
+-- **백엔드/인프라**: Google Apps Script (GAS) 서버리스 환경
+-- **데이터베이스**: Google Sheets (업무/사용자 DB 마스터)
+-- **저장소**: Google Drive (마크다운 메모/아카이브 저장)
+-- **AI 엔진**: Claude 3 (Claude-Sonnet-4-20250514) API
+-- **프론트엔드 채널**: Slack (명령어 및 즉각 알림), Web (SPA 형태의 Judy Workspace)
+-
+-### 현재 GAS 개발 환경의 장/단점 및 개선 방향
+-
+-#### ✅ 장점 (현재 단계의 강점)
+-1. **운영 비용 제로(Zero)**: 구글 인프라 내에서 동작하므로 별도의 호스팅 및 서버 유지비가 발생하지 않습니다.
+-2. **쉬운 데이터 접근성**: 기획자나 운영자도 직접 구글 시트를 통해 DB를 열람하고 수정할 수 있는 직관적인 환경을 제공합니다.
+-3. **신속한 프로토타이핑**: 복잡한 서버 구축 없이 스크립트 작성만으로 슬랙 봇과 웹앱을 동시에 빠르게 배포할 수 있습니다.
++### 🏗 개발 현황 (Milestones)
++- [✅ Phase 20: 통합 SPA 워크스페이스 구축](planning/implementation_plans/phase_20_workspace.md)
++- [✅ Phase 21: 타임 트래킹 및 통계 UI](planning/implementation_plans/phase_21_time_tracking.md)
++- [🟢 Phase 23: 칸반 보드 & 캘린더 통합](planning/implementation_plans/phase_23_kanban_calendar.md)
++- [⏳ Phase 24: AI 프로액티브 에이전트 (예정)]
+ 
+-#### ⛔ 단점 및 한계점
+-1. **슬랙 3초 타임아웃 룰**: 슬랙 API는 무조건 3초 내에 `HTTP 200 OK` 응답을 요구하나, GAS는 비동기(Async) 백그라운드 처리가 불가능한 동기(Sync) 방식이라 무거운 AI 연산(예: 컨텍스트 파싱) 시 무조건 에러가 발생합니다.
+-2. **성능 및 확장성 제약**: 데이터베이스 대신 구글 시트를 사용하므로, 데이터가 1,000건 이상 누적되거나 동시 접속자가 늘어날 경우 읽기/쓰기 병목 현상과 심각한 레이턴시 지연이 발생합니다.
+-
+-#### 💡 향후 개선 방향 (서버 고도화)
+-- **1단계 (임시 방편)**: Cloudflare Workers 등 무료 엣지(Edge) 서버를 미들웨어로 두어 슬랙의 3초 룰 응답만 대신 처리해주고, 실제 연산은 GAS 트리거에 던지는 방안.
+-- **2단계 (완전 독립)**: Node.js (Express/NestJS) 기반 백엔드 및 PostgreSQL(또는 Firebase)을 도입하여 비동기 처리의 근본적 해결과 AI 에이전트의 완전 능동화 구현 (업무량 매일 500건 초과 시점 권장).
++### 🤖 AI 에이전트 협업
++- [📋 자비스 PO 기획함](agent_work/jarvis_po/)
++- [🎨 벨라 UX/UI 디자인](agent_work/bella_ux/)
++- [✅ 김감사 QA 검토 보고서](qa/qa_reviews/)
++- [🛠 에이다/클로이 구현 히스토리](agent_work/)
+ 
+ ---
+ 
+-## 🧠 AI 기능 현황 및 로드맵
+-
+-### ✅ 현재 개발 완료된 AI 기능 (Current Capabilities)
+-- **✨ AI 요약 (Note)**: 메모 조회 시 상단 버튼을 통해 긴 본문을 한눈에 볼 수 있게 요약 (Claude API 연동)
+-- **✨ AI 업무 추출 (Workspace 연동)**: 노트 에디터에서 텍스트 드래그 시 🐰 플로팅 버튼이 나타나며, 클릭 시 AI가 업무명/마감일/상세내용을 자동 파싱하여 등록 모달에 채워줌.
+-- **✨ AI 리포팅**: 일간/주간 완료 업무 데이터를 바탕으로 요약 리포트를 생성하여 슬랙으로 자동 전송.
+-- **✨ 스마트 검색**: 마크다운 파일을 순회하여 키워드 매칭 후 결과를 표출하는 AI RAG 기반 로직.
+-
+-### 🚀 향후 추가/확장 예정인 AI 기능 (Future Capabilities)
+-주디를 "내 지시에 따르는 도구"에서 **"먼저 알아서 행동하는 동료"**로 진화시키는 단계입니다:
+-
+-- **🗣️ 슬랙 자연어 업무 등록**: 슬랙 DM에 "넷마블 기획서 금요일까지"라고만 쳐도 AI가 자동으로 파싱하여 등록 버튼을 제안함.
+-- **⏰ 맥락 인지 스마트 리마인더 & 업무 트래킹**: 마감 임박 업무나 3일 이상 방치된 업무를 감지해 "넛지(Nudge)" 알림을 보냅니다. 또한, 업무 상태(대기→진행→완료) 변경 시간에 기반한 **업무 트래킹(Time Tracking)** 기능이 추가되어, 일간/주간/월간 단위 대시보드에서 내가 어떤 업무에 실제 시간을 많이 사용했는지 직관적으로 파악할 수 있습니다.
+-- **💬 대화형 업무 상태 변경**: "넷마블 기획서 완료했어"라고 채팅하면 AI가 업무를 찾아 상태를 업데이트하고 오늘의 진척도를 보고함.
+-- **📝 AI 주디와 함께 작성하는 지식 회고 노트 (Retrospective)**: 
+-  - 업무가 특정 상태(성공적 완료, 지연 완료, 보류, 도움 요청 등)로 종료되면, 기획서나 태스크 문서를 만들듯 **회고 문서를 작성할 수 있는 전용 공간**이 활성화됩니다.
+-  - 여기에 기록된 회고 노트 DB는 향후 비슷한 실수나 어려움에 봉착했을 때 강력한 진가를 발휘합니다. 사용자가 검색하거나 AI에게 도움을 요청하면, **과거 회고 노트를 기반으로 주디가 솔루션과 새로운 대안을 선제적으로 제공**해 줍니다.
++## 🎯 핵심 목표 (Core Objectives)
++1. **슬랙-웹 이원화 전략**: 가벼운 소통은 슬랙, 깊은 관리는 웹에서.
++2. **AI 비서 주디**: 단순히 저장하는 도구를 넘어 먼저 제안하는 동료로.
++3. **데이터 중심 설계**: 모든 활동을 시트와 로그로 정형화하여 분석 가능하게.
+ 
+ ---
+ 
+-## �🚦 채널별 AI 사용 전략과 역할 분리 (현재 기준)
+-
+-현재 GAS 환경의 태생적 한계(3초룰 및 동기 지연)로 인해 AI 연산 과정에서 지속적인 충돌이 발생합니다. 이를 회피하고 최적의 UX를 제공하기 위해 **슬랙봇 영역과 웹 워크스페이스 영역의 역할을 철저히 이원화**합니다.
+-
+-### 1. 💬 주디 슬랙봇 (Slack Bot) 영역
+-**[목표]: "가벼운 접수 창구 및 확성기 (Quick Input & Push Notification)"**
+-
+-무거운 AI 분석(요약, 파싱)을 슬랙에서 완전히 배제하여 타임아웃 오류를 방지합니다.
+-
+-- **현재 사용 방법**:
+-  - `/주디` 명령어: 정형화된 데이터 입력을 위한 모달(팝업)을 띄워 시트에 즉시 등록(AI 연산 없음).
+-  - 메시지 메뉴 (점 3개): 대화를 그대로 긁어와서 태스크 폼에 채워주는 역할.
+-  - 매직 링크 발급 (`/주디 내업무`, `/주디 노트`): 웹으로 넘어가기 위한 1회용 로그인 링크 셔틀.
+-- **향후 개발 방향**:
+-  - 서버 고도화 이전까지는 타임아웃을 유발하는 AI 자유 대화(DM 질의응답) 기능을 의도적으로 제한하거나, 사용자에게 웹 워크스페이스로 이동하도록 가이드하는 봇 로직을 유지합니다.
+-  - 매일 아침 리포트(모닝 브리핑), 타인 지정 시 담당자 알림 등 일방향 **푸시(Push)** 기능 고도화에 시스템 역량을 집중합니다.
+-
+-### 2. 🌐 주디 워크스페이스 (Web Workspace) 영역
+-**[목표]: "AI 연산 및 심층 관리 공간 (Deep Processing & Management)"**
+-
+-웹 환경은 3초 타임아웃 룰의 제약을 받지 않으므로(서버 응답 최장 6분 대기 가능), Claude AI의 무거운 연산 로직을 이곳에 몰아줍니다.
+-
+-- **현재 사용 방법**:
+-  - **✨ AI 핵심 업무 내용 추출**: 노트 에디터에서 긴 회의록의 일부분을 드래그하면 화면 상단에 🐰 플로팅 버튼이 노출됩니다. 누르면 넉넉히 5~10초 동안 AI가 문단을 파싱하여 모달 입력폼에 내용(제목/마감일/상세)을 예쁘게 스플릿하여 채워줍니다.
+-  - **✨ 과거 내용 스마트 요약**: 긴 아카이브 문서를 불어왔을 때 상단의 팝업 버튼을 눌러 핵심 맥락을 요약받습니다.
+-  - **📊 통합 대시보드 상태 관리**: 상태(진행/대기)를 드롭다운으로 즉시 변경하고 현황을 넓게 봅니다.
+-- **향후 개발 방향**:
+-  - 현재 단방향 요약/추출에 그치는 AI 액션을, 텍스트 에디터 안쪽에서 "AI에게 질문하기" 혹은 특정 영역을 지정하고 "여기에 어울리는 기획안 목차 작성해 줘" 등 **양방향 프롬프팅 툴**로 진화시킬 계획입니다.
++## 🚦 김감사 QA 피드백 & 운영 가이드
++- **최신 수용**: [2026-02-26 문서 구조화 및 운영 가이드](agent_work/kim_qa/2026-02-26_restructure_and_guide.md) 수용 완료.
++- **Fast-Track 정책**: 간단한 작업은 '선조치 후보고' 시스템 도입.
+ 
+ ---
+ 
+-## 🎯 요약 및 결론 
+-현재의 이원화 채널 전략은 인프라 한계 타개와 사용자 경험(UX) 최적화라는 두 마리 토끼를 잡기 위한 최선의 과도기적 아키텍처입니다.
+-- **명확한 규율**: *"슬랙에서는 가볍게 확인하고 넘기고, 무거운 일은 무조건 딥 다이브(웹)에서 한다."*
+-- 개발 논의 시, 새로운 기능(예: 자연어 대화형 등록)이 요구될 때 이 기능이 가벼운 알림 수신형(Slack)에 적합한지, 무거운 연산형(Web)에 적합한지 판단하는 기준 문서를 삼고자 합니다.
++## 📌 미해결 이슈 및 작업 (To-Do)
++1. [ ] 모바일 환경에서의 오프캔버스 메뉴 드래그 감도 조정
++2. [ ] 칸반 보드 내 카드 드래그 시 GAS 타임아웃 방어 로직 심화
++3. [ ] AI 요약 시 긴 텍스트 청크 분할 처리 고도화
+ 
+ ---
+ 
+-## 1단계: 기반 구축 - 구글 스프레드시트 데이터베이스 설정 <!-- id: 1 -->
+-- [x] 시트 구조 정의 (업무, 프로젝트, 팀원) <!-- id: 2 -->
+-- [x] `Tasks` (업무) 시트 생성 (ID, 상태, 프로젝트, 내용, 담당자, 날짜 등) <!-- id: 3 -->
+-- [x] `Users` (팀원) 및 `Projects` (프로젝트) 참조 시트 생성 <!-- id: 4 -->
+-- [x] ID 생성 및 타임스탬프 관리를 위한 기본 Google Apps Script (GAS) 구현 <!-- id: 5 -->
+-
+-## Git 및 문서 관리 (Phase 1.5) <!-- id: 25 -->
+-- [x] 프로젝트 파일 및 문서 Git 커밋 <!-- id: 26 -->
+-- [x] GitHub 원격 저장소 생성 및 푸시 ([링크](https://github.com/syn-glitch/gongdo-task-system)) <!-- id: 27 -->
+-
+-## 2단계: 슬랙 연동 - 알림 시스템 <!-- id: 6 -->
+-- [x] 슬랙 앱 생성 및 권한 설정 <!-- id: 7 -->
+-- [x] 슬랙으로 메시지를 보내기 위한 Incoming Webhook (또는 Bot Token) 설정 <!-- id: 8 -->
+-- [x] 새 업무 등록 시 슬랙으로 알림을 보내는 GAS 함수 작성 <!-- id: 9 -->
+-   - [x] 기본 전송 코드 작성
+-   - [x] 실전용 자동화 코드(DB연동) 작성 및 트리거 설정
+-   - [x] 데이터 유효성 검사(드롭다운) 적용으로 알림 정확도 향상
+-
+-## 3단계: 슬랙 연동 - 업무 등록 (양방향) <!-- id: 10 -->
+-- [x] GAS에서 슬랙 상호작용 페이로드 처리 (doPost 생성) <!-- id: 13 -->
+-- [x] GAS를 '웹 앱'으로 배포하여 URL 획득 <!-- id: 28 -->
+-- [x] 슬랙 앱에서 슬래시 커맨드(예: `/주디`) 생성 및 URL 연결 <!-- id: 11 -->
+-- [x] 상세 업무 입력을 위한 슬랙 모달(Modal) UI 구축 <!-- id: 12 -->
+-   - 슬랙과 GAS 연동은 추후에 처리 예정 //용남이 직접 추가한 내용
+-
+-
+-## 4단계: 캘린더 동기화 <!-- id: 14 -->
+-- [x] GAS에서 캘린더 API 활성화 및 `calendar_sync.gs` 스크립트 작성 <!-- id: 15 -->
+-- [x] 동기화 로직 구현: 시트 행 업데이트 -> 캘린더 일정 생성/수정 <!-- id: 16 -->
+-- [x] 일정 삭제 또는 날짜 변경 처리 (상태 변경 반영) <!-- id: 17 -->
+-
+-## 5단계: AI 리포팅 및 분석 <!-- id: 18 -->
+-- [x] GAS에서 Claude API 연결 설정 및 `ai_report.gs` 작성 <!-- id: 19 -->
+-- [x] 일간/주간 완료 업무 데이터를 가져오는 스크립트 작성 <!-- id: 20 -->
+-- [x] AI를 통한 요약 리포트 생성 및 슬랙 전송 <!-- id: 21 -->
+-
+-## 6단계: 대시보드 및 최적화 <!-- id: 22 -->
+-- [x] 구글 스프레드시트 내 시각적 대시보드 및 차트 세팅 가이드 작성 <!-- id: 23 -->
+-- [x] 매일 아침 전송되는 "모닝 브리핑" 자동화 코드 및 트리거 스위치 구현 <!-- id: 24 -->
+-
+-## 7단계: 메모장 (Judy Note) UI/UX 고도화 및 AI 요약
+-- [x] `judy_note.html` CSS 구조 개편 (CSS Variables 도입 및 Light Mode/Dark Mode 지원)
+-- [x] 좌측 사이드바(폴더 구조) 및 우측 에디터 영역 2단 레이아웃 구현
+-- [x] `drive_archive.gs`에 아카이브 트리 파싱 백엔드 함수 (`getArchivedMemos`) 추가
+-- [x] 프론트엔드 연동 및 사이드바 내 폴더 목록 클릭 이벤트 구현 (읽기 모드 전환)
+-- [x] 메모 조회 영역 상단에 AI 요약 버튼 및 UI 오버레이 구현
+-- [x] `web_app.gs` 및 AI 로직 (`summarizeMemoContent`) 추가
+-
+-## 8단계: 🚀 향후 고도화 계획 (Future Enhancements)
+-- [x] **특정 단어 및 단어 전체 검색 기능 (Global Search)**
+-  - 모든 마크다운 파일을 순회하여 키워드 매칭 후 사이드바나 에디터에 결과 표출 (AI RAG 통합 로직 기반)
+-- [x] **슬랙 기반 챗봇 라우팅 및 빠른 검색 (Slack Intent Routing)**
+-  - 슬랙 봇 DM 수신 시 메시지 의도 판별(기반: 키워드) 로직 추가
+-  - 메모 단순 저장 시 불필요한 AI 답변(`processAiChatSync`) 완전 차단
+-  - "오늘 작성 메모 보여줘" 검색 의도시 금일 날짜의 메모를 조회하여 슬랙으로 깔끔하게 반환
+-- [ ] **에디터 내용 수정 가능 모드 (Edit Mode) & 덮어쓰기 기능**
+-  - **설명**: 현재 읽기 전용으로 불러와지는 과거 메모를 웹 에디터 안에서 직접 수정하고 저장할 수 있는 기능입니다.
+-  - **개발 방향**: 드라이브 마크다운 문서 내용을 파싱하여 특정 시간대 블록만 정확히 찾아 교체하고 파일 원본을 덮어쓰는(Update) 안전한 치환 로직 구현이 핵심입니다.
+-- [ ] **AI 챗봇과의 양방향 인터페이스 (AI Chat & Ask)**
+-  - **설명**: 단순한 '전체 글 요약' 팝업을 넘어서, 본문 내용 중 특정 구역을 지정하거나 하단 채팅창을 통해 AI와 티키타카(질의응답)를 나눌 수 있는 지능형 워크스페이스 기능입니다.
+-  - **개발 방향**: 에디터 내 동적 질문 API(`askAi`) 신설 및 노션(Notion)의 AI 블록과 유사한 양방향 채팅 버블 UI를 프론트엔드에 추가 구축해야 합니다.
+-
+-## ✅ Judy Workspace 통합 (SPA 마이그레이션 — 완료)
+-> 📅 **완료일**: 2026-02-24 | 📖 상세 계획: [`implementation_plan_workspace.md`](implementation_plan_workspace.md)
+-> 💡 **목표**: 기존 `judy_note.html`과 `task_dashboard.html` 2개의 독립 웹앱을 `judy_workspace.html` 단일 SPA로 통합하여 원스톱 워크스페이스 구현
+-
+-- [x] **Phase 1: SPA 셸 구축** — GNB, 탭 UI, 테마 전환, 라우팅 변경
+-- [x] **Phase 2: 주디 노트 모듈 이식** — 에디터, 사이드바, AI 요약 기능 전체 이식
+-- [x] **Phase 3: 대시보드 모듈 이식** — 테이블, 통계 카드, 모달 UI 전체 이식
+-- [x] **Phase 4: 유기적 연동 및 시너지 개발** — 드래그 선택 → 🐰 플로팅 버튼 → AI 업무 추출 → 모달 Pre-fill
+-- [x] **Phase 5: 최종 배포** — 슬랙 봇 링크 통합, Claude API 키 교체(`claude-sonnet-4-20250514`)
+-
+-## [기각됨] 9단계: 동적 유저 관리 및 구글 SSO 보안 강화 (Dynamic User & Auth)
+-> 💡 **회고 및 기각 사유**: 
+-> 구글의 `Session.getActiveUser().getEmail()`을 활용한 SSO 인증을 시도했으나, 공도 팀의 **다중 도메인 환경(`@microchool.kr`, `@gongdo.kr`, `@gmail.com`)** 특성상 배포 권한을 외부로 개방해야 했음. 
+-> 이로 인해 최초 접속 시 발생하는 **구글 Oauth 권한 승인("이 앱이 정보에 접근하려 합니다") 팝업창**이 팀원들에게 상당한 UX 저하와 심리적 장벽을 유발할 것으로 판단되어 해당 접근 방식을 전면 백지화(Rollback) 하였음.
+-
+-## 10단계: 슬랙 기반 매직 링크 보안 인증 (Slack Magic Link Auth)
+-> 📖 상세 계획: [`implementation_plan_phase10.md`](implementation_plan_phase10.md)
+-> 💡 **핵심 원리**: 신원이 이미 100% 보장된 '슬랙'을 인증(SSO) 창구로 역이용. 슬랙봇이 일회용 난수 토큰(Token)을 생성해 전용 만능 키(Magic Link)를 팀원 개인 DM으로 발급함. 구글 권한 팝업 없이 1초 만에 안전하고 완벽한 자동 로그인을 제공함.
+-
+-### 개발
+-- [x] **Step 1: 슬랙 봇(`slack_command.gs`) 로직에 매직 링크 발급 기능 신설**
+-  - 팀원이 슬랙에서 `/주디 노트` 등 특정 액션 시, 봇이 16자리 난수 토큰 생성
+-  - `CacheService`를 이용해 토큰과 해당 팀원 실명을 **10분(600초)** 동안 단기 캐싱
+-  - 유저별 `?token=난수값` 형태의 파라미터가 붙은 접속 버튼을 개인 DM으로 전송
+-- [x] **Step 2: 웹 백엔드(`web_app.gs`)의 토큰 검증 시스템 개발**
+-  - `doGet(e)`에서 토큰 파라미터 존재 유무 확인
+-  - 백엔드에 토큰 유효성 검증 API(`validateToken`)를 만들어, 10분 이내의 유효 캐시인지 대조
+-  - 검증 성공 시 `이름` 반환 후, **보안을 위해 해당 토큰은 즉시 파기(1회용)**
+-- [x] **Step 3: 웹 프론트엔드(`judy_note.html`) 안전 렌더링 및 UI 방어**
+-  - 타인 이름 임의 선택 및 메모 열람 가능성이 있던 기존 드롭다운 완전 삭제
+-  - 토큰 검증에 성공한 본인 이름(Real Name)만 상단에 고정 렌더링
+-  - 토큰 변조(브루트포스) 및 만료 시 "잘못된 접근입니다" 풀스크린 오버레이 표출
+-
+-### 검증
+-- [x] 슬랙봇이 준 링크로 접속 시 로그인 과정 없이 내 이름으로 즉시 노트 로드되는지 확인
+-- [x] 이미 방문했던 링크의 주소창 토큰 값 복사 후 시크릿 탭에서 붙여넣었을 때 **'만료된 링크' 차단(1회용 소멸)** 확인
+-- [x] 임의로 URL의 토큰 텍스트를 조작하여 엔터 입력 시 **타인 노트 우회 접속 불가(차단)** 확인
+-
+-## [기각됨] 11단계: 마크다운 & 위지윅 하이브리드 에디터 도입 (TUI Editor)
+-> 📖 상세 계획: [`implementation_plan_phase11.md`](implementation_plan_phase11.md)
+-> 💡 **회고 및 기각 사유**: 심플한 기존 버전으로 롤백 요망.
+-> **기술적 이유**:
+-> 1. 모바일 등 다양한 기기에서의 호환성 문제 (TUI 에디터가 화면의 가로/세로 영역을 고정적으로 점유해 사용성 저하)
+-> 2. 구글 문서(Google Docs) 등 써드파티 문서 연동에 있어서 마크다운 에디터 엔진(TUI)으로 값을 불러와 다시 랜더링 하는 과정에서 원본 텍스트의 형태가 심하게 훼손됨.
+-> 3. 단순 텍스트 기록장을 원했던 초기의 기획 의도와 달리 지나치게 무겁고 복잡한 위지윅 에디터 방식이 유저 경험(UX)에 오히려 마이너스 요소로 작용함.
+-
+-
+-
+-### 개발
+-- [x] **Step 1: 에디터 라이브러리 탑재 및 CSS 레이아웃 개편 (`judy_note.html`)**
+-  - `<textarea id="memoInput">` 완전 삭제 및 TUI 에디터 컨테이너(`<div id="editor">`) 생성
+-  - CDN을 통해 TUI 에디터 핵심 라이브러리 및 다크 테마 플러그인 연동
+-  - `judy_note_theme` 테마(Dark/Light) 변경 버튼과 에디터 내부 스킨(다크모드) 연동
+-- [x] **Step 2: 에디터 인스턴스 초기화 및 상태 관리 (JS)**
+-  - 페이지 로딩 시 마크다운+위지윅 탭이 보이는 에디터 뷰 마운트
+-  - 사이드바 과거 메모 클릭 시 단순 글자 뿌리기가 아닌 `editor.setMarkdown(text)`로 렌더링
+-  - 구글 드라이브 CORS 한계를 고려하여 이미지 복사/업로드(AddImageBlobHook) 기능 차단 처리 
+-- [x] **Step 3: 데이터 입출력 파이프라인 연결 연동**
+-  - 메모 일반 저장(`saveBtn`) 및 AI 추출(`extractBtn`) 시 에디터 내용을 `editor.getMarkdown()`으로 추출하여 백엔드 전송
+-  - AI 내용 요약(`summarizeBtn`) 시 에디터 본문을 타겟팅 하도록 로직 수정
+-
+-### 검증
+-- [ ] 에디터 상단 툴바(굵게, 기울임, 표, 링크 등) 및 하단 탭(마크다운/위지윅) 전환이 정상 작동하는가?
+-- [ ] 노션처럼 블록 드래그 후 스타일 변경 뒤 저장했을 때, 구글 드라이브에 `.md` 원본 포맷으로 저장되는가?
+-- [ ] "✨ AI 내용 요약" 및 "✨ AI 업무 추출" 기능 사용 시 에디터에 적힌 내용이 백엔드로 정상 전달되는가?
+-
+-## 12단계: 주디 노트 에디터 심플 버전 롤백 및 구글 문서 연동
+-> 📖 상세 계획: [`implementation_plan.md`](../../../.gemini/antigravity/brain/4b6fdd0e-4194-4fd1-b05a-0c007c5462e3/implementation_plan.md)
+-> 💡 **목표**: TUI 에디터를 제거하고 기존의 심플한 텍스트 에어리어로 복구하며, 구글 드라이브(MD 파일) 및 구글 문서(Doc) 모두에 기록 가능하도록 파싱 로직을 확장합니다.
+-
+-- [x] `judy_note.html`에서 TUI 에디터 제거 후 심플 텍스트 에어리어 복구
+-- [x] `drive_archive.gs`에서 기존 `.md` 파일 파싱 외에 구글 문서(`application/vnd.google-apps.document`)에 저장된 내용도 동일하게 읽어올 수 있도록 수정
+-- [x] 주디 노트 폴더 클릭 시 구글 문서에 저장된 노트 버전 내역도 뷰어에 정상 출력되는지 확인
+-
+-## 13단계: 모바일 반응형 디자인 (UI/UX) 최적화
+-- [x] 오프캔버스(Off-canvas) 방식 사이드바 구현 (`max-width: 768px`)
+-- [x] 헤더 영역 햄버거 메뉴 및 배경 반투명 오버레이 처리
+-- [x] 폴더 내 아이템 열람 및 '새 메모' 작성 시 모바일 사이드바 자동 닫기 편의 기능 추가
+-- [x] 모바일 사용성을 위해 하단 버튼 패딩 확대 및 단축키 힌트 숨김 처리
+-- [x] **모바일 최초 진입 시 에디터 자동 포커스 처리 (키보드 팝업)**
+-  - **설명**: 클로드 모바일 앱처럼 접속 즉시 가상 키보드가 하단에서 팝업되어 유저가 타자 칠 곳을 찾지 않고 즉시 텍스트 입력 상태가 되도록 유도.
+-  - **이슈 접근**: iOS 사파리와 크롬 등의 브라우저는 정책상 '사용자의 명시적인 터치(Gesture)' 없이 스크립트에 의한 `focus()` 호출만으로 키보드를 올리는 빈도를 엄격히 차단(또는 무시)하는 경향이 있음. 그러나 슬랙 등 특정 웹뷰(WebView) 링크 환경에선 편법적이나마 동작하게 강제할 수 있는 최적의 이벤트 바인딩 시점을 찾아야 함.
+-  - **결정 사항**: 편법적인 우회(Workaround) 스크립트는 추후 브라우저 업데이트 시 예기치 못한 크러시 버그를 유발할 위험성이 높다고 판단됨. 기술적인 강제 적용 대신, **"접속 후 화면의 입력창을 한 번 터치하면 키보드가 올라옵니다"**라는 팀원 안내/공지로 갈음하기로 결정하여 개발을 완료(기각 후 우회 해결) 처리함.
+-
+-## 14단계: 분산형 개인 드라이브 저장 아키텍처 (Personal Drive Migration)
+-> 📖 상세 계획: [implementation_plan_phase14.md](implementation_plan_phase14.md)
+-- [ ] **팀원 개인 폴더 생성 및 권한 위임 로직 설계**
+-  - 웹앱 최초 진입 시 사용자의 'My Drive'에 전용 폴더 자동 생성 및 시스템 계정 공유
+-- [ ] **유저별 폴더 ID 매핑 시스템 구축**
+-  - 구글 시트 또는 Script Properties에 `User Email : Folder ID` 매핑 테이블 관리
+-- [ ] **동적 저장 아키텍처 적용**
+-  - `drive_archive.gs` 내 고정 ROOT 폴더 ID를 제거하고 사용자별 폴더로 동적 분기 저장 구현
+-- [ ] **기존 데이터 마이그레이션 가이드 작성**
+-  - 현재 마스터 계정에 쌓인 데이터를 각 개인 드라이브로 안전하게 옮기는 절차 안내
+-
+-## 🚨 팀원 피드백 개발 방향 v1 (주디 노트 수정/삭제 기능)
+-> 📖 상세 계획 및 QA 합의안: [주디노트 업데이트 자&김 v1_20260226.1450.md](주디노트%20업데이트%20자&김%20v1_20260226.1450.md)
+-> 💡 **목표**: 이지은, 정혜림 팀원의 피드백을 수용하여, 읽기 전용이었던 과거 노트 기록에 인라인 수정, 완료(취소선), 삭제 기능을 도입합니다. (김감사의 QA 검토를 거쳐 데이터 유실 방지가 포함된 안전한 v2 아키텍처로 구현)
+-
+-### 1단계: 백엔드 동시성 및 파싱 인프라 구축 (에이다 & 허밋)
+-- [ ] **LockService 전면 도입**: `drive_archive.gs` 쓰기/수정 함수에 Lock을 걸어 동시성(슬랙 vs 웹 충돌) 완벽 방어
+-- [ ] **2-Phase Commit 백업**: 원본 마크다운 덮어쓰기 전 임시 백업 파일 생성 및 파싱 실패 시 롤백 기능 구현
+-- [ ] **정교한 정규식 파싱**: 특정 날짜/시간 블록을 매칭하여 '단 1건 매칭' 시에만 텍스트를 치환하는 안전망 구축
+-
+-### 2단계: 프론트엔드 1-Depth 직관적 UI 개발 (클로이)
+-- [ ] **에디터 파싱 렌더링**: `judy_note.html` 읽기 모드를 통짜 텍스트에서 쪼개진 개별 `.memo-block` DOM 조립으로 리팩토링
+-- [ ] **1-Depth 아이콘 UI**: 각 블록 우측 상단에 직관적인 조작 아이콘(`✏️`, `✓`, `🗑️`) 배치 (호버/터치 노출)
+-- [ ] **인라인 텍스트 수정**: `✏️` 클릭 시 즉시 폼(`textarea`)으로 바뀌어 내용 수정 및 저장/취소 지원
+-- [ ] **안전 삭제 로직**: 우발적 삭제 방지를 위해 2단계 컨펌(위험 모달) 및 토스트 연동
+-
+----
+-
+-## 📌 향후 개발 로드맵 (우선순위 순)
+-
+-> 아래는 실용성, 선행 조건(의존성), 팀원 체감효과를 기준으로 정리한 우선순위입니다.
+-
+-### 🚀 [NEW] 커스텀 워크스페이스: 칸반 보드 & 웹 캘린더 통합 뷰
+-> 📖 상세 계획: [implementation_plan_kanban_calendar.md](implementation_plan_kanban_calendar.md)
+-> 📝 작업 목록 (QA 검토용): [task_kanban_calendar.md](task_kanban_calendar.md)
+-> 💡 **목표**: 구글 캘린더를 DB로 활용하되, 주디 워크스페이스 내에 직접 칸반 보드 및 달력 UI를 구축하여 드래그 앤 드롭으로 업무 스케줄을 직관적으로 관리합니다.
+-
+-#### Step 1: 📋 칸반 보드 (Kanban Board) 뷰 구축
+-- [ ] 시트 데이터를 '대기/진행중/완료' 컬럼으로 시각화 및 드래그 앤 드롭 상태 변경 구현
+-- [ ] 마우스/터치 액션 시 실시간 시트 동기화(Optimistic UI) 처리
+-
+-#### Step 2: 📅 커스텀 웹 캘린더 (Calendar View) 구축
+-- [ ] 월간/주간 달력 UI 직접 구현 및 업무 마감일(Due Date) 연동
+-- [ ] 달력 내 카드 이동 시 시트 마감일 자동 업데이트 및 구글 캘린더 동기화
+-
+----
+-
+-## 🚦 김감사(QA) 검수 요청: 신규 기능 기획안
+-**검수 대상**: [기획안] 칸반 보드 & 커스텀 캘린더 통합 뷰
+-**관련 문서**:
+-1. [기획 상세 문서 (Implementation Plan)](implementation_plan_kanban_calendar.md)
+-2. [상세 태스크 리스트 (Task List)](task_kanban_calendar.md)
+-
+-**검토 요청 사항**:
+-- GAS 환경에서의 드래그 앤 드롭 통신 지연(Latency) 방어 전략의 적절성
+-- 모바일(터치) 환경에서의 UX 동작 안정성 및 데이터 정합성 보장 여부
+-- 구글 캘린더 동기화 트리거 충돌 방지 로직 검토
+-
+----
+-
+-### 🚀 차순위: AI 에이전트 핵심 기능 추가 (Proactive Agent Experience)
+-> 💡 **목표**: 주디를 "시키면 하는 도구"에서 **"먼저 알아서 행동하는 AI 동료"**로 진화시키는 핵심 3가지 기능
+-> 📅 **예정일**: 2026-02-24 저녁
+-
+-#### Step 1: 🗣️ 슬랙 자연어 업무 등록
+-- [ ] 슬랙 DM에서 자연어 입력 시 Claude AI로 업무 자동 파싱 (기존 `ai_task_parser.gs` 재활용)
+-- [ ] 추출 결과를 슬랙 확인 메시지(버튼 포함)로 반환 → 사용자 승인 시 시트 자동 등록
+-- [ ] `slack_command.gs` 이벤트 라우팅에 "업무 등록 의도(Intent)" 판별 로직 추가
+-```
+-사용자: "넷마블 기획서 금요일까지 작성해야 해"
+-주디: "📋 업무를 등록할까요?
+-      • 제목: 넷마블 기획서 작성
+-      • 마감일: 2026-02-28
+-      [등록하기] [수정하기]"
+-```
+-
+-#### Step 2: ⏰ 스마트 리마인더 & 마감 경고
+-- [ ] 매일 오전 트리거로 `Tasks` 시트 스캔 → 마감 D-1/D-Day 업무 감지
+-- [ ] 3일 이상 '대기' 상태 방치 업무 자동 넛지(Nudge) 알림
+-- [ ] 기존 모닝 브리핑에 **마감 경고 블록** 추가 (슬랙 개인 DM 발송)
+-```
+-주디: "🔔 오늘 주의할 업무:
+-      • ⚠️ '넷마블 기획서' 마감 D-1 (내일까지)
+-      • 💤 '전주 기획서 분리' 3일째 '대기' 상태
+-      오늘도 화이팅! 🐰"
+-```
+-
+-#### Step 3: 💬 대화형 업무 상태 변경
+-- [ ] 슬랙 DM에서 "완료/시작/보류" 키워드 + 업무명 감지 → 시트 상태 자동 변경
+-- [ ] 변경 완료 후 확인 메시지 + 오늘의 업무 진척 현황 요약 자동 제공
+-- [ ] 업무명 모호 시 후보 목록 제시 → 사용자 선택 플로우 구현
+-```
+-사용자: "넷마블 기획서 완료했어"
+-주디: "✅ '넷마블 기획서 작성' 완료 처리했습니다!
+-      오늘 완료: 3건 / 남은 업무: 5건 🐰"
+-```
+-
+-### 🥇 우선순위 1: 프로젝트 분류 체계 고도화 (기존 16단계)
+-> 📖 상세 계획: [implementation_plan_phase16.md](implementation_plan_phase16.md)
+-> ⚠️ **17단계·20단계의 선행 조건** — 정형화된 데이터 구조가 필수
+-- [ ] **Projects 시트 속성 확장 및 AI 학습 메타데이터 추가**
+-  - 프로젝트 설명(Description), 상태, 우선순위 필드 신설 및 AI 프롬프트 연동
+-- [ ] **구조적 업무 ID (Structured Task ID) 시스템 구현**
+-  - `[프로젝트코드]-[일련번호]` 형태의 자동 ID 생성 로직 및 기존 데이터 마이그레이션
+-- [ ] **입력 UI 통제 및 정형 데이터 확보 (Selection over Collection)**
+-  - 슬랙 및 웹 앱 업무 등록 시 프로젝트명을 드롭다운(선택형)으로 강제화
+-- [ ] **AI 기반 컨텍스트 업무 분석 및 자동화 워크플로우 연동**
+-  - 프로젝트 코드별 맞춤형 자동화 규칙 적용 및 AI 전문 분석 리포트 강화
+-
+-### 🥈 우선순위 2: 일정 캘린더 직접 등록 (기존 18단계)
+-> 📖 상세 계획: [implementation_plan_phase18.md](implementation_plan_phase18.md)
+-> ⚠️ 기존 4단계(마감일→종일 이벤트)와 달리 시간 지정 이벤트
+-- [ ] **슬랙 일정 등록 인터페이스 구현 (`/주디 일정`)**
+-  - 일정 유형(회의/외근/미팅), 날짜, 시작~종료 시간, 장소 입력 모달 구축
+-- [ ] **캘린더 시간 지정 이벤트 등록 백엔드 (`calendar_schedule.gs` 신규)**
+-  - 기존 종일 이벤트와 분리된 `createEvent()` 기반 시간 이벤트 생성 로직
+-- [ ] **`Schedules` 시트 신설 및 일정 데이터 관리**
+-  - Tasks 시트와 독립된 일정 이력 관리 및 AI 리포트 교차 분석 기반 제공
+-- [ ] **일정 리마인더 및 팀 일정 조회 기능**
+-  - 일정 30분 전 슬랙 알림 자동 발송 및 `/주디 팀 일정` 조회 연동
+-
+-### 🥉 우선순위 3: 업무 라이프사이클 고도화 (기존 20단계)
+-> 📖 상세 계획: [implementation_plan_phase20.md](implementation_plan_phase20.md)
+-- [ ] **슬랙 모달 기반 업무 상태 관리**
+-  - `/주디 내 업무` → 업무 선택 → 모달에서 상태(시작/대기/보류/완료) 원스톱 변경 → 시트 자동 반영
+-- [ ] **업무 시간 트래킹 (Time Tracking)**
+-  - 시작 시 예상 소요 시간 입력 + 타임스탬프 자동 기록, 완료 시 실제 소요 시간 자동 계산
+-- [ ] **업무 완료 회고 시스템 (Retrospective)**
+-  - 완료 전환 시 회고 모달 자동 팝업 (잘된 점, 어려웠던 점, 지연 사유, 한 줄 메모)
+-- [ ] **상태 기반 스마트 리마인더**
+-  - 대기 3일, 진행중 2일 무변화 자동 알림 + 마감 D-1/D-Day 알림 + 사용자 직접 설정 리마인드
+-
+-### 우선순위 4: 역할 기반 업무 뷰 및 팀원 협업 (기존 17단계)
+-> 📖 상세 계획: [implementation_plan_phase17.md](implementation_plan_phase17.md)
+-> 📌 **선행 조건**: 우선순위 1 완료 (정형화된 데이터 구조 필수)
+-- [ ] **Users 시트 확장 및 역할/팀 체계 도입**
+-  - 역할(대표/팀장/팀원), 소속 팀, 기본 프로젝트 필드 추가 및 Config 시트 신설
+-- [ ] **역할 기반 업무 뷰 시스템 구현**
+-  - `/주디 내 업무`(개인), `/주디 팀 현황`(팀장), `/주디 전사 현황`(대표) 필터링 로직
+-- [ ] **팀원 간 업무 요청/위임/완료 알림 워크플로우 구축**
+-  - `/주디 요청 @팀원 업무내용` 자동 등록 및 상태 변경 시 요청자에게 알림 발송
+-- [ ] **모닝 브리핑 개인화 (역할별 맞춤 리포트)**
+-  - 팀원/팀장/대표에게 각각 다른 수준의 업무 요약 자동 발송
+-
+-### 🥈 우선순위 2: ⏱️ 업무 시간 트래킹 및 시각화 (MVP)
+-> 📖 상세 계획: [implementation_plan_time_tracking.md](implementation_plan_time_tracking.md) | 태스크: [task_time_tracking.md](task_time_tracking.md)
+-- [ ] **업무 라이프사이클 타임스탬프 기록**
+-  - '진행중' 및 '완료' 시점의 시간 데이터를 자동으로 수집하여 소요 시간 계산
+-- [ ] **대시보드 몰입 시간 시각화**
+-  - 개별 업무 소요 시간 표시 및 오늘 하루 총 집중 시간 요약 카드 구현
+-
+-### 🥉 우선순위 3: 일정 캘린더 직접 등록 (기존 18단계)
+-> 📖 상세 계획: [implementation_plan_phase15.md](implementation_plan_phase15.md)
+-- [ ] **AI 파싱 엔진 통합 및 영수증 OCR 구현**
+-  - 카드 결제 문자 및 영수증 이미지 자동 분석 로직 이식
+-- [ ] **개인 드라이브 기반 영수증 아카이빙 연동**
+-  - 추출된 영수증 이미지를 유저 개인 드라이브 전용 폴더에 자동 저장
+-- [ ] **지출-업무 태스크 자동 링크 시스템 구축**
+-  - 지출 내역 저장 시 '지출결의 필요' 태스크를 `Tasks` 시트에 자동 생성
+-- [ ] **통합 검색 및 모바일 지출 관리 UI 최적화**
+-  - Judy Note 웹 앱 내 지출 내역 조회 탭 신설 및 글로벌 검색 연동
+-
+-### 우선순위 7: 팀 온보딩 가이드 및 AI 평가 시스템 (기존 19단계)
+-> 📖 상세 계획: [implementation_plan_phase19.md](implementation_plan_phase19.md)
+-
+-#### 🅰️ 주디 사용설명 (팀원 온보딩 가이드)
+-- [ ] **기능별 사용 가이드 문서 작성**
+-  - 팀원 온보딩 첫 번째 문서: 전체 기능 목록, 기능별 사용법, 주의사항 정리
+-- [ ] **QA 기본 문서 및 테스트 방법 안내**
+-  - 각 기능에 대한 정상/비정상 케이스 검증 절차 문서화
+-- [ ] **기능별 녹화 화면 제작 및 문서 첨부**
+-  - 실제 동작 환경에서 기능별 시연 영상 녹화 후 가이드 문서에 임베드
+-
+-#### 🅱️ 주디 평가 시스템 (AI 학습 데이터 수집)
+-> 💡 **평가 목적**: 주디 AI 에이전트의 학습 데이터(스코어, 스킬스 문서, 피드백)로 활용하여 지속적 개선
+-
+-- [ ] **실시간: 슬랙 이모지 리액션 (👍/👎)**
+-  - 주디의 모든 응답 메시지에 자동으로 리액션 이모지 부착, 팀원이 클릭하면 `FeedbackLog` 시트에 자동 기록 (마찰 제로)
+-- [ ] **주간: 슬랙 내 미니 설문**
+-  - 매주 금요일 주디가 DM으로 "이번 주 가장 유용했던 기능은?" + 버튼 선택 전송, 30초 내 완료
+-- [ ] **패시브: 기능별 사용 빈도 + 에러 자동 로깅**
+-  - 각 기능 호출 시 `FeedbackLog` 시트에 자동 기록 (누가, 언제, 어떤 기능, 성공/실패), 에러 발생 시 원인 자동 추적
+-
+----
+-
+-## 🔮 향후 서버 고도화 방안
+-
+-> **작성일**: 2026-02-24 | **전환 시점**: 팀 20명 이상 또는 업무 1000건 초과 시 검토
+-
+-### 현재 아키텍처 (GAS)의 한계
+-
+-| 문제 | 원인 | 영향 |
+-|---|---|---|
+-| 콜드 스타트 2~5초 | GAS 서버리스 특성 | Slack 3초 타임아웃 위험 |
+-| 비동기 처리 불가 | GAS 언어 제약 | 트리거 사용 시 1~2분 지연 |
+-| 시트 읽기 속도 | DB 대신 Google Sheets 사용 | 데이터 증가 시 성능 저하 |
+-
+-### 고도화 단계
+-
+-**1단계: Cloudflare Workers 미들웨어 (비용: 무료)**
+-- Slack → Cloudflare Workers (즉시 응답) → GAS (백그라운드)
+-- 콜드 스타트 0ms, 무료 티어 10만 요청/일
+-- Google Sheets 그대로 유지, 속도 문제만 해결
+-- 기존 GAS 코드 최소 수정
+-
+-**2단계: 풀 서버 전환 (비용: 월 $5~20)**
+-- Node.js + Google Cloud Run + PostgreSQL
+-- 응답 0.1~0.3초, 비동기 네이티브 지원
+-- 모든 제약 해소, 무한 확장 가능
+-- 기존 Google Sheets 데이터 마이그레이션 필요
++## 📈 최근 성과
++- **폴더 구조 재편성 (53개 파일 이동 및 분류)**
++- **백엔드 데이터 동기화 이슈 해결 (web_app.gs 최적화)**
++- **팀 표준 템플릿 4종 배포**
+diff --git a/slack_proxy.py b/slack_proxy.py
+deleted file mode 100644
+index 48f4a70..0000000
+--- a/slack_proxy.py
++++ /dev/null
+@@ -1,50 +0,0 @@
+-import requests
+-import threading
+-from flask import Flask, request
+-
+-app = Flask(__name__)
+-
+-# [필수 설정] 구글 Apps Script 배포 URL (웹 앱 URL)을 여기에 붙여넣으세요.
+-GAS_WEB_APP_URL = "여기에_GAS_웹앱_URL_입력"
+-
+-def forward_to_gas(data):
+-    """백그라운드에서 구글 Apps Script(GAS)로 데이터를 전달합니다."""
+-    try:
+-        response = requests.post(GAS_WEB_APP_URL, data=data)
+-        if response.status_code == 200:
+-            print("✅ GAS로 데이터 성공적 전달")
+-        else:
+-            print(f"⚠️ GAS 응답 에러: {response.status_code}")
+-    except Exception as e:
+-        print(f"❌ GAS 전달 실패: {e}")
+-
+-@app.route('/slack/events', methods=['POST'])
+-def slack_events():
+-    """슬랙으로부터 오는 /주디 커맨드와 모달 제출(Interactivity)을 받습니다."""
+-    
+-    # 1. 모달 전송 (Payload)
+-    if 'payload' in request.form:
+-        # 백그라운드로 GAS에 전달 (시트 저장 등 오래 걸리는 작업)
+-        payload_data = {'payload': request.form['payload']}
+-        threading.Thread(target=forward_to_gas, args=(payload_data,)).start()
+-        
+-        # 슬랙에는 0.01초 만에 "알았어!" 하고 빈 문자열(200 OK)을 반환 -> 즉시 모달 닫힘
+-        return "", 200
+-        
+-    # 2. 슬래시 커맨드 (/주디)
+-    elif 'command' in request.form:
+-        # 모달 띄우기 창 요청도 GAS로 전달
+-        command_data = {
+-            'command': request.form['command'],
+-            'trigger_id': request.form.get('trigger_id')
+-        }
+-        threading.Thread(target=forward_to_gas, args=(command_data,)).start()
+-        
+-        # 커맨드 에러가 안 뜨게 빈 응답 반환
+-        return "", 200
+-
+-    return "Unknown", 400
+-
+-if __name__ == '__main__':
+-    print("🚀 슬랙-GAS 프록시 서버 실행 중... (포트 3000)")
+-    app.run(port=3000)
+diff --git a/src/frontend/judy_workspace.html b/src/frontend/judy_workspace.html
+index 2b13e86..174a33f 100644
+--- a/src/frontend/judy_workspace.html
++++ b/src/frontend/judy_workspace.html
+@@ -1187,6 +1187,11 @@
+             border-color: rgba(220, 53, 69, 0.3);
+         }
+ 
++        .action-add-task {
++            color: var(--primary);
++            border-color: var(--primary) !important;
++        }
++
+         .action-delete.danger:hover {
+             background-color: #dc3545;
+             color: white;
+@@ -2019,12 +2024,22 @@
+         // ===== 🐰 드래그 선택 플로팅 버튼 로직 =====
+         let _selectedTextForTask = '';
+ 
+-        function handleTextSelection() {
++        function handleTextSelection(e) {
+             // 노트 탭이 활성 상태일 때만 작동
+             if (!document.getElementById('viewNote').classList.contains('active')) return;
+ 
+             const selection = window.getSelection();
+-            const text = selection.toString().trim();
++            let text = selection.toString().trim();
++            let isTextarea = false;
++
++            // textarea 내부 선택 확인 (추가됨)
++            if (!text && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
++                const ta = document.activeElement;
++                if (ta.selectionStart !== ta.selectionEnd) {
++                    text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
++                    isTextarea = true;
++                }
++            }
+ 
+             if (text.length < 5) {
+                 judyFloatBtn.style.display = 'none';
+@@ -2034,19 +2049,29 @@
+ 
+             _selectedTextForTask = text;
+ 
+-            // 선택 영역 위치 계산
+-            const range = selection.getRangeAt(0);
+-            const rect = range.getBoundingClientRect();
+-
+-            // 버튼 위치: 선택 영역 상단 중앙
+             const btnWidth = 120;
+-            let left = rect.left + (rect.width / 2) - (btnWidth / 2);
+-            let top = rect.top - 42;
++            let left = 0, top = 0;
++
++            if (isTextarea && e) {
++                // textarea의 경우 마우스 위치 기반 보정
++                left = e.clientX - (btnWidth / 2);
++                top = e.clientY - 42;
++                if (top < 8) top = e.clientY + 12; // 화면 위를 벗어나면 마우스 아래로
++            } else if (selection.rangeCount > 0) {
++                // 일반 텍스트는 Range 기반
++                const range = selection.getRangeAt(0);
++                const rect = range.getBoundingClientRect();
++                left = rect.left + (rect.width / 2) - (btnWidth / 2);
++                top = rect.top - 42;
++            } else if (e) {
++                left = e.clientX - (btnWidth / 2);
++                top = e.clientY - 42;
++            }
+ 
+-            // 화면 밖으로 나가지 않도록 보정
++            // 좌우/상하 최종 보정
+             if (left < 8) left = 8;
+             if (left + btnWidth > window.innerWidth - 8) left = window.innerWidth - btnWidth - 8;
+-            if (top < 8) top = rect.bottom + 6;
++            if (top < 8) top = 8;
+ 
+             judyFloatBtn.style.left = left + 'px';
+             judyFloatBtn.style.top = top + 'px';
+@@ -2055,9 +2080,9 @@
+ 
+         // mouseup 이벤트로 텍스트 선택 감지 (읽기/쓰기 모드 모두)
+         document.addEventListener('mouseup', (e) => {
+-            // 플로팅 버튼 자체를 클릭한 경우는 무시
++            // 버튼 내부 클릭 시 무시
+             if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+-            setTimeout(handleTextSelection, 10);
++            setTimeout(() => handleTextSelection(e), 50); // delay 약간 늘림
+         });
+ 
+         // 다른 곳 클릭 시 버튼 숨기기
+@@ -2067,7 +2092,14 @@
+         });
+ 
+         // 플로팅 버튼 클릭 시 AI 파싱 후 모달 오픈
+-        judyFloatBtn.addEventListener('click', () => {
++        judyFloatBtn.addEventListener('mousedown', (e) => {
++            e.preventDefault(); // 포커스 잃음 방지 및 브라우저 기본동작 제어
++            e.stopPropagation();
++        });
++
++        judyFloatBtn.addEventListener('click', (e) => {
++            e.preventDefault();
++            e.stopPropagation();
+             if (!_selectedTextForTask) return;
+             if (!g_userName) return showToast('⛔ 인증된 사용자가 없습니다.', true);
+ 
+@@ -2723,10 +2755,12 @@
+ 
+             const actionsDiv = document.createElement('div');
+             actionsDiv.className = 'action-buttons';
++            const btnAddTask = document.createElement('button'); btnAddTask.className = 'action-add-task'; btnAddTask.innerHTML = '📋'; btnAddTask.title = '업무 등록하기';
+             const btnEdit = document.createElement('button'); btnEdit.className = 'action-edit'; btnEdit.innerHTML = '✏️'; btnEdit.title = '수정';
+             const btnDone = document.createElement('button'); btnDone.className = 'action-done'; btnDone.innerHTML = '✓'; btnDone.title = '완료(취소선)';
+             const btnDel = document.createElement('button'); btnDel.className = 'action-delete danger'; btnDel.innerHTML = '🗑️'; btnDel.title = '삭제';
+ 
++            actionsDiv.appendChild(btnAddTask);
+             actionsDiv.appendChild(btnEdit);
+             actionsDiv.appendChild(btnDone);
+             actionsDiv.appendChild(btnDel);
+@@ -2839,6 +2873,14 @@
+                     .toggleStrikethroughMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent });
+             });
+ 
++            btnAddTask.addEventListener('click', () => {
++                let cleanContent = currentContent;
++                if (cleanContent.startsWith('~~') && cleanContent.endsWith('~~')) {
++                    cleanContent = cleanContent.substring(2, cleanContent.length - 2);
++                }
++                openRegModal({ title: cleanContent });
++            });
++
+             btnDel.addEventListener('click', () => {
+                 executeDeleteFlow(wrapper, g_userName, dateStr, timeStr, currentContent);
+             });
+diff --git a/src/gas/web_app.gs b/src/gas/web_app.gs
+index 4c568d2..7fb70c4 100644
+--- a/src/gas/web_app.gs
++++ b/src/gas/web_app.gs
+@@ -1,18 +1,12 @@
+ /**
+  * [파일명]: web_app.gs
+- * [마지막 업데이트]: 2026-02-22 13:21 (KST)
+- * [기능 설명]: 데스크탑 웹 브라우저용 '주디 노트(메모장)' 인터페이스를 제공하는 백엔드 처리기.
+- * [최근 개편]: 저장 기능(saveFromWeb, extractFromWeb) 외에 과거 데이터 AI 요약(summarizeMemoContent) 액션이 추가되었습니다.
++ * [마지막 업데이트]: 2026-02-26 18:20 (KST)
++ * [기능 설명]: 주디 워크스페이스 통합 백엔드 (데이터 불일치 및 동기화 문제 해결 버전)
+  */
+ 
+-/**
+- * 웹 앱 URL로 접속 시 HTML 화면을 렌더링합니다.
+- */
+ function doGet(e) {
+   const template = HtmlService.createTemplateFromFile('judy_workspace');
+-  
+-  // 파라미터로 넘어온 값들을 모두 템플릿에 전달
+-  template.initialPage = e.parameter.page || 'tasks'; // 기본 탭: 업무(tasks) 또는 노트(note)
++  template.initialPage = e.parameter.page || 'tasks';
+   template.userId = e.parameter.user || '';
+   template.userName = e.parameter.name || '';
+   template.token = e.parameter.token || '';
+@@ -22,223 +16,39 @@ function doGet(e) {
+     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+ }
+ 
++/**
++ * 전역 설정된 시트 ID를 사용하여 일관된 Spreadsheet 객체를 반환합니다.
++ */
++function getTargetSpreadsheet() {
++  const props = PropertiesService.getScriptProperties();
++  const ssId = props.getProperty("STORED_SS_ID");
++  if (ssId) {
++    try {
++      return SpreadsheetApp.openById(ssId);
++    } catch (e) {
++      console.error("STORED_SS_ID로 열기 실패, 기본 시트 사용:", e);
++    }
++  }
++  return SpreadsheetApp.getActiveSpreadsheet();
++}
++
+ /**
+  * [Phase 10] 매직 링크 토큰 검증 시스템
+- * 프론트엔드에서 페이지 로드 시 호출하여 토큰의 유효성을 검사하고 
+- * 일회용 토큰을 즉시 파기한 후 사용자 이름을 반환합니다.
+  */
+ function validateToken(token) {
+-  if (!token) {
+-    return { valid: false, reason: "토큰이 없습니다. 슬랙에서 다시 접속해주세요." };
+-  }
+-  
++  if (!token) return { valid: false, reason: "토큰이 없습니다. 슬랙에서 다시 접속해주세요." };
+   const cache = CacheService.getScriptCache();
+   const userName = cache.get("MAGIC_" + token);
+-  
+   if (userName) {
+-    // 보안을 위해 일회용 토큰 즉시 파기!
+     cache.remove("MAGIC_" + token);
+     return { valid: true, name: userName };
+   } else {
+-    // 캐시에 없거나, 만료되었거나, 이미 사용됨
+-    return { valid: false, reason: "접근 권한이 없거나 이미 만료/사용된 링크입니다.<br>슬랙에서 '/주디 노트' 명령어로 다시 발급받아주세요." };
+-  }
+-}
+-
+-/**
+- * 프론트엔드(judy_note.html)에서 호출하는 저장 함수
+- * 기존의 drive_archive.gs 와 완벽하게 호환됩니다.
+- * 
+- * @param {string} userName - 작성자 이름
+- * @param {string} text - 작성된 메모 텍스트
+- */
+-function saveFromWeb(userName, text) {
+-  try {
+-    if (!text || text.trim() === "") return { success: false, message: "내용이 없습니다." };
+-    
+-    // 이전에 만들어둔 drive_archive.gs의 appendMemoToArchive 재사용!
+-    // 세 번째 파라미터(userId)를 null로 주어 슬랙 DM 알림을 생략합니다 (웹앱 자체 토스트로 알림).
+-    const resultMsg = appendMemoToArchive(userName, text, null);
+-    
+-    return { success: true, message: resultMsg || "성공적으로 저장되었습니다." };
+-  } catch (err) {
+-    console.error("웹 오류:", err);
+-    return { success: false, message: err.message };
+-  }
+-}
+-
+-/**
+- * 프론트엔드에서 '✨ AI 업무 추출 및 저장' 버튼을 눌렀을 때 호출되는 함수
+- */
+-function extractFromWeb(userName, text) {
+-  try {
+-    if (!text || text.trim() === "") return { success: false, message: "내용이 없습니다." };
+-    
+-    // 1. 구글 드라이브 아카이브에 영구 저장 (백업)
+-    appendMemoToArchive(userName, text, null);
+-    
+-    // 2. AI 분석기를 돌려서 Tasks 시트에 스마트하게 꽂아버림
+-    const summaryMsg = parseAndCreateTasks(text, userName);
+-    
+-    return { success: true, message: summaryMsg };
+-  } catch (err) {
+-    console.error("AI 파싱 웹 오류:", err);
+-    return { success: false, message: err.message };
+-  }
+-}
+-
+-/**
+- * [Phase 4] 노트 모듈에서 '✨ AI 업무 추출' 버튼 클릭 시 호출 (개편)
+- * 텍스트를 Claude API로 요약/분석하여 새 업무 등록 모달에 Pre-fill 할 JSON 객체 반환
+- */
+-function parseTaskFromMemoWeb(userName, text) {
+-  try {
+-    if (!text || text.trim() === "") return { success: false, message: "분석할 내용이 없습니다." };
+-    
+-    // 1. 구글 드라이브 아카이브에 영구 저장 (백업은 기존처럼 실시)
+-    appendMemoToArchive(userName, text, null);
+-    
+-    let apiKey = "";
+-    try {
+-      apiKey = CLAUDE_API_KEY; // 전역 설정된 키 스코프에서 사용
+-    } catch(e) {}
+-    
+-    if(!apiKey) return { success: false, message: "CLAUDE API키 설정이 없습니다."};
+-
+-    // 오늘 날짜 주입 (상대적 기한 추론용)
+-    const today = new Date();
+-    const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd (E)");
+-
+-    const systemPrompt = `당신은 업무 내용을 분석하고 추출하는 일급 비서입니다. 사용자(${userName})의 회의록이나 메모를 바탕으로 새로운 업무 카드 내용을 구성하세요.
+-
+-⚠️ 핵심 규칙:
+-- 메모에 여러 가지 업무가 있더라도, 가장 중요한 업무 1건으로 통합 요약하여 반드시 **JSON 1개만** 응답하세요.
+-- 절대로 JSON을 2개 이상 출력하지 마세요.
+-- 인사말, 설명, 마크다운 백틱 없이 오직 순수 JSON만 출력하세요.
+-- 오늘 날짜: ${todayStr}
+-
+-출력 포맷:
+-{
+-  "title": "업무 제목 (20자 이내 명확하게)",
+-  "desc": "업무 상세 내용을 3~4줄로 명확하게 요약 (마크다운 사용 가능)",
+-  "due": "메모상에 기한이 명시되어 있다면 YYYY-MM-DD (오늘 날짜 기준으로 추론. 불확실하면 빈 문자열 '')"
+-}`;
+-
+-    // Messages API v1 스펙: system은 top-level 파라미터로 필수 배치 (messages 배열 밖)
+-    const payload = {
+-      "model": "claude-sonnet-4-20250514",
+-      "max_tokens": 600,
+-      "temperature": 0,
+-      "system": systemPrompt,
+-      "messages": [
+-        {"role": "user", "content": text}
+-      ]
+-    };
+-    
+-    const options = {
+-      "method": "post",
+-      "headers": {
+-        "x-api-key": apiKey,
+-        "anthropic-version": "2023-06-01",
+-        "content-type": "application/json"
+-      },
+-      "payload": JSON.stringify(payload),
+-      "muteHttpExceptions": true
+-    };
+-    
+-    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
+-    const json = JSON.parse(res.getContentText());
+-    
+-    if (json.content && json.content.length > 0) {
+-      const resultText = json.content[0].text.trim();
+-      let parsedData = {};
+-      
+-      // 견고한 JSON 추출: 첫 번째 { ... } 완전한 블록만 안전하게 꺼냄
+-      try {
+-        // 첫 번째 JSON 객체만 찾아 추출 (멀티 JSON 응답 안전 처리)
+-        let cleaned = resultText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+-        let depth = 0, start = -1, end = -1;
+-        for (let i = 0; i < cleaned.length; i++) {
+-          if (cleaned[i] === '{') { if (depth === 0) start = i; depth++; }
+-          else if (cleaned[i] === '}') { depth--; if (depth === 0 && start >= 0) { end = i; break; } }
+-        }
+-        if (start >= 0 && end > start) {
+-          parsedData = JSON.parse(cleaned.substring(start, end + 1));
+-        } else {
+-          return { success: false, message: "AI 응답에서 JSON을 찾을 수 없습니다." };
+-        }
+-      } catch (parseErr) {
+-        return { success: false, message: "JSON 파싱 실패: " + parseErr.message };
+-      }
+-      return { success: true, data: parsedData, message: "업무 추출 성공" };
+-    } else {
+-      let errMsg = json.error ? json.error.message : JSON.stringify(json);
+-      return { success: false, message: "API 오류: " + errMsg };
+-    }
+-
+-  } catch (err) {
+-    console.error("AI 파싱 프리필 오류:", err);
+-    return { success: false, message: err.message };
++    return { valid: false, reason: "권한이 없거나 이미 만료된 링크입니다." };
+   }
+ }
+ 
+ /**
+- * 프론트엔드에서 '✨ AI 내용 요약' 버튼 클릭 시 호출
+- * 특정 메모 텍스트를 대상 모델(Claude)로 요약하여 반환
+- */
+-function summarizeMemoContent(text, userName) {
+-  try {
+-    if (!text || text.trim() === "") return { success: false, message: "요약할 내용이 없습니다." };
+-    
+-    let apiKey = "";
+-    try {
+-      // ai_report.gs 등에 글로벌 선언된 키 재사용
+-      apiKey = CLAUDE_API_KEY; 
+-    } catch(e) {}
+-    
+-    if(!apiKey) return { success: false, message: "CLAUDE API키 설정이 없습니다."};
+-    
+-    const systemPrompt = `당신은 핵심을 짚어내는 요약 비서입니다. 작성자(${userName})의 업무일지 내용을 읽고, 1~3줄 이내의 간결하고 명확한 요약본을 작성하세요. 불필요한 인사말 없이 요약 결과만 마크다운을 곁들여 예쁘게 출력하세요.`;
+-    
+-    const payload = {
+-      "model": "claude-sonnet-4-20250514",
+-      "max_tokens": 500,
+-      "temperature": 0,
+-      "system": systemPrompt,
+-      "messages": [
+-        {"role": "user", "content": text}
+-      ]
+-    };
+-    
+-    const options = {
+-      "method": "post",
+-      "headers": {
+-        "x-api-key": apiKey,
+-        "anthropic-version": "2023-06-01",
+-        "content-type": "application/json"
+-      },
+-      "payload": JSON.stringify(payload),
+-      "muteHttpExceptions": true
+-    };
+-    
+-    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
+-    const json = JSON.parse(res.getContentText());
+-    
+-    if (json.content && json.content.length > 0) {
+-      return { success: true, summary: json.content[0].text.trim() };
+-    } else {
+-      let errMsg = json.error ? json.error.message : JSON.stringify(json);
+-      return { success: false, message: "API 오류: " + errMsg };
+-    }
+-  } catch(e) {
+-    console.error("AI 요약 웹 오류:", e);
+-    return { success: false, message: e.message };
+-  }
+-}
+-
+-/**
+- * [Phase 23] 모든 업무 데이터 반환 (팀 단위 레이아웃용)
+- * CacheService를 사용하여 5분간 데이터를 캐싱합니다.
++ * 모든 업무 데이터 반환 (캐싱 적용)
+  */
+ function getAllTasksForWeb(userId) {
+   const cache = CacheService.getScriptCache();
+@@ -246,14 +56,10 @@ function getAllTasksForWeb(userId) {
+   const cachedData = cache.get(cacheKey);
+   
+   if (cachedData) {
+-    try {
+-      return JSON.parse(cachedData);
+-    } catch (e) {
+-      console.error("캐시 파싱 오류:", e);
+-    }
++    try { return JSON.parse(cachedData); } catch (e) {}
+   }
+ 
+-  const ss = SpreadsheetApp.getActiveSpreadsheet();
++  const ss = getTargetSpreadsheet();
+   const sheet = ss.getSheetByName("Tasks");
+   if (!sheet) return [];
+   
+@@ -269,7 +75,6 @@ function getAllTasksForWeb(userId) {
+     const title    = String(data[i][4]).trim();
+     const desc     = String(data[i][5] || "").trim();
+     const assignee = String(data[i][6]).trim();
+-    const requester= String(data[i][7] || "").trim();
+     const rawDue   = data[i][8];
+     const startTime   = data[i][14];
+     const durationMin = data[i][16];
+@@ -285,7 +90,6 @@ function getAllTasksForWeb(userId) {
+         d.setHours(0, 0, 0, 0);
+         dDays = Math.round((d - today) / 86400000);
+         dueDate = (d.getMonth() + 1) + "/" + d.getDate();
+-        
+         const yyyy = d.getFullYear();
+         const mm = String(d.getMonth() + 1).padStart(2, '0');
+         const dd = String(d.getDate()).padStart(2, '0');
+@@ -294,323 +98,163 @@ function getAllTasksForWeb(userId) {
+     }
+     
+     allTasks.push({ 
+-      row: i + 1, id: rowId, title, project, status, dueDate, rawDueStr, desc, dDays, assignee, requester,
++      row: i + 1, id: rowId, title, project, status, dueDate, rawDueStr, desc, dDays, assignee,
+       startTime: startTime instanceof Date ? startTime.getTime() : null,
+       durationMin: !isNaN(parseFloat(durationMin)) ? parseFloat(durationMin) : null
+     });
+   }
+   
+-  // 마감일순 정렬 (미지정은 뒤로)
+-  allTasks.sort((a, b) => {
+-    const aPri = a.dDays !== null ? a.dDays : 9999;
+-    const bPri = b.dDays !== null ? b.dDays : 9999;
+-    return aPri - bPri;
+-  });
+-  
+-  // 5분(300초) 캐싱
++  allTasks.sort((a, b) => (a.dDays ?? 9999) - (b.dDays ?? 9999));
+   cache.put(cacheKey, JSON.stringify(allTasks), 300);
+-  
+   return allTasks;
+ }
+ 
+ /**
+- * [20단계] 업무 대시보드 웹 페이지용 — 내 업무 데이터 반환 (필터링 버전)
++ * 내 업무 필터링
+  */
+ function getMyTasksForWeb(userId) {
+-  const userName = fetchUserName(userId);
++  const userName = fetchUserName ? fetchUserName(userId) : userId;
+   const allTasks = getAllTasksForWeb(userId);
+-  
+-  // userId에서 슬랙 username 추출 (dict에서 역매핑)
+   const dict = {
+     "U02S3CN9E6R": "syn", "U08SJ3SJQ9W": "jieun",
+     "U02SK29URP": "hyerim", "U0749G2SNBE": "yuna",
+     "U04JL09C6DV": "sangho", "U02S3EURC21": "kwansu"
+   };
+   const slackUsername = dict[userId] || "";
+-  
+   return allTasks.filter(t => t.assignee === userName || t.assignee === slackUsername);
+ }
+ 
+ /**
+- * [Phase 23] 웹 페이지에서 상태 변경 (LockService 적용)
++ * 상태 변경 (Lock + 캐시 파기)
+  */
+ function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
+   const lock = LockService.getUserLock();
+   try {
+-    lock.waitLock(10000); // 10초 대기
+-    
+-    const ss = SpreadsheetApp.getActiveSpreadsheet();
++    lock.waitLock(10000);
++    const ss = getTargetSpreadsheet();
+     const sheet = ss.getSheetByName("Tasks");
+-    if (!sheet || isNaN(rowNum)) return { success: false, message: "시트를 찾을 수 없습니다." };
+-    
+     const oldStatus = sheet.getRange(rowNum, 3).getValue();
+     const now = new Date();
+-    sheet.getRange(rowNum, 3).setValue(newStatus);   // C: 상태
+-    sheet.getRange(rowNum, 14).setValue(now);        // N: 최근 수정일
+     
+-    // 타임 트래킹 로직
+-    if (newStatus === "진행중") {
+-      sheet.getRange(rowNum, 15).setValue(now);
+-    } else if (newStatus === "완료") {
++    sheet.getRange(rowNum, 3).setValue(newStatus);
++    sheet.getRange(rowNum, 14).setValue(now);
++    
++    if (newStatus === "진행중") sheet.getRange(rowNum, 15).setValue(now);
++    else if (newStatus === "완료") {
+       sheet.getRange(rowNum, 16).setValue(now);
+-      const startTime = sheet.getRange(rowNum, 15).getValue();
+-      if (startTime && startTime instanceof Date) {
+-        const diffMs = now - startTime;
+-        const diffMin = Math.floor(diffMs / (1000 * 60));
+-        sheet.getRange(rowNum, 17).setValue(diffMin);
++      const start = sheet.getRange(rowNum, 15).getValue();
++      if (start instanceof Date) {
++        sheet.getRange(rowNum, 17).setValue(Math.floor((now - start) / 60000));
+       }
+     }
+     
+-    // 캐시 파기
+     CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+-    
+-    // 캘린더 동기화 트리거
+-    if (typeof syncCalendarEvent === "function") {
+-      syncCalendarEvent(sheet, rowNum);
+-    }
+-    
+-    // 액션 로그 기록
+-    logAction(userName || "Unknown", "Status Change", sheet.getRange(rowNum, 1).getValue(), oldStatus, newStatus);
+-    
++    if (typeof syncCalendarEvent === "function") syncCalendarEvent(sheet, rowNum);
++    logAction(userName, "Status Change", sheet.getRange(rowNum, 1).getValue(), oldStatus, newStatus);
+     return { success: true };
+   } catch (err) {
+-    console.error("상태 변경 오류:", err);
+-    return { success: false, message: err.message === "주어진 기간 내에 Lock을 획득하지 못했습니다." ? "ERR_LOCK_TIMEOUT" : err.message };
+-  } finally {
+-    lock.releaseLock();
+-  }
+-}
+-
+-/**
+- * [Phase 23] 웹 페이지에서 마감일 변경 (캘린더 드래그 앤 드롭용)
+- */
+-function changeTaskDueDateFromWeb(rowNum, newDueDate, userName) {
+-  const lock = LockService.getUserLock();
+-  try {
+-    lock.waitLock(10000);
+-    
+-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+-    const sheet = ss.getSheetByName("Tasks");
+-    if (!sheet || isNaN(rowNum)) return { success: false, message: "시트를 찾을 수 없습니다." };
+-    
+-    const oldDueDate = sheet.getRange(rowNum, 9).getValue();
+-    const now = new Date();
+-    
+-    sheet.getRange(rowNum, 9).setValue(newDueDate ? new Date(newDueDate) : ""); // I: 마감일
+-    sheet.getRange(rowNum, 14).setValue(now); // N: 최근 수정일
+-    
+-    // 캐시 파기
+-    CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+-    
+-    // 캘린더 동기화 트리거
+-    if (typeof syncCalendarEvent === "function") {
+-      syncCalendarEvent(sheet, rowNum);
+-    }
+-    
+-    // 액션 로그 기록
+-    logAction(userName || "Unknown", "DueDate Change", sheet.getRange(rowNum, 1).getValue(), oldDueDate, newDueDate);
+-    
+-    return { success: true };
+-  } catch (err) {
+-    console.error("마감일 변경 오류:", err);
+-    return { success: false, message: err.message === "주어진 기간 내에 Lock을 획득하지 못했습니다." ? "ERR_LOCK_TIMEOUT" : err.message };
++    return { success: false, message: err.message };
+   } finally {
+     lock.releaseLock();
+   }
+ }
+ 
+ /**
+- * [추가] 웹 대시보드에서 업무 수정 (LockService 적용)
++ * 업무 수정
+  */
+ function updateTaskFromWeb(rowNum, title, desc, dueDate, status, userName) {
+   const lock = LockService.getUserLock();
+   try {
+     lock.waitLock(10000);
+-    
+-    const props = PropertiesService.getScriptProperties();
+-    const ssId = props.getProperty("STORED_SS_ID");
+-    if (!ssId) return { success: false, message: "시트 ID가 저장되지 않았습니다." };
+-    
+-    const ss = SpreadsheetApp.openById(ssId);
++    const ss = getTargetSpreadsheet();
+     const sheet = ss.getSheetByName("Tasks");
+-    if (!sheet || isNaN(rowNum)) return { success: false, message: "Tasks 시트를 찾을 수 없거나 데이터 위치 오류입니다." };
+-
+     const oldValues = sheet.getRange(rowNum, 1, 1, 9).getValues()[0];
+     const now = new Date();
+ 
+-    sheet.getRange(rowNum, 5).setValue(title);        // E: 제목
+-    sheet.getRange(rowNum, 6).setValue(desc);         // F: 상세내용
+-    if(dueDate) {
+-      sheet.getRange(rowNum, 9).setValue(new Date(dueDate)); // I: 마감일
+-    } else {
+-      sheet.getRange(rowNum, 9).setValue("");
+-    }
+-    sheet.getRange(rowNum, 3).setValue(status);       // C: 상태
+-    sheet.getRange(rowNum, 14).setValue(now);         // N: 수정일
++    sheet.getRange(rowNum, 5).setValue(title);
++    sheet.getRange(rowNum, 6).setValue(desc);
++    sheet.getRange(rowNum, 9).setValue(dueDate ? new Date(dueDate) : "");
++    sheet.getRange(rowNum, 3).setValue(status);
++    sheet.getRange(rowNum, 14).setValue(now);
+ 
+-    // 캐시 파기
+     CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+-    
+-    // 캘린더 동기화 트리거
+-    if (typeof syncCalendarEvent === "function") {
+-      syncCalendarEvent(sheet, rowNum);
+-    }
+-    
+-    // 액션 로그 기록
+-    logAction(userName || "Unknown", "Update", sheet.getRange(rowNum, 1).getValue(), 
+-              `T:${oldValues[4]}, S:${oldValues[2]}`, `T:${title}, S:${status}`);
+-
+-    return { success: true, message: "업무가 성공적으로 수정되었습니다." };
++    if (typeof syncCalendarEvent === "function") syncCalendarEvent(sheet, rowNum);
++    logAction(userName, "Update", sheet.getRange(rowNum, 1).getValue(), oldValues[4], title);
++    return { success: true, message: "수정 완료" };
+   } catch (err) {
+-    console.error("웹 업무수정 에러:", err);
+-    return { success: false, message: err.message === "주어진 기간 내에 Lock을 획득하지 못했습니다." ? "ERR_LOCK_TIMEOUT" : err.message };
++    return { success: false, message: err.message };
+   } finally {
+     lock.releaseLock();
+   }
+ }
+ 
+ /**
+- * [20단계/추가] 웹 대시보드 업무 등록용 - 프로젝트 목록 반환
++ * 프로젝트 목록 반환
+  */
+ function getProjectOptionsForWeb() {
+   try {
+-    const props = PropertiesService.getScriptProperties();
+-    const ssId = props.getProperty("STORED_SS_ID");
+-    if (!ssId) return [{text: "기본 프로젝트", value: "DEFAULT"}];
+-
+-    const cache = CacheService.getScriptCache();
+-    const CACHE_KEY = "PROJECT_OPTIONS_CACHE";
+-    const cached = cache.get(CACHE_KEY);
+-    if (cached) {
+-      const parsed = JSON.parse(cached);
+-      if (parsed && parsed.length > 0) return parsed;
+-    }
+-
+-    const ss = SpreadsheetApp.openById(ssId);
++    const ss = getTargetSpreadsheet();
+     const sheet = ss.getSheetByName("Projects");
+-    if (!sheet || sheet.getLastRow() < 2) return [{text: "기본 프로젝트", value: "DEFAULT"}];
+-
++    if (!sheet) return [{text: "기본 프로젝트", value: "DEFAULT"}];
+     const data = sheet.getDataRange().getValues();
+     const options = [];
+     for (let i = 1; i < data.length; i++) {
+-      const name = String(data[i][0]).trim();
+-      const code = String(data[i][1]).trim();
+-      const active = String(data[i][2]).trim();
+-      if (name && code && active !== "미사용") {
+-        options.push({ text: name, value: code });
++      if (data[i][0] && data[i][2] !== "미사용") {
++        options.push({ text: data[i][0], value: data[i][1] });
+       }
+     }
+-
+-    const result = options.length > 0 ? options : [{text: "기본 프로젝트", value: "DEFAULT"}];
+-    cache.put(CACHE_KEY, JSON.stringify(result), 3600);
+-    return result;
++    return options.length > 0 ? options : [{text: "기본 프로젝트", value: "DEFAULT"}];
+   } catch(e) {
+-    console.error("웹 프로젝트 목록 에러:", e);
+     return [{text: "기본 프로젝트", value: "DEFAULT"}];
+   }
+ }
+ 
+ /**
+- * [20단계/추가] 웹 대시보드 - 새 업무 등록 (LockService 적용)
++ * 새 업무 등록 (동기화 핵심)
+  */
+ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueDate, status) {
+   const lock = LockService.getUserLock();
+   try {
+-    lock.waitLock(10000);
+-    
+-    const props = PropertiesService.getScriptProperties();
+-    const ssId = props.getProperty("STORED_SS_ID");
+-    if (!ssId) {
+-      return { success: false, message: "시트 ID가 저장되지 않았습니다. 슬랙 메뉴를 한 번 열어주세요." };
+-    }
+-    
+-    const ss = SpreadsheetApp.openById(ssId);
++    lock.waitLock(15000);
++    const ss = getTargetSpreadsheet();
+     const sheet = ss.getSheetByName("Tasks");
+-    if (!sheet) return { success: false, message: "Tasks 시트를 찾을 수 없습니다." };
+-
+-    const userName = fetchUserName(userId);
++    const userName = fetchUserName ? fetchUserName(userId) : userId;
+     const newId = generateNewId(sheet, projectCode || "DEFAULT");
+     const today = new Date();
+     
+-    const dict = {
+-      "U02S3CN9E6R": "syn", "U08SJ3SJQ9W": "jieun",
+-      "U02SK29URP": "hyerim", "U0749G2SNBE": "yuna",
+-      "U04JL09C6DV": "sangho", "U02S3EURC21": "kwansu"
+-    };
+-    const slackUsername = dict[userId] || "";
+-    const assigneeField = userName; 
+-    let formattedDue = "";
+-    if (dueDate) {
+-      formattedDue = new Date(dueDate);
+-    }
+-
+     const rowData = [
+-      newId,                   // A: ID
+-      "일반",                   // B: 업무 유형
+-      status || "대기",        // C: 상태
+-      projectName || "DEFAULT",// D: 프로젝트명
+-      title,                   // E: 제목
+-      desc || "",              // F: 상세내용
+-      assigneeField,           // G: 담당자
+-      userName,                // H: 요청자
+-      formattedDue || "",      // I: 마감일
+-      "",                      // J: 선행 업무
+-      "",                      // K: 우선순위
+-      slackUsername ? "@" + slackUsername : "",  // L: 슬랙 멘션
+-      "",                      // M: 캘린더 ID
+-      today,                   // N: 최근 수정일
+-      today                    // O: 등록시간
++      newId, "일반", status || "대기", projectName || "DEFAULT", title,
++      desc || "", userName, userName, dueDate ? new Date(dueDate) : "",
++      "", "", "", "", today, today
+     ];
++    
+     sheet.appendRow(rowData);
+-
+-    // 캐시 파기
+     CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+     
+-    // 캘린더 동기화 트리거
+     const newRow = sheet.getLastRow();
+-    if (typeof syncCalendarEvent === "function") {
+-      syncCalendarEvent(sheet, newRow);
+-    }
+-    
+-    // 액션 로그 기록
+-    logAction(userName || "Unknown", "Register", newId, null, title);
++    if (typeof syncCalendarEvent === "function") syncCalendarEvent(sheet, newRow);
++    logAction(userName, "Register", newId, null, title);
+ 
+-    // 슬랙 알림
+     try {
+-      if (typeof sendTaskNotification === "function") {
+-         sendTaskNotification(rowData);
+-      }
+-    } catch(err) {
+-      console.log("슬랙 알림 발송 에러(웹등록):", err);
+-    }
++      if (typeof sendTaskNotification === "function") sendTaskNotification(rowData);
++    } catch(e) {}
+ 
+     return { success: true, message: "업무가 등록되었습니다!" };
+-
+   } catch (err) {
+-    console.error("웹업무등록 에러:", err);
+-    return { success: false, message: err.message === "주어진 기간 내에 Lock을 획득하지 못했습니다." ? "ERR_LOCK_TIMEOUT" : err.message };
++    return { success: false, message: err.message };
+   } finally {
+     lock.releaseLock();
+   }
+ }
+ 
+-/**
+- * [Phase 23] ActionLog 시트에 로그를 남깁니다. 시트가 없으면 생성합니다.
+- */
+-function logAction(user, action, taskId, oldValue, newValue, errorCode) {
++function logAction(user, action, taskId, oldValue, newValue) {
+   try {
+-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+-    let sheet = ss.getSheetByName("ActionLog");
+-    
+-    if (!sheet) {
+-      sheet = ss.insertSheet("ActionLog");
+-      sheet.appendRow(["Timestamp", "User", "Action", "TaskID", "OldValue", "NewValue", "ErrorCode"]);
+-      sheet.getRange(1, 1, 1, 7).setBackground("#f3f3f3").setFontWeight("bold");
+-      sheet.setFrozenRows(1);
++    const ss = getTargetSpreadsheet();
++    let logSheet = ss.getSheetByName("ActionLog");
++    if (!logSheet) {
++      logSheet = ss.insertSheet("ActionLog");
++      logSheet.appendRow(["Timestamp", "User", "Action", "TaskID", "Old", "New"]);
+     }
+-    
+-    sheet.appendRow([new Date(), user, action, taskId, oldValue, newValue, errorCode || "OK"]);
+-  } catch (e) {
+-    console.error("로그 기록 실패:", e);
+-  }
++    logSheet.appendRow([new Date(), user, action, taskId, oldValue, newValue]);
++  } catch(e) {}
+ }
+diff --git a/temp_script.js b/temp_script.js
+deleted file mode 100644
+index cb509cc..0000000
+--- a/temp_script.js
++++ /dev/null
+@@ -1,445 +0,0 @@
+-
+-    // TUI Editor 인스턴스를 담을 전역 변수
+-    let editor;
+-    let viewer;
+-
+-    // TUI Editor 초기화 함수
+-    function initEditor() {
+-      editor = new toastui.Editor({
+-        el: document.querySelector('#editor'),
+-        height: '100%',
+-        initialEditType: 'markdown',
+-        previewStyle: 'vertical', // 마크다운과 프리뷰를 반반 나누어 보여줌
+-        theme: currentHtmlTheme === 'dark' ? 'dark' : '',
+-        placeholder: '당신의 아이디어를 여기에 쏟아내세요...\n(일반 저장 시 드라이브에만 백업되며, AI 업무 추출 시 엑셀까지 등록됩니다)',
+-        hooks: {
+-          addImageBlobHook: (blob, callback) => {
+-            // 구글 드라이브 CORS 이슈 대비: 클립보드 이미지 직접 붙여넣기 기능 차단 또는 대체 스크립트 삽입 경로
+-            alert("보안 정책상 이미지 직접 붙여넣기는 지원하지 않습니다.\n외부 이미지 URL 링크 기능을 이용해주세요.");
+-            return false;
+-          }
+-        }
+-      });
+-
+-      viewer = toastui.Editor.factory({
+-        el: document.querySelector('#viewer'),
+-        viewer: true,
+-        height: '100%',
+-        theme: currentHtmlTheme === 'dark' ? 'dark' : ''
+-      });
+-
+-      // 단축키 설정 (Cmd+Enter / Ctrl+Enter 로 저장)
+-      document.querySelector('#editor').addEventListener('keydown', (e) => {
+-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+-          e.preventDefault();
+-          if (currentMode === 'write') {
+-            saveMemo('saveFromWeb');
+-          }
+-        }
+-      });
+-    }
+-
+-    const saveBtn = document.getElementById('saveBtn');
+-    const extractBtn = document.getElementById('extractBtn');
+-    const toast = document.getElementById('toast');
+-    const toastMsg = document.getElementById('toastMsg');
+-    const toastStatus = document.getElementById('toastStatus');
+-
+-    // Theme Elements
+-    const themeToggleBtn = document.getElementById('themeToggleBtn');
+-    const htmlEl = document.documentElement;
+-
+-    // Layout Elements
+-    const folderList = document.getElementById('folderList');
+-    const newMemoBtn = document.getElementById('newMemoBtn');
+-    const editorHeader = document.getElementById('editorHeader');
+-    const editorFooter = document.getElementById('editorFooter');
+-    const viewTitle = document.getElementById('viewTitle');
+-    const summarizeBtn = document.getElementById('summarizeBtn');
+-    const summaryOverlay = document.getElementById('summaryOverlay');
+-    const summaryContent = document.getElementById('summaryContent');
+-    const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+-
+-    // Auth Elements
+-    const userBadge = document.getElementById('userBadge');
+-    const accessDeniedOverlay = document.getElementById('accessDeniedOverlay');
+-    const accessDeniedMsg = document.getElementById('accessDeniedMsg');
+-
+-    // State Variable
+-    let currentMode = 'write'; // 'write' or 'read'
+-    let currentHtmlTheme = 'dark';
+-    let currentUserName = null; // Magic Link 인증 완료 후 확보된 사용자 이름
+-    let cachedSidebarData = null; // 검색 취소 시 복구할 원래 폴더 리스트 데이터
+-    const searchInput = document.getElementById('searchInput');
+-
+-    // ==========================================
+-    // 0. 테마 관리 (Light / Dark)
+-    // ==========================================
+-    const savedTheme = localStorage.getItem('judy_note_theme') || 'dark';
+-    setTheme(savedTheme);
+-
+-    themeToggleBtn.addEventListener('click', () => {
+-      const newTheme = currentHtmlTheme === 'dark' ? 'light' : 'dark';
+-      setTheme(newTheme);
+-    });
+-
+-    function setTheme(theme) {
+-      currentHtmlTheme = theme;
+-      htmlEl.setAttribute('data-theme', theme);
+-      themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+-      localStorage.setItem('judy_note_theme', theme);
+-    }
+-
+-    // ==========================================
+-    // 1. [Phase 10] 슬랙 기반 Magic Link (One-Time Token) 검증
+-    // ==========================================
+-    function showAccessDenied(reason) {
+-      accessDeniedMsg.innerHTML = reason;
+-      accessDeniedOverlay.style.display = 'flex';
+-    }
+-
+-    // 구글 앱스 스크립트 특성상 window.location.search가 작동하지 않으므로,
+-    // doGet에서 주입해준 서버 사이드 템플릿 변수(token)를 사용합니다.
+-    const magicToken = "<?= token ?>";
+-
+-    if (!magicToken) {
+-      userBadge.textContent = '⛔ 미인가';
+-      showAccessDenied('만료되었거나 잘못된 접속 정보입니다.<br>슬랙앱에서 [주디 노트 열어줘] 로 다시 접속하세요.');
+-    } else {
+-      // 서버를 통해 토큰 유효성 검증
+-      google.script.run
+-        .withSuccessHandler((result) => {
+-          if (result.valid) {
+-            // ✅ 인증 통과: 이름 표시 및 본인 데이터 로딩
+-            currentUserName = result.name;
+-            userBadge.textContent = `👤 ${result.name} 님`;
+-            loadSidebarData(result.name);
+-
+-            // 보안 목적 + 미관상 URL에서 토큰 숨기기 (pushState 사용)
+-            if (window.history.replaceState) {
+-              const cleanUrl = window.location.href.split('?')[0];
+-              window.history.replaceState({}, document.title, cleanUrl);
+-            }
+-          } else {
+-            // ❌ 인증 실패 (만료, 없는 토큰, 이미 사용된 토큰)
+-            userBadge.textContent = '⛔ 미인가';
+-            showAccessDenied(result.reason);
+-          }
+-        })
+-        .withFailureHandler((err) => {
+-          userBadge.textContent = '⛔ 보안 에러';
+-          showAccessDenied('인증 서버 연결에 실패했습니다.<br>새로고침 하거나 슬랙에서 다시 접속하세요.');
+-        })
+-        .validateToken(magicToken);
+-    }
+-
+-    // ==========================================
+-    // 2. 모드 전환 (Write <-> Read)
+-    // ==========================================
+-    newMemoBtn.addEventListener('click', () => {
+-      setToWriteMode();
+-    });
+-
+-    function setToWriteMode() {
+-      currentMode = 'write';
+-      editorHeader.style.display = 'none';
+-      editorFooter.style.display = 'flex';
+-
+-      document.getElementById('editor').style.display = 'flex';
+-      document.getElementById('viewer').style.display = 'none';
+-      if (editor) {
+-        editor.setMarkdown('');
+-        editor.focus();
+-      }
+-      summaryOverlay.classList.remove('show');
+-    }
+-
+-    function setToReadMode(title, content) {
+-      currentMode = 'read';
+-      editorHeader.style.display = 'flex';
+-      editorFooter.style.display = 'none';
+-      viewTitle.textContent = title;
+-
+-      document.getElementById('editor').style.display = 'none';
+-      document.getElementById('viewer').style.display = 'block';
+-      if (viewer) {
+-        viewer.setMarkdown(content.trim());
+-      }
+-      summaryOverlay.classList.remove('show'); // 혹시 열려있던 요약창 닫기
+-    }
+-
+-    // ==========================================
+-    // 3. 사이드바 렌더링 및 검색 핸들링
+-    // ==========================================
+-    function loadSidebarData(userName) {
+-      folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
+-      if (searchInput) searchInput.value = ''; // 초기화
+-
+-      google.script.run
+-        .withSuccessHandler((data) => {
+-          try {
+-            cachedSidebarData = data;
+-            renderSidebar(data);
+-          } catch (err) {
+-            console.error("Render Error:", err);
+-            folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">사이드바 렌더링 중 오류가 발생했습니다.</div>';
+-          }
+-        })
+-        .withFailureHandler((err) => {
+-          console.error("Backend Error:", err);
+-          folderList.innerHTML = `<div class="loading-text" style="color:#f44336;">데이터를 불러오지 못했습니다.<br>(${err.message})</div>`;
+-        })
+-        .getArchivedMemos(userName); // Backend 함수
+-    }
+-
+-    if (searchInput) {
+-      searchInput.addEventListener('keydown', (e) => {
+-        if (e.key === 'Enter') {
+-          const query = e.target.value.trim();
+-          const userName = currentUserName;
+-          if (!userName) return;
+-
+-          if (query === '') {
+-            renderSidebar(cachedSidebarData);
+-            return;
+-          }
+-
+-          // 검색 모드 진입
+-          folderList.innerHTML = '<div class="loading-text">검색 중... 🔍</div>';
+-          google.script.run
+-            .withSuccessHandler((results) => {
+-              renderSearchResults(results, query);
+-            })
+-            .withFailureHandler((err) => {
+-              folderList.innerHTML = '<div class="loading-text" style="color:#f44336;">검색 실패</div>';
+-              console.error(err);
+-            })
+-            .searchArchivedMemos(userName, query);
+-        }
+-      });
+-    }
+-
+-    function renderSearchResults(results, query) {
+-      folderList.innerHTML = '';
+-
+-      const clearBtn = document.createElement('div');
+-      clearBtn.className = 'loading-text';
+-      clearBtn.style.cursor = 'pointer';
+-      clearBtn.style.color = 'var(--primary)';
+-      clearBtn.style.fontWeight = '500';
+-      clearBtn.textContent = '← 폴더 목록으로 돌아가기';
+-      clearBtn.addEventListener('click', () => {
+-        searchInput.value = '';
+-        renderSidebar(cachedSidebarData);
+-      });
+-      folderList.appendChild(clearBtn);
+-
+-      if (!results || results.length === 0) {
+-        const emptyInfo = document.createElement('div');
+-        emptyInfo.className = 'loading-text';
+-        emptyInfo.textContent = '검색 결과가 없습니다.';
+-        folderList.appendChild(emptyInfo);
+-        return;
+-      }
+-
+-      results.forEach(res => {
+-        const d = document.createElement('div');
+-        d.className = 'search-result-item';
+-
+-        const dateDiv = document.createElement('div');
+-        dateDiv.className = 'search-result-date';
+-        dateDiv.textContent = `${res.date} ${res.time}`;
+-
+-        const textDiv = document.createElement('div');
+-        textDiv.className = 'search-result-text';
+-
+-        // Highlight The Match
+-        const safeQuery = query.replace(/[.*+?^${ }()|[\]\\]/g, '\\$&');
+-        const regex = new RegExp(`(${safeQuery})`, 'gi');
+-        // XSS 방어 (간단한 escape 후 highlight 적용)
+-        let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+-        escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
+-        textDiv.innerHTML = escapedContent;
+-
+-        d.appendChild(dateDiv);
+-        d.appendChild(textDiv);
+-
+-        d.addEventListener('click', () => {
+-          // 검색된 원문을 클릭하면 우측 뷰어에 보여줌
+-          setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`);
+-        });
+-
+-        folderList.appendChild(d);
+-      });
+-    }
+-
+-    function renderSidebar(data) {
+-      // data: [{month: "2026-02", days: [ {date: "2026-02-22 (일)", memos: [ {time: "14:30 PM", content: "..." } ] } ] }]
+-      if (!data || data.length === 0) {
+-        folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
+-        return;
+-      }
+-
+-      folderList.innerHTML = '';
+-      data.forEach(monthData => {
+-        const folderDiv = document.createElement('div');
+-        folderDiv.className = 'folder-item';
+-
+-        const titleDiv = document.createElement('div');
+-        titleDiv.className = 'folder-title';
+-        titleDiv.innerHTML = `<span class="folder-icon">📁</span> ${monthData.month} 업무일지`;
+-
+-        const childrenDiv = document.createElement('div');
+-        childrenDiv.className = 'folder-children';
+-
+-        monthData.days.forEach(dayData => {
+-          // 하위 폴더: 날짜별 묶음 (또는 파일 리스트)
+-          const fileDiv = document.createElement('div');
+-          fileDiv.className = 'file-item';
+-          fileDiv.textContent = `📄 ${dayData.date}`;
+-          fileDiv.addEventListener('click', () => {
+-            // 해당 날짜 클릭 시 모든 메모 취합해서 읽기 모드로 진입
+-            let combinedContent = "";
+-            dayData.memos.forEach(m => {
+-              combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`;
+-            });
+-            setToReadMode(dayData.date, combinedContent);
+-          });
+-          childrenDiv.appendChild(fileDiv);
+-        });
+-
+-        titleDiv.addEventListener('click', () => {
+-          folderDiv.classList.toggle('open');
+-        });
+-
+-        folderDiv.appendChild(titleDiv);
+-        folderDiv.appendChild(childrenDiv);
+-        folderList.appendChild(folderDiv);
+-      });
+-
+-      // 첫 번째 폴더는 기본 열어두기
+-      if (document.querySelector('.folder-item')) {
+-        document.querySelector('.folder-item').classList.add('open');
+-      }
+-    }
+-
+-    // ==========================================
+-    // 4. 새 메모 저장 / 업무 추출 로직
+-    // ==========================================
+-    // (단축키 리스너는 initEditor() 로 이동됨)
+-
+-    saveBtn.addEventListener('click', () => saveMemo('saveFromWeb'));
+-    extractBtn.addEventListener('click', () => saveMemo('extractFromWeb'));
+-
+-    function showToast(message, isError = false) {
+-      toastMsg.textContent = message;
+-      toastStatus.style.background = isError ? '#f44336' : '#4caf50';
+-      toast.classList.add('show');
+-      setTimeout(() => {
+-        toast.classList.remove('show');
+-      }, 5000);
+-    }
+-
+-    function saveMemo(actionName) {
+-      const text = editor ? editor.getMarkdown().trim() : '';
+-      const userName = currentUserName;
+-      const isExtract = actionName === 'extractFromWeb';
+-
+-      if (!userName) {
+-        showToast('⛔ 인증된 사용자가 없습니다. 새로고침 해주세요.', false);
+-        return;
+-      }
+-
+-      if (!text) {
+-        if (editor) editor.focus();
+-        return;
+-      }
+-
+-      // UI 상태 변경 (저장 중)
+-      saveBtn.disabled = true;
+-      extractBtn.disabled = true;
+-
+-      const prevSaveText = saveBtn.textContent;
+-      const prevExtractText = extractBtn.textContent;
+-
+-      if (isExtract) {
+-        extractBtn.textContent = "AI가 분석 중입니다... 🪄";
+-      } else {
+-        saveBtn.textContent = "저장 중...";
+-      }
+-
+-      const runner = google.script.run
+-        .withSuccessHandler((res) => {
+-          saveBtn.disabled = false;
+-          extractBtn.disabled = false;
+-          saveBtn.textContent = prevSaveText;
+-          extractBtn.textContent = prevExtractText;
+-
+-          if (res && res.success) {
+-            if (editor) editor.setMarkdown(""); // 입력창 초기화
+-            showToast(res.message);
+-            if (editor) editor.focus();
+-
+-            // 사이드바 실시간 갱신 (저장 즉시 갱신)
+-            loadSidebarData(userName);
+-          } else {
+-            showToast("❌ 에러: " + (res ? res.message : "알 수 없는 에러"), true);
+-          }
+-        })
+-        .withFailureHandler((err) => {
+-          saveBtn.disabled = false;
+-          extractBtn.disabled = false;
+-          saveBtn.textContent = prevSaveText;
+-          extractBtn.textContent = prevExtractText;
+-          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+-          console.error("Save Error:", err);
+-        });
+-
+-      if (actionName === 'saveFromWeb') {
+-        runner.saveFromWeb(userName, text);
+-      } else {
+-        runner.extractFromWeb(userName, text);
+-      }
+-    }
+-
+-    // ==========================================
+-    // 5. 모달 형태 AI 요약
+-    // ==========================================
+-    closeSummaryBtn.addEventListener('click', () => {
+-      summaryOverlay.classList.remove('show');
+-    });
+-
+-    summarizeBtn.addEventListener('click', () => {
+-      const text = viewer ? viewer.getMarkdown().trim() : '';
+-      const userName = currentUserName;
+-
+-      if (!text) return;
+-
+-      summarizeBtn.disabled = true;
+-      summarizeBtn.textContent = "요약 중... 🪄";
+-
+-      google.script.run
+-        .withSuccessHandler((res) => {
+-          summarizeBtn.disabled = false;
+-          summarizeBtn.textContent = "✨ AI 내용 요약";
+-
+-          if (res.success) {
+-            summaryContent.textContent = res.summary;
+-            summaryOverlay.classList.add('show');
+-          } else {
+-            showToast("❌ 요약 실패: " + res.message, true);
+-          }
+-        })
+-        .withFailureHandler((err) => {
+-          summarizeBtn.disabled = false;
+-          summarizeBtn.textContent = "✨ AI 내용 요약";
+-          showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+-        })
+-        .summarizeMemoContent(text, userName);
+-    });
+-
+-    // 초기 포커스 및 초기화
+-    window.onload = () => {
+-      initEditor();
+-    };
+-  
+\ No newline at end of file

@@ -1187,6 +1187,11 @@
             border-color: rgba(220, 53, 69, 0.3);
         }
 
+        .action-add-task {
+            color: var(--primary);
+            border-color: var(--primary) !important;
+        }
+
         .action-delete.danger:hover {
             background-color: #dc3545;
             color: white;
@@ -2019,12 +2024,22 @@
         // ===== 🐰 드래그 선택 플로팅 버튼 로직 =====
         let _selectedTextForTask = '';
 
-        function handleTextSelection() {
+        function handleTextSelection(e) {
             // 노트 탭이 활성 상태일 때만 작동
             if (!document.getElementById('viewNote').classList.contains('active')) return;
 
             const selection = window.getSelection();
-            const text = selection.toString().trim();
+            let text = selection.toString().trim();
+            let isTextarea = false;
+
+            // textarea 내부 선택 확인 (추가됨)
+            if (!text && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+                const ta = document.activeElement;
+                if (ta.selectionStart !== ta.selectionEnd) {
+                    text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+                    isTextarea = true;
+                }
+            }
 
             if (text.length < 5) {
                 judyFloatBtn.style.display = 'none';
@@ -2034,19 +2049,29 @@
 
             _selectedTextForTask = text;
 
-            // 선택 영역 위치 계산
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-
-            // 버튼 위치: 선택 영역 상단 중앙
             const btnWidth = 120;
-            let left = rect.left + (rect.width / 2) - (btnWidth / 2);
-            let top = rect.top - 42;
+            let left = 0, top = 0;
 
-            // 화면 밖으로 나가지 않도록 보정
+            if (isTextarea && e) {
+                // textarea의 경우 마우스 위치 기반 보정
+                left = e.clientX - (btnWidth / 2);
+                top = e.clientY - 42;
+                if (top < 8) top = e.clientY + 12; // 화면 위를 벗어나면 마우스 아래로
+            } else if (selection.rangeCount > 0) {
+                // 일반 텍스트는 Range 기반
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                left = rect.left + (rect.width / 2) - (btnWidth / 2);
+                top = rect.top - 42;
+            } else if (e) {
+                left = e.clientX - (btnWidth / 2);
+                top = e.clientY - 42;
+            }
+
+            // 좌우/상하 최종 보정
             if (left < 8) left = 8;
             if (left + btnWidth > window.innerWidth - 8) left = window.innerWidth - btnWidth - 8;
-            if (top < 8) top = rect.bottom + 6;
+            if (top < 8) top = 8;
 
             judyFloatBtn.style.left = left + 'px';
             judyFloatBtn.style.top = top + 'px';
@@ -2055,9 +2080,9 @@
 
         // mouseup 이벤트로 텍스트 선택 감지 (읽기/쓰기 모드 모두)
         document.addEventListener('mouseup', (e) => {
-            // 플로팅 버튼 자체를 클릭한 경우는 무시
+            // 버튼 내부 클릭 시 무시
             if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
-            setTimeout(handleTextSelection, 10);
+            setTimeout(() => handleTextSelection(e), 50); // delay 약간 늘림
         });
 
         // 다른 곳 클릭 시 버튼 숨기기
@@ -2067,7 +2092,14 @@
         });
 
         // 플로팅 버튼 클릭 시 AI 파싱 후 모달 오픈
-        judyFloatBtn.addEventListener('click', () => {
+        judyFloatBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // 포커스 잃음 방지 및 브라우저 기본동작 제어
+            e.stopPropagation();
+        });
+
+        judyFloatBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (!_selectedTextForTask) return;
             if (!g_userName) return showToast('⛔ 인증된 사용자가 없습니다.', true);
 
@@ -2723,10 +2755,12 @@
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'action-buttons';
+            const btnAddTask = document.createElement('button'); btnAddTask.className = 'action-add-task'; btnAddTask.innerHTML = '📋'; btnAddTask.title = '업무 등록하기';
             const btnEdit = document.createElement('button'); btnEdit.className = 'action-edit'; btnEdit.innerHTML = '✏️'; btnEdit.title = '수정';
             const btnDone = document.createElement('button'); btnDone.className = 'action-done'; btnDone.innerHTML = '✓'; btnDone.title = '완료(취소선)';
             const btnDel = document.createElement('button'); btnDel.className = 'action-delete danger'; btnDel.innerHTML = '🗑️'; btnDel.title = '삭제';
 
+            actionsDiv.appendChild(btnAddTask);
             actionsDiv.appendChild(btnEdit);
             actionsDiv.appendChild(btnDone);
             actionsDiv.appendChild(btnDel);
@@ -2837,6 +2871,37 @@
                         showToast('❌ 통신 에러', true);
                     })
                     .toggleStrikethroughMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent });
+            });
+
+            btnAddTask.addEventListener('mousedown', (e) => {
+                // 클릭 시 포커스 이동으로 인한 텍스트 선택(Selection) 해제 방지
+                e.preventDefault();
+            });
+
+            btnAddTask.addEventListener('click', () => {
+                const selection = window.getSelection();
+                let selectedText = selection.toString().trim();
+
+                // 에디터(textarea) 내부의 텍스트가 선택된 경우 보정
+                if (!selectedText && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+                    const ta = document.activeElement;
+                    if (ta.selectionStart !== ta.selectionEnd) {
+                        selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+                    }
+                }
+
+                if (selectedText.length >= 2) {
+                    // 선택된 텍스트가 있다면 해당 텍스트를 제목으로 채움
+                    openRegModal({ title: selectedText });
+                    return;
+                }
+
+                // 선택된 텍스트가 없다면 전체 메모 내용을 기본 제목으로 사용
+                let cleanContent = currentContent;
+                if (cleanContent.startsWith('~~') && cleanContent.endsWith('~~')) {
+                    cleanContent = cleanContent.substring(2, cleanContent.length - 2);
+                }
+                openRegModal({ title: cleanContent });
             });
 
             btnDel.addEventListener('click', () => {

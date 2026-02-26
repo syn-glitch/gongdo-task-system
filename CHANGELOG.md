@@ -152,13 +152,14 @@
 - 📝 **파일 네이밍 규칙 표준화**
   - QA 문서: `YYYY-MM-DD_제목.md` 형식
   - 한글 파일명 → 영문 변환
-- 📚 **신규 문서 생성**
+- 🤖 **AI 에이전트 팀 운영 가이드 배포**
+  - 의사결정 프로세스(Decision Flow) 확립
+  - Fast-Track(긴급 조치) 시스템 도입
+  - ActionLog 기록 의무화
+  - 🎨 **신규 에이전트 합류**: 벨라(Bella, UX/UI Designer)
+- 📚 **신규 문서 및 가이드 체계 구축**
   - `CHANGELOG.md` (본 파일)
   - `docs/architecture/SYSTEM_ARCHITECTURE.md`
-  - `docs/architecture/DATABASE_SCHEMA.md`
-  - `docs/architecture/API_REFERENCE.md`
-  - `docs/guides/DEVELOPER_GUIDE.md`
-  - `docs/guides/SETUP_GUIDE.md`
   - `templates/` (4개 템플릿)
 
 ### Improved
