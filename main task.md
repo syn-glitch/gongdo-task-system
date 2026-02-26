@@ -275,7 +275,35 @@
 
 > 아래는 실용성, 선행 조건(의존성), 팀원 체감효과를 기준으로 정리한 우선순위입니다.
 
-### 🚀 최우선: AI 에이전트 핵심 기능 추가 (Proactive Agent Experience)
+### 🚀 [NEW] 커스텀 워크스페이스: 칸반 보드 & 웹 캘린더 통합 뷰
+> 📖 상세 계획: [implementation_plan_kanban_calendar.md](implementation_plan_kanban_calendar.md)
+> 📝 작업 목록 (QA 검토용): [task_kanban_calendar.md](task_kanban_calendar.md)
+> 💡 **목표**: 구글 캘린더를 DB로 활용하되, 주디 워크스페이스 내에 직접 칸반 보드 및 달력 UI를 구축하여 드래그 앤 드롭으로 업무 스케줄을 직관적으로 관리합니다.
+
+#### Step 1: 📋 칸반 보드 (Kanban Board) 뷰 구축
+- [ ] 시트 데이터를 '대기/진행중/완료' 컬럼으로 시각화 및 드래그 앤 드롭 상태 변경 구현
+- [ ] 마우스/터치 액션 시 실시간 시트 동기화(Optimistic UI) 처리
+
+#### Step 2: 📅 커스텀 웹 캘린더 (Calendar View) 구축
+- [ ] 월간/주간 달력 UI 직접 구현 및 업무 마감일(Due Date) 연동
+- [ ] 달력 내 카드 이동 시 시트 마감일 자동 업데이트 및 구글 캘린더 동기화
+
+---
+
+## 🚦 김감사(QA) 검수 요청: 신규 기능 기획안
+**검수 대상**: [기획안] 칸반 보드 & 커스텀 캘린더 통합 뷰
+**관련 문서**:
+1. [기획 상세 문서 (Implementation Plan)](implementation_plan_kanban_calendar.md)
+2. [상세 태스크 리스트 (Task List)](task_kanban_calendar.md)
+
+**검토 요청 사항**:
+- GAS 환경에서의 드래그 앤 드롭 통신 지연(Latency) 방어 전략의 적절성
+- 모바일(터치) 환경에서의 UX 동작 안정성 및 데이터 정합성 보장 여부
+- 구글 캘린더 동기화 트리거 충돌 방지 로직 검토
+
+---
+
+### 🚀 차순위: AI 에이전트 핵심 기능 추가 (Proactive Agent Experience)
 > 💡 **목표**: 주디를 "시키면 하는 도구"에서 **"먼저 알아서 행동하는 AI 동료"**로 진화시키는 핵심 3가지 기능
 > 📅 **예정일**: 2026-02-24 저녁
 

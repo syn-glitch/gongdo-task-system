@@ -105,6 +105,10 @@ function appendMemoToArchive(userName, memoText, userId) {
     mdFile.setContent(newContent);
     Logger.log(`✅ [${userName}] 메모 아카이브 저장 완료`);
     sendDebugLog("✅ `[저장 완료]` 구글 드라이브 폴더에 마크다운 파일이 완벽하게 생성되었습니다!");
+    
+    // [Phase 3] 새 메모 작성 로깅 추가
+    logMemoEditAction(userName, "CREATE", dateStr, timeStr, true, null);
+    
     return true;
 
   } catch (error) {

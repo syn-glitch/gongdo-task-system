@@ -4,6 +4,8 @@
 <head>
     <base target="_top">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
+    <!-- FullCalendar v6 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <style>
         :root {
             /* Dark Theme (Default) */
@@ -1117,46 +1119,335 @@
             }
         }
 
-        /* ===== Floating Task Button (드래그 선택 시 팝업) ===== */
-        .judy-float-btn {
-            position: fixed;
-            display: none;
+
+        /* V2 Memo Block */
+        .memo-block {
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        html[data-theme="dark"] .memo-block {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .memo-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .memo-time {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
             gap: 6px;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, #a855f7, #7c3aed);
-            color: #fff;
-            font-size: 13px;
-            font-weight: 700;
-            border: none;
-            border-radius: 24px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .memo-block:hover .action-buttons,
+        .memo-block.touched .action-buttons {
+            opacity: 1;
+        }
+
+        .action-buttons button {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             cursor: pointer;
-            z-index: 999;
-            box-shadow: 0 4px 16px rgba(168, 85, 247, 0.5);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            animation: floatIn 0.2s ease-out;
-            white-space: nowrap;
+            font-size: 14px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            transition: all 0.2s;
         }
 
-        .judy-float-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.7);
+        .action-buttons button:hover {
+            background: var(--surface);
         }
 
-        .judy-float-btn .judy-icon {
-            font-size: 16px;
-            line-height: 1;
+        .action-buttons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        @keyframes floatIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px) scale(0.9);
+        .action-delete.danger {
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .action-delete.danger:hover {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .memo-content {
+            font-size: 15px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
+        .memo-edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .edit-input {
+            width: 100%;
+            min-height: 100px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn-save-sm,
+        .btn-cancel-sm {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            font-weight: 500;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-save-sm {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-cancel-sm {
+            background: transparent;
+            color: var(--hint-color);
+            border: 1px solid var(--border);
+        }
+
+        /* FullCalendar Theme Tweaks */
+        .fc {
+            --fc-border-color: var(--border);
+            --fc-button-bg-color: var(--surface-elevated);
+            --fc-button-border-color: var(--border);
+            --fc-button-hover-bg-color: var(--surface);
+            --fc-button-active-bg-color: var(--primary);
+            --fc-page-bg-color: var(--bg-color);
+            --fc-list-event-hover-bg-color: rgba(187, 134, 252, 0.05);
+            font-family: inherit;
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .fc .fc-col-header-cell-cushion {
+            color: var(--hint-color);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .fc .fc-daygrid-day-number {
+            color: var(--hint-color);
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .fc .fc-event {
+            border: none;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .fc .fc-day-today {
+            background: rgba(187, 134, 252, 0.05) !important;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons button {
+                min-width: 44px;
+                min-height: 44px;
+                font-size: 18px;
+            }
+        }
+
+        /* ===== [Phase 23] Kanban & Calendar CSS ===== */
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            padding: 20px 32px;
+            flex: 1;
+            overflow-x: auto;
+            align-items: flex-start;
+            min-height: 0;
+            background: var(--bg-color);
+        }
+
+        .kanban-column {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 320px;
+            min-width: 300px;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s;
+        }
+
+        .kanban-column-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .kanban-column-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kanban-task-count {
+            background: var(--surface-elevated);
+            color: var(--hint-color);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .kanban-task-list {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .kanban-card {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            position: relative;
+            user-select: none;
+        }
+
+        .kanban-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .kanban-card .title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .kanban-card .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--hint-color);
+        }
+
+        .kanban-card .project-tag {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 드래그 시각적 피드백 */
+        .kanban-column.drag-over {
+            border-color: var(--primary);
+            background: rgba(187, 134, 252, 0.05);
+        }
+
+        /* 에러 모달 디자인 */
+        .error-modal-header {
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .error-modal-body {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: rgba(207, 102, 121, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid var(--danger);
+        }
+
+        /* 캘린더 컨테이너 */
+        #calendar {
+            flex: 1;
+            padding: 20px 32px;
+            min-height: 0;
+            background: var(--bg-color);
+        }
+
+        /* 모바일 스와이프 전용 레이아웃 */
+        @media (max-width: 768px) {
+            .kanban-board {
+                padding: 12px;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
+            .kanban-board::-webkit-scrollbar {
+                display: none;
+            }
+
+            .kanban-column {
+                width: calc(100vw - 40px);
+                scroll-snap-align: center;
+                margin-right: 12px;
             }
         }
     </style>
@@ -1173,6 +1464,8 @@
             <div class="gnb-tabs">
                 <button class="gnb-tab" id="navNote" onclick="switchMainView('note')">📝 내 노트</button>
                 <button class="gnb-tab" id="navTasks" onclick="switchMainView('tasks')">📊 내 업무</button>
+                <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
+                <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
             </div>
         </div>
         <div class="gnb-right">
@@ -1276,6 +1569,35 @@
             </div>
         </div>
 
+        <!-- View 3: Kanban Board -->
+        <div id="viewKanban" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>📋 <span>칸반 보드</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadKanban()">🔄 새로고침</button>
+                    </div>
+                </div>
+                <div class="kanban-board" id="kanbanBoard">
+                    <div class="loading">데이터 로딩 중...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 4: Custom Calendar -->
+        <div id="viewCalendar" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>📅 <span>업무 캘린더</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadCalendar()">🔄 새로고침</button>
+                    </div>
+                </div>
+                <!-- FullCalendar 컨테이너 -->
+                <div id="calendar"></div>
+            </div>
+        </div>
+
     </div>
 
     <!-- 업무 등록 모달 -->
@@ -1362,6 +1684,22 @@
         <div class="desc" id="accessDeniedMsg">비정상적인 접근입니다.<br>슬랙에서 다시 링크를 발급받아주세요.</div>
     </div>
 
+    <!-- 🚨 Concurrency Error Modal (Critical Level) -->
+    <div id="errorModal" class="dash-modal-overlay" style="display: none; z-index: 100001; padding: 20px;">
+        <div class="dash-modal" style="width: 100%; max-width: 400px; border-top: 5px solid var(--danger);">
+            <div class="error-modal-header">
+                <span>⚠️</span> 동시 편집 충돌 발생
+            </div>
+            <div class="error-modal-body" id="errorModalMsg">
+                다른 사용자가 현재 업무를 수정하고 있습니다.<br>데이터 정합성을 위해 새로고침 후 다시 시도해주세요.
+            </div>
+            <div class="modal-actions" style="margin-top: 0;">
+                <button class="btn-submit" style="background: var(--danger); width: 100%;"
+                    onclick="location.reload()">새로고침하여 복구하기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // URL/Backend Parameters
         const initialPage = '<?= initialPage ?>';
@@ -1431,12 +1769,13 @@
             g_userName = uname;
             userBadge.textContent = "👤 " + uname + " 님";
 
-            // [Phase 21] 관리자 여부 확인 (트래킹 기능 노출 제어)
+            // [Phase 21] 관리자 여부 확인 (트래킹 및 메모 편집 제어)
             window.isAdmin = ["송용남", "정혜림"].includes(uname);
+            window.FEATURE_MEMO_EDIT_ENABLED_USERS = ["송용남", "정혜림"];
 
             // 모듈 초기화
             initNoteModule();
-            // initTasksModule(); 은 탭 진입 시점에 최초 1회 로드하도록 지연 처리
+            // initTasksModule();
         }
 
         function showAccessDenied(reason) {
@@ -1447,25 +1786,24 @@
 
         // --- View Switching ---
         function switchMainView(viewName) {
-            document.getElementById('navNote').classList.remove('active');
-            document.getElementById('navTasks').classList.remove('active');
-            document.getElementById('viewNote').classList.remove('active');
-            document.getElementById('viewTasks').classList.remove('active');
+            document.querySelectorAll('.gnb-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
 
-            if (viewName === 'note') {
-                document.getElementById('navNote').classList.add('active');
-                document.getElementById('viewNote').classList.add('active');
-            } else if (viewName === 'tasks') {
-                document.getElementById('navTasks').classList.add('active');
-                document.getElementById('viewTasks').classList.add('active');
+            const navBtn = document.getElementById('nav' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+            const viewPanel = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
 
-                // Dashboard 최초 진입 시 로드
-                if (!window._tasksInitialized) {
-                    if (typeof initTasksModule === 'function') {
-                        initTasksModule();
-                    }
-                    window._tasksInitialized = true;
-                }
+            if (navBtn) navBtn.classList.add('active');
+            if (viewPanel) viewPanel.classList.add('active');
+
+            if (viewName === 'tasks' && !window._tasksInitialized) {
+                if (typeof initTasksModule === 'function') initTasksModule();
+                window._tasksInitialized = true;
+            } else if (viewName === 'kanban' && !window._kanbanInitialized) {
+                loadKanban();
+                window._kanbanInitialized = true;
+            } else if (viewName === 'calendar' && !window._calendarInitialized) {
+                initCalendarModule();
+                window._calendarInitialized = true;
             }
         }
 
@@ -1552,14 +1890,27 @@
             closeMobileMenu();
         }
 
-        function setToReadMode(title, content) {
+        function setToReadMode(title, contentOrMemos, dateStr) {
             currentMode = 'read';
             editorHeader.style.display = 'flex';
             editorFooter.style.display = 'none';
             viewTitle.textContent = title;
             memoInput.style.display = 'none';
-            memoViewer.style.display = 'block';
-            memoViewer.textContent = content.trim();
+            memoViewer.style.display = 'flex';
+            memoViewer.style.flexDirection = 'column';
+            memoViewer.innerHTML = '';
+
+            if (Array.isArray(contentOrMemos)) {
+                contentOrMemos.forEach(m => {
+                    const block = createMemoBlock(dateStr, m.time, m.content);
+                    memoViewer.appendChild(block);
+                });
+            } else {
+                // 단일 텍스트 모드 (검색 등)
+                // dateStr과 timeStr이 없는 경우를 대비한 처리
+                memoViewer.textContent = contentOrMemos.trim();
+            }
+
             summaryOverlay.classList.remove('show');
             closeMobileMenu();
         }
@@ -1619,13 +1970,17 @@
                 d.className = 'search-result-item';
                 const dateDiv = document.createElement('div'); dateDiv.className = 'search-result-date'; dateDiv.textContent = `${res.date} ${res.time}`;
                 const textDiv = document.createElement('div'); textDiv.className = 'search-result-text';
-                const safeQuery = query.replace(/[.*+?^${ }()|[\]\\]/g, '\\$&');
+                const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const regex = new RegExp(`(${safeQuery})`, 'gi');
                 let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
                 textDiv.innerHTML = escapedContent;
                 d.appendChild(dateDiv); d.appendChild(textDiv);
-                d.addEventListener('click', () => setToReadMode(res.date + " 검색 결과", `- **[${res.time}]**\n  ${res.content}`));
+
+                // 검색 결과 클릭 시 createMemoBlock을 사용해 렌더링하도록 ㅂ변경
+                d.addEventListener('click', () => {
+                    setToReadMode(res.date + " 검색 결과", [{ time: res.time, content: res.content }], res.date);
+                });
                 folderList.appendChild(d);
             });
         }
@@ -1645,9 +2000,7 @@
                 monthData.days.forEach(dayData => {
                     const fileDiv = document.createElement('div'); fileDiv.className = 'file-item'; fileDiv.textContent = `📄 ${dayData.date}`;
                     fileDiv.addEventListener('click', () => {
-                        let combinedContent = "";
-                        dayData.memos.forEach(m => { combinedContent += `- **[${m.time}]**\n  ${m.content}\n\n`; });
-                        setToReadMode(dayData.date, combinedContent);
+                        setToReadMode(dayData.date, dayData.memos, dayData.date);
                     });
                     childrenDiv.appendChild(fileDiv);
                 });
@@ -1945,16 +2298,40 @@
         }
 
         function changeTaskStatus(row, newStatus, taskId) {
+            const task = currentTasks.find(t => t.row === row);
+            const oldStatus = task ? task.status : "";
+
             showToast('⏳ 상태 변경 중...');
             google.script.run
                 .withSuccessHandler(res => {
                     if (res.success) {
                         showToast('✅ ' + (taskId || '') + ' → ' + newStatus + ' 완료!');
                         if (newStatus === '완료') loadTasks();
-                    } else { showToast('❌ ' + res.message, true); }
+                    } else {
+                        handleApiError(res.message, () => {
+                            // Revert in UI if list view (re-render)
+                            renderTaskTable();
+                        });
+                    }
                 })
-                .withFailureHandler(err => showToast('❌ ' + err.message, true))
-                .changeTaskStatusFromWeb(row, newStatus);
+                .withFailureHandler(err => handleApiError(err.message))
+                .changeTaskStatusFromWeb(row, newStatus, g_userName);
+        }
+
+        /**
+         * [Phase 23] 통합 에러 핸들러
+         */
+        function handleApiError(msg, revertCallback) {
+            if (msg === "ERR_LOCK_TIMEOUT") {
+                // Level 2 Core Error: 중앙 모달 노출
+                document.getElementById('errorModal').style.display = 'flex';
+                document.getElementById('errorModalMsg').innerHTML =
+                    `다른 사용자가 현재 업무를 수정하고 있습니다.<br><b>데이터 정합성을 위해 새로고침 후 다시 시도해주세요.</b>`;
+            } else {
+                // Level 1 Networking Error: 토스트 노출
+                showToast('❌ ' + msg, true);
+                if (revertCallback) revertCallback();
+            }
         }
 
         // ==========================================
@@ -2056,14 +2433,465 @@
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         closeEditModal(); loadTasks();
-                    } else { showToast('❌ ' + res.message, true); }
+                    } else { handleApiError(res.message); }
                 })
                 .withFailureHandler(err => {
                     btn.disabled = false; btn.textContent = '수정하기';
-                    showToast('❌ ' + err.message, true);
+                    handleApiError(err.message);
                 })
-                .updateTaskFromWeb(rowNum, title, desc, due, status);
+                .updateTaskFromWeb(rowNum, title, desc, due, status, g_userName);
         }
+
+        // ==========================================
+        // Kanban Module Logic [Phase 23]
+        // ==========================================
+        let kanbanTasks = [];
+
+        function loadKanban() {
+            const board = document.getElementById('kanbanBoard');
+            board.innerHTML = '<div class="loading">칸반 데이터를 불러오는 중...</div>';
+
+            google.script.run
+                .withSuccessHandler(tasks => {
+                    kanbanTasks = tasks || [];
+                    renderKanban();
+                })
+                .withFailureHandler(err => {
+                    board.innerHTML = `<div class="loading" style="color:var(--danger);">❌ 데이터를 불러오지 못했습니다.<br>${err.message}</div>`;
+                })
+                .getAllTasksForWeb(g_userId || g_userName);
+        }
+
+        function renderKanban() {
+            const board = document.getElementById('kanbanBoard');
+            board.innerHTML = '';
+
+            const columns = [
+                { id: '대기', title: '⏸ 대기', emoji: '⏸' },
+                { id: '진행중', title: '▶ 진행 중', emoji: '▶' },
+                { id: '보류', title: '🔴 보류', emoji: '🔴' }
+            ];
+
+            columns.forEach(col => {
+                const colEl = document.createElement('div');
+                colEl.className = 'kanban-column';
+                colEl.id = `col-${col.id}`;
+                colEl.dataset.status = col.id;
+
+                const filtered = kanbanTasks.filter(t => t.status === col.id);
+
+                colEl.innerHTML = `
+                    <div class="kanban-column-header">
+                        <h3>${col.emoji} ${col.title}</h3>
+                        <span class="kanban-task-count">${filtered.length}</span>
+                    </div>
+                    <div class="kanban-task-list" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                        <!-- Cards will be injected here -->
+                    </div>
+                `;
+
+                const listEl = colEl.querySelector('.kanban-task-list');
+                filtered.forEach(task => {
+                    const card = createKanbanCard(task);
+                    listEl.appendChild(card);
+                });
+
+                board.appendChild(colEl);
+            });
+        }
+
+        function createKanbanCard(task) {
+            const card = document.createElement('div');
+            card.className = 'kanban-card';
+            card.draggable = true;
+            card.id = `task-${task.id}`;
+            card.dataset.row = task.row;
+            card.dataset.id = task.id;
+            card.dataset.status = task.status;
+
+            const dueHtml = task.dDays !== null ? `<span class="${task.dDays < 0 ? 'due-overdue' : ''}">${task.dueDate}</span>` : '-';
+
+            card.innerHTML = `
+                <div class="title">${task.title}</div>
+                <div class="meta">
+                    <span class="project-tag">${task.project}</span>
+                    <span class="due-tag">${dueHtml}</span>
+                </div>
+            `;
+
+            card.ondragstart = handleDragStart;
+            card.ondragend = handleDragEnd;
+            card.onclick = () => openEditModal(task.row);
+
+            return card;
+        }
+
+        // --- Drag & Drop Handlers ---
+        let draggedCard = null;
+
+        function handleDragStart(e) {
+            draggedCard = e.currentTarget;
+            draggedCard.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', draggedCard.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            if (draggedCard) draggedCard.classList.remove('dragging');
+            draggedCard = null;
+            document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const col = e.currentTarget.closest('.kanban-column');
+            if (col) col.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            const col = e.currentTarget.closest('.kanban-column');
+            if (col) col.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const listEl = e.currentTarget;
+            const col = listEl.closest('.kanban-column');
+            col.classList.remove('drag-over');
+
+            const newStatus = col.dataset.status;
+            const taskId = e.dataTransfer.getData('text/plain');
+            const card = document.getElementById(`task-${taskId}`);
+
+            if (!card || card.dataset.status === newStatus) return;
+
+            const oldStatus = card.dataset.status;
+            const rowNum = parseInt(card.dataset.row, 10);
+
+            // --- [Optimistic UI] ---
+            // 1. UI 즉시 이동
+            listEl.appendChild(card);
+            card.dataset.status = newStatus;
+            updateColumnCount();
+
+            // 2. 서버 통신
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        showToast(`✅ ${taskId} 상태 변경 완료!`);
+                        // 내부 데이터 동기화
+                        const t = kanbanTasks.find(x => x.id === taskId);
+                        if (t) t.status = newStatus;
+                    } else {
+                        // Level 2 에러 여부 확인 및 롤백
+                        handleApiError(res.message, () => {
+                            rollbackCard(card, oldStatus);
+                        });
+                    }
+                })
+                .withFailureHandler(err => {
+                    handleApiError(err.message, () => {
+                        rollbackCard(card, oldStatus);
+                    });
+                })
+                .changeTaskStatusFromWeb(rowNum, newStatus, g_userName);
+        }
+
+        function rollbackCard(card, oldStatus) {
+            const oldColList = document.querySelector(`#col-${oldStatus} .kanban-task-list`);
+            if (oldColList) {
+                oldColList.appendChild(card);
+                card.dataset.status = oldStatus;
+                updateColumnCount();
+                showToast('🚨 동기화 실패: 원래 상태로 되돌립니다.', true);
+            }
+        }
+
+        function updateColumnCount() {
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                const count = col.querySelectorAll('.kanban-card').length;
+                col.querySelector('.kanban-task-count').textContent = count;
+            });
+        }
+
+        // ==========================================
+        // Calendar Module Logic [Phase 23]
+        // ==========================================
+        let calendar = null;
+
+        function initCalendarModule() {
+            const calendarEl = document.getElementById('calendar');
+            if (!calendarEl) return;
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                height: 'parent',
+                editable: true,
+                droppable: true,
+                eventClick: function (info) {
+                    if (info.event.extendedProps.row) {
+                        openEditModal(info.event.extendedProps.row);
+                    }
+                },
+                eventDrop: handleCalendarEventDrop
+            });
+
+            calendar.render();
+            loadCalendar();
+        }
+
+        function loadCalendar() {
+            if (!calendar) return;
+
+            showToast('📅 일정 불러오는 중...');
+            google.script.run
+                .withSuccessHandler(tasks => {
+                    const events = tasks.filter(t => t.rawDueStr).map(t => ({
+                        id: t.id,
+                        title: `[${t.project}] ${t.title}`,
+                        start: t.rawDueStr,
+                        allDay: true,
+                        extendedProps: {
+                            row: t.row,
+                            status: t.status
+                        },
+                        color: t.status === '진행중' ? '#64b5f6' : (t.status === '대기' ? '#ffb74d' : '#888888')
+                    }));
+
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(events);
+                })
+                .withFailureHandler(err => showToast('❌ 캘린더 로드 실패: ' + err.message, true))
+                .getAllTasksForWeb(g_userId || g_userName);
+        }
+
+        function handleCalendarEventDrop(info) {
+            const rowNum = info.event.extendedProps.row;
+            const newDate = info.event.startStr;
+            const taskId = info.event.id;
+
+            showToast(`⏳ ${taskId} 마감일 변경 중...`);
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        showToast(`✅ ${taskId} 마감일이 ${newDate}로 변경되었습니다.`);
+                        // 내부 데이터 동기화 (캐시된 데이터 업데이트)
+                        const t = kanbanTasks.find(x => x.id === taskId);
+                        if (t) {
+                            t.rawDueStr = newDate;
+                            // MM/DD 포맷 업데이트
+                            const d = new Date(newDate);
+                            t.dueDate = (d.getMonth() + 1) + "/" + d.getDate();
+                        }
+                    } else {
+                        handleApiError(res.message, () => {
+                            info.revert();
+                        });
+                    }
+                })
+                .withFailureHandler(err => {
+                    handleApiError(err.message, () => {
+                        info.revert();
+                    });
+                })
+                .changeTaskDueDateFromWeb(rowNum, newDate, g_userName);
+        }
+
+        // ==========================================
+        // Note V2 Actions: Create, Edit, Toggle, Delete
+        // ==========================================
+        function createMemoBlock(dateStr, timeStr, originalContent) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'memo-block';
+
+            let currentContent = originalContent;
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'memo-header';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'memo-time';
+            timeSpan.textContent = `[${timeStr}]`;
+            headerDiv.appendChild(timeSpan);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'action-buttons';
+            const btnEdit = document.createElement('button'); btnEdit.className = 'action-edit'; btnEdit.innerHTML = '✏️'; btnEdit.title = '수정';
+            const btnDone = document.createElement('button'); btnDone.className = 'action-done'; btnDone.innerHTML = '✓'; btnDone.title = '완료(취소선)';
+            const btnDel = document.createElement('button'); btnDel.className = 'action-delete danger'; btnDel.innerHTML = '🗑️'; btnDel.title = '삭제';
+
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnDone);
+            actionsDiv.appendChild(btnDel);
+            headerDiv.appendChild(actionsDiv);
+
+            if (!window.FEATURE_MEMO_EDIT_ENABLED_USERS.includes(g_userName)) {
+                actionsDiv.style.display = 'none';
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'memo-content';
+            contentDiv.textContent = currentContent;
+
+            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                contentDiv.style.textDecoration = 'line-through';
+                contentDiv.style.color = 'var(--hint-color)';
+            }
+
+            const editForm = document.createElement('div');
+            editForm.className = 'memo-edit-form';
+            editForm.style.display = 'none';
+            const textarea = document.createElement('textarea');
+            textarea.className = 'edit-input';
+            const editActions = document.createElement('div');
+            editActions.className = 'edit-actions';
+            const btnSaveEdit = document.createElement('button'); btnSaveEdit.className = 'btn-save-sm'; btnSaveEdit.textContent = '저장';
+            const btnCancelEdit = document.createElement('button'); btnCancelEdit.className = 'btn-cancel-sm'; btnCancelEdit.textContent = '취소';
+
+            editActions.appendChild(btnCancelEdit);
+            editActions.appendChild(btnSaveEdit);
+            editForm.appendChild(textarea);
+            editForm.appendChild(editActions);
+
+            wrapper.appendChild(headerDiv);
+            wrapper.appendChild(contentDiv);
+            wrapper.appendChild(editForm);
+
+            btnEdit.addEventListener('click', () => {
+                contentDiv.style.display = 'none';
+                editForm.style.display = 'flex';
+                let editableText = currentContent;
+                if (editableText.startsWith('~~') && editableText.endsWith('~~')) {
+                    editableText = editableText.substring(2, editableText.length - 2);
+                }
+                textarea.value = editableText;
+                textarea.focus();
+            });
+
+            btnCancelEdit.addEventListener('click', () => {
+                contentDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            });
+
+            btnSaveEdit.addEventListener('click', () => {
+                const newText = textarea.value.trim();
+                if (!newText || newText === currentContent) { btnCancelEdit.click(); return; }
+                btnSaveEdit.disabled = true; btnSaveEdit.textContent = '저장 중...';
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
+                        if (res.success) {
+                            currentContent = res.newContent;
+                            contentDiv.textContent = currentContent;
+                            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                                contentDiv.style.textDecoration = 'line-through';
+                                contentDiv.style.color = 'var(--hint-color)';
+                            } else {
+                                contentDiv.style.textDecoration = 'none';
+                                contentDiv.style.color = '';
+                            }
+                            btnCancelEdit.click();
+                            showToast('메모가 수정되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            showToast('❌ 수정 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
+                        showToast('❌ 서버 통신 에러', true);
+                    })
+                    .editArchivedMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent, newContent: newText });
+            });
+
+            btnDone.addEventListener('click', () => {
+                btnDone.disabled = true;
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btnDone.disabled = false;
+                        if (res.success) {
+                            currentContent = res.newContent;
+                            contentDiv.textContent = currentContent;
+                            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                                contentDiv.style.textDecoration = 'line-through';
+                                contentDiv.style.color = 'var(--hint-color)';
+                            } else {
+                                contentDiv.style.textDecoration = 'none';
+                                contentDiv.style.color = '';
+                            }
+                            showToast('상태가 변경되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            showToast('❌ 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        btnDone.disabled = false;
+                        showToast('❌ 통신 에러', true);
+                    })
+                    .toggleStrikethroughMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent });
+            });
+
+            btnDel.addEventListener('click', () => {
+                executeDeleteFlow(wrapper, g_userName, dateStr, timeStr, currentContent);
+            });
+
+            wrapper.addEventListener('touchstart', () => {
+                wrapper.classList.add('touched');
+                setTimeout(() => wrapper.classList.remove('touched'), 3000);
+            });
+
+            return wrapper;
+        }
+
+        let currentDeleteAction = null;
+        function executeDeleteFlow(memoBlock, userName, dateStr, timeStr, originalContent) {
+            const preview = originalContent.length > 50 ? originalContent.substring(0, 50) + "..." : originalContent;
+            document.getElementById('confirmMsg').innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
+            currentDeleteAction = () => {
+                document.getElementById('confirmModal').style.display = 'none';
+                const btnDel = memoBlock.querySelector('.action-delete');
+                if (btnDel) btnDel.disabled = true;
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) {
+                            memoBlock.style.transition = 'opacity 0.3s';
+                            memoBlock.style.opacity = '0';
+                            setTimeout(() => memoBlock.remove(), 300);
+                            showToast('🗑️ 메모가 삭제되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            if (btnDel) btnDel.disabled = false;
+                            showToast('❌ 삭제 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        if (btnDel) btnDel.disabled = false;
+                        showToast('❌ 통신 에러', true);
+                    })
+                    .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
+            }
+            document.getElementById('confirmModal').style.display = 'flex';
+            document.getElementById('confirmCancelBtn').focus();
+        }
+
+        document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+            document.getElementById('confirmModal').style.display = 'none';
+            currentDeleteAction = null;
+        });
+        document.getElementById('confirmOkBtn').addEventListener('click', () => {
+            if (currentDeleteAction) currentDeleteAction();
+        });
+
+        // 초기 포커스
+        if (memoInput) memoInput.focus();
 
     </script>
 </body>
