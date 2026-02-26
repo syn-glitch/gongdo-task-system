@@ -1455,6 +1455,40 @@
                 margin-right: 12px;
             }
         }
+
+        .judy-float-btn {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
+            animation: judyBounce 0.5s ease;
+        }
+
+        .judy-float-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+
+        @keyframes judyBounce {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
     </style>
 </head>
 
@@ -1803,8 +1837,8 @@
             if (viewName === 'tasks' && !window._tasksInitialized) {
                 if (typeof initTasksModule === 'function') initTasksModule();
                 window._tasksInitialized = true;
-            } else if (viewName === 'kanban' && !window._kanbanInitialized) {
-                loadKanban();
+            } else if (viewName === 'kanban') {
+                loadKanban(); // [v3 핫픽스] 탭 전환 시 캐시데이터를 활용해 항상 새 데이터 로드
                 window._kanbanInitialized = true;
             } else if (viewName === 'calendar' && !window._calendarInitialized) {
                 initCalendarModule();
@@ -2025,20 +2059,25 @@
         let _selectedTextForTask = '';
 
         function handleTextSelection(e) {
-            // 노트 탭이 활성 상태일 때만 작동
-            if (!document.getElementById('viewNote').classList.contains('active')) return;
+            // View 조건 제거: 노트 탭뿐만 아니라 모든 곳에서 작동 가능하도록 주석 처리
+            // if (!document.getElementById('viewNote').classList.contains('active')) return;
 
-            const selection = window.getSelection();
-            let text = selection.toString().trim();
+            let text = '';
             let isTextarea = false;
 
-            // textarea 내부 선택 확인 (추가됨)
-            if (!text && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+            // 1. Textarea 선택 우선 확인
+            if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
                 const ta = document.activeElement;
                 if (ta.selectionStart !== ta.selectionEnd) {
                     text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
                     isTextarea = true;
                 }
+            }
+
+            // 2. Textarea가 아니면 일반 텍스트 선택 확인
+            if (!isTextarea) {
+                const selection = window.getSelection();
+                text = selection.toString().trim();
             }
 
             if (text.length < 5) {
@@ -2057,12 +2096,21 @@
                 left = e.clientX - (btnWidth / 2);
                 top = e.clientY - 42;
                 if (top < 8) top = e.clientY + 12; // 화면 위를 벗어나면 마우스 아래로
-            } else if (selection.rangeCount > 0) {
-                // 일반 텍스트는 Range 기반
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                left = rect.left + (rect.width / 2) - (btnWidth / 2);
-                top = rect.top - 42;
+            } else if (!isTextarea && window.getSelection().rangeCount > 0) {
+                // 일반 텍스트는 Range 기반 (textarea가 아닐 때만)
+                try {
+                    const range = window.getSelection().getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    left = rect.left + (rect.width / 2) - (btnWidth / 2);
+                    top = rect.top - 42;
+                } catch (err) {
+                    // getRangeAt 실패 시 마우스 위치로 폴백
+                    console.warn('getRangeAt failed, using mouse position:', err);
+                    if (e) {
+                        left = e.clientX - (btnWidth / 2);
+                        top = e.clientY - 42;
+                    }
+                }
             } else if (e) {
                 left = e.clientX - (btnWidth / 2);
                 top = e.clientY - 42;
@@ -2084,11 +2132,43 @@
             if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
             setTimeout(() => handleTextSelection(e), 50); // delay 약간 늘림
         });
+        document.addEventListener('touchend', (e) => {
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            setTimeout(() => handleTextSelection(e), 50);
+        });
 
         // 다른 곳 클릭 시 버튼 숨기기
         document.addEventListener('mousedown', (e) => {
+            // judyFloatBtn 클릭 시 무시
             if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
-            judyFloatBtn.style.display = 'none';
+
+            // Textarea 내부 클릭 시 즉시 숨기지 않고 지연 (드래그 감지 대기)
+            const isTargetTextarea = e.target.tagName === 'TEXTAREA';
+            if (isTargetTextarea) {
+                // 드래그 시작 가능성 있으므로 200ms 지연
+                setTimeout(() => {
+                    // 선택된 텍스트가 없으면 버튼 숨김
+                    if (!_selectedTextForTask || _selectedTextForTask.length < 5) {
+                        judyFloatBtn.style.display = 'none';
+                    }
+                }, 200);
+            } else {
+                // Textarea 외부 클릭 시 즉시 숨김
+                judyFloatBtn.style.display = 'none';
+            }
+        });
+        document.addEventListener('touchstart', (e) => {
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            const isTargetTextarea = e.target.tagName === 'TEXTAREA';
+            if (isTargetTextarea) {
+                setTimeout(() => {
+                    if (!_selectedTextForTask || _selectedTextForTask.length < 5) {
+                        judyFloatBtn.style.display = 'none';
+                    }
+                }, 200);
+            } else {
+                judyFloatBtn.style.display = 'none';
+            }
         });
 
         // 플로팅 버튼 클릭 시 AI 파싱 후 모달 오픈
@@ -2425,6 +2505,9 @@
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         closeRegModal(); loadTasks();
+
+                        // [v3 핫픽스] 업무 등록 직후 사용자가 칸반 탭으로 넘어가면 자동 갱신되도록 처리
+                        if (window._kanbanInitialized) loadKanban();
                     } else { showToast('❌ ' + res.message, true); }
                 })
                 .withFailureHandler(err => {
@@ -2465,6 +2548,9 @@
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         closeEditModal(); loadTasks();
+
+                        // [v3 핫픽스] 업무 상태/내용 변경 후 칸반에도 즉각 반영
+                        if (window._kanbanInitialized) loadKanban();
                     } else { handleApiError(res.message); }
                 })
                 .withFailureHandler(err => {
