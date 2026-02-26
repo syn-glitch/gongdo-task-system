@@ -34,11 +34,18 @@ function jarvis_AutoDevelopmentTrigger() {
       
       // Case 1: 팀장님이 새 작업을 등록한 상태 ("대기중")
       if (status === "대기중") {
+        const reqContent = data[i][1];
         Logger.log(`[자비스] 신규 Task 감지: ${taskId} - 개발 시작`);
+        
+        // 락(Lock) 걸기: 다른 트리거가 중복으로 물어가지 않게 상태를 즉시 "개발중"으로 변경
+        sheet.getRange(rowNum, 3).setValue("개발중");
+        sheet.getRange(rowNum, 4).setValue("자비스");
+        
+        // 실시간 중계 알림
+        sendSlackMessage(`🚀 *[자비스]* \`${taskId}\` 업무 확인했습니다! 지금 바로 기획 및 개발을 시작합니다.\n(요청: ${reqContent})`);
         
         // Phase 2: OpenAI (GPT) 기반 요구사항 분석 및 로컬(구글 드라이브) 문서 생성 처리 로직
         try {
-          const reqContent = data[i][1];
           const sysPrompt = "당신은 구글 앱스 스크립트 특급 개발자 에이전트 자비스(Jarvis)입니다. 사용자의 요구사항을 받아 완벽한 구조의 코드를 작성하고 마크다운 문서로 보고서를 제출합니다.";
           const usrPrompt = "요청 사항:\n" + reqContent + "\n\n요구사항을 분석하여 개발된 코드 및 기획서를 마크다운으로 작성해주세요.";
           
@@ -50,9 +57,13 @@ function jarvis_AutoDevelopmentTrigger() {
           sheet.getRange(rowNum, 3).setValue("QA_대기"); // 다음 파이프라인으로 토스
           
           Logger.log(`[자비스] ${taskId} 문서 생성 및 QA_대기 토스 성공 (${fileUrl})`);
+          
+          // 중계 알림
+          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` 1차 개발 완료했습니다. 김감사 팀장님 QA 부탁드립니다.\n🔗 기획서/코드: ${fileUrl}`);
         } catch (e) {
           sheet.getRange(rowNum, 12).setValue("자비스 생성 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
+          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 개발 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`);
         }
       }
       
@@ -62,6 +73,8 @@ function jarvis_AutoDevelopmentTrigger() {
         
         // 락(Lock) 걸기
         sheet.getRange(rowNum, 3).setValue("개발중");
+        
+        sendSlackMessage(`🛠️ *[자비스]* \`${taskId}\` 김감사 팀장님의 QA 지적사항을 확인했습니다. 즉시 버그 수정에 돌입합니다!`);
         
         // Phase 2 연동: F열(QA 문서 링크)의 불합격 사유(.md)를 읽어와서 코드 수정
         try {
@@ -75,6 +88,7 @@ function jarvis_AutoDevelopmentTrigger() {
           if (newPingPong > 5) {
              sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
              sheet.getRange(rowNum, 12).setValue("무한루프 강제 중단");
+             sendSlackMessage(`🚨 *[시스템]* \`${taskId}\` 핑퐁이 5회를 초과하여 무한루프 방지를 위해 작업을 강제 중단합니다. 팀장님의 확인이 필요합니다.`);
              continue; // 핑퐁 5회 초과시 무한루프 방지
           }
 
@@ -87,9 +101,12 @@ function jarvis_AutoDevelopmentTrigger() {
           sheet.getRange(rowNum, 5).setValue(fileUrl);
           sheet.getRange(rowNum, 9).setValue(newPingPong);
           sheet.getRange(rowNum, 3).setValue("QA_대기");
+          
+          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` ${newPingPong}번째 수정 완료했습니다. 김감사 팀장님, 다시 깐깐한 검토 바랍니다!\n🔗 수정안: ${fileUrl}`);
         } catch (e) {
           sheet.getRange(rowNum, 12).setValue("자비스 수정 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
+          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 수정 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`);
         }
       }
     }
@@ -124,6 +141,8 @@ function kimQA_AutoReviewTrigger() {
         sheet.getRange(rowNum, 3).setValue("QA_진행중");
         sheet.getRange(rowNum, 4).setValue("김감사");
         
+        sendSlackMessage(`🔍 *[김감사]* \`${taskId}\` 자비스가 올린 코드를 샅샅이 검수하겠습니다. (QA 진행 중...)`);
+        
         // Phase 2: E열(개발 문서 링크)을 분석하여 에러 검출 로직
         try {
           const devUrl = data[i][4]; // E: 개발 문서 링크
@@ -153,11 +172,14 @@ function kimQA_AutoReviewTrigger() {
           if (errorCount > 0) {
             sheet.getRange(rowNum, 3).setValue("디버깅_필요");
             sheet.getRange(rowNum, 4).setValue("자비스");
+            sendSlackMessage(`💥 *[김감사]* \`${taskId}\` 맙소사, 에러를 ${errorCount}개나 발견했습니다! 자비스, 당장 꼼꼼하게 다시 수정해오세요.\n🔗 QA 리포트: ${fileUrl}`);
           } else {
             sheet.getRange(rowNum, 3).setValue("최종_승인");
             sheet.getRange(rowNum, 11).setValue(new Date()); // K열 완료 시간
             
-            // Phase 3: 슬랙 알람 발송 연동
+            sendSlackMessage(`✅ *[김감사]* \`${taskId}\` 훌륭합니다. 에러 0개! 깐깐한 제 QA 기준을 완벽하게 통과했습니다.\n🔗 최종 QA 리포트: ${fileUrl}`);
+            
+            // Phase 3: 슬랙 알람 발송 연동 (최종 결재)
             try {
               sendSlackNotification(taskId, rowNum, sheet);
               Logger.log(`[김감사] ${taskId} QA 완료 → 최종 결재 슬랙 알림 전송`);
@@ -168,6 +190,7 @@ function kimQA_AutoReviewTrigger() {
         } catch(e) {
           sheet.getRange(rowNum, 12).setValue("김감사 QA 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
+          sendSlackMessage(`🚨 *[김감사]* \`${taskId}\` QA 검수 중 시스템 에러가 발생했습니다. (${e.message})`);
         }
       }
     }
@@ -315,5 +338,22 @@ function sendSlackNotification(taskId, rowNum, sheet) {
     muteHttpExceptions: true
   };
   
+  UrlFetchApp.fetch(webhookUrl, options);
+}
+
+/**
+ * [헬퍼 함수] 실시간 핑퐁 중계 알림용 슬랙 전송기
+ */
+function sendSlackMessage(text) {
+  const webhookUrl = PropertiesService.getScriptProperties().getProperty("SLACK_WEBHOOK_URL");
+  if (!webhookUrl) return; // 웹훅 미설정 시 패스
+  
+  const payload = { "text": text };
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
   UrlFetchApp.fetch(webhookUrl, options);
 }
