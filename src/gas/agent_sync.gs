@@ -66,11 +66,11 @@ function jarvis_AutoDevelopmentTrigger() {
           Logger.log(`[자비스] ${taskId} 문서 생성 및 QA_대기 토스 성공 (${fileUrl})`);
           
           // 중계 알림
-          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` 1차 개발 완료했습니다. 김감사 팀장님 QA 부탁드립니다.\n🔗 기획서/코드: ${fileUrl}`);
+          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` 1차 개발 완료했습니다. 김감사 팀장님 QA 부탁드립니다.\n🔗 기획서/코드: ${fileUrl}`, "LOW");
         } catch (e) {
           sheet.getRange(rowNum, 12).setValue("자비스 생성 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
-          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 개발 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`);
+          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 개발 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`, "CRITICAL");
         }
       }
       
@@ -88,14 +88,14 @@ function jarvis_AutoDevelopmentTrigger() {
           const qaUrl = data[i][5]; // F: QA 문서 링크
           const qaContent = getDriveFileContent(qaUrl);
           
-          let pingPongNum = parseInt(data[i][8], 10); // I: 핑퐁_횟수
+          let pingPongNum = parseInt(data[i][11], 10); // L: 핑퐁_횟수
           if (isNaN(pingPongNum)) pingPongNum = 0;
           const newPingPong = pingPongNum + 1;
           
           if (newPingPong > 5) {
              sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
-             sheet.getRange(rowNum, 12).setValue("무한루프 강제 중단");
-             sendSlackMessage(`🚨 *[시스템]* \`${taskId}\` 핑퐁이 5회를 초과하여 무한루프 방지를 위해 작업을 강제 중단합니다. 팀장님의 확인이 필요합니다.`);
+             sheet.getRange(rowNum, 12).setValue("무한루프 강제 중단"); // L열 기록
+             sendSlackMessage(`🚨 *[시스템]* \`${taskId}\` 핑퐁이 5회를 초과하여 무한루프 방지를 위해 작업을 강제 중단합니다. 팀장님의 확인이 필요합니다.`, "CRITICAL");
              continue; // 핑퐁 5회 초과시 무한루프 방지
           }
 
@@ -106,14 +106,14 @@ function jarvis_AutoDevelopmentTrigger() {
           const fileUrl = createDriveFile(taskId + `_Jarvis_Dev_Fix_v${newPingPong}`, devDocContent);
           
           sheet.getRange(rowNum, 5).setValue(fileUrl);
-          sheet.getRange(rowNum, 9).setValue(newPingPong);
+          sheet.getRange(rowNum, 12).setValue(newPingPong); // L열 (핑퐁_횟수) 기록 업데이트
           sheet.getRange(rowNum, 3).setValue("QA_대기");
           
-          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` ${newPingPong}번째 수정 완료했습니다. 김감사 팀장님, 다시 깐깐한 검토 바랍니다!\n🔗 수정안: ${fileUrl}`);
+          sendSlackMessage(`📝 *[자비스]* \`${taskId}\` ${newPingPong}번째 수정 완료했습니다. 김감사 팀장님, 다시 깐깐한 검토 바랍니다!\n🔗 수정안: ${fileUrl}`, "LOW");
         } catch (e) {
           sheet.getRange(rowNum, 12).setValue("자비스 수정 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
-          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 수정 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`);
+          sendSlackMessage(`🚨 *[자비스]* \`${taskId}\` 수정 중 에러가 발생했습니다. 수동 개입이 필요합니다. (${e.message})`, "CRITICAL");
         }
       }
     }
@@ -159,23 +159,33 @@ function kimQA_AutoReviewTrigger() {
           const qaRules = fetchGitHubRaw("qa/QA_PROCESS_V2.md");
           const teamRules = fetchGitHubRaw("qa/qa_team_rules.md");
           
-          const sysPrompt = "당신은 최고의 QA 팀장 김감사입니다. 제출된 코드를 읽고 깃허브의 RAG 룰북 기준에 따라 매우 꼼꼼하게 에러를 검수하세요. 맨 마지막 줄에 JSON 형태로 에러 갯수를 표기하세요! (예: {\"errorCount\": 2})";
+          // [Phase 2] Json 포맷 강제 프롬프트
+          const sysPrompt = "당신은 최고의 QA 팀장 김감사입니다. 제출된 코드를 읽고 엄격하게 검수하세요.\n" +
+                            "응답은 반드시 아래 JSON 구조로만 출력해야 하며, 다른 텍스트는 절대 포함하지 마세요:\n" +
+                            "{\n" +
+                            "  \"qa_result\": \"PASS\" | \"FAIL\",\n" +
+                            "  \"total_errors\": 숫자,\n" +
+                            "  \"errors\": []\n" +
+                            "}";
+          
           const qaPrompt = `=== 자비스가 개발한 코드 산출물 ===\n${devContent}\n\n` +
                            `=== [RAG 1] 공식 QA 프로세스 룰북 ===\n${qaRules}\n\n` +
                            `=== [RAG 2] 팀 운영 규칙 ===\n${teamRules}\n\n` +
-                           `위 RAG 룰북(QA Phase 조건 등) 규칙을 엄격하게 적용하여 제출된 코드를 1:1로 검수하고, 치명적 결함 및 보안 위협을 철저히 찾아내세요.`;
+                           `위 RAG 룰북(QA Phase 조건 등) 규칙을 엄격하게 적용하여 제출된 코드를 1:1로 검수하고, 치명적 결함 및 보안 위협을 철저히 찾아내세요. 오직 JSON만 반환하세요.`;
           
           const qaResultText = callOpenAIAPI(qaPrompt, sysPrompt);
           
-          // 에러 갯수 추출 시도 (JSON 파싱 정규식)
-          let errorCount = 0;
-          let match = qaResultText.match(/\{.*\"errorCount\"\s*:\s*(\d+).*\}/);
-          if (match) {
-            errorCount = parseInt(match[1], 10);
-          } else {
-             // 기본 규칙 (에러라는 단어가 들어있으면 1 없으면 0)
-             errorCount = (qaResultText.includes("오류") || qaResultText.includes("에러 발견")) ? 1 : 0;
+          // [Phase 2] 에러 갯수 추출 로직 (Robust Parsing)
+          const parsedQA = parseErrorCount(qaResultText);
+          
+          if (parsedQA.errorCount === -1) {
+             sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
+             sheet.getRange(rowNum, 12).setValue("QA JSON 파싱 에러");
+             sendSlackMessage(`🚨 *[김감사]* \`${taskId}\` QA 결과 JSON 파싱에 실패했습니다. 형식 오류를 점검해주세요.`, "HIGH");
+             continue; // 파싱 실패 시 진행 불가
           }
+          
+          const errorCount = parsedQA.errorCount;
 
           const fileUrl = createDriveFile(taskId + "_Kim_QA_Report", qaResultText);
           
@@ -186,12 +196,12 @@ function kimQA_AutoReviewTrigger() {
           if (errorCount > 0) {
             sheet.getRange(rowNum, 3).setValue("디버깅_필요");
             sheet.getRange(rowNum, 4).setValue("자비스");
-            sendSlackMessage(`💥 *[김감사]* \`${taskId}\` 맙소사, 에러를 ${errorCount}개나 발견했습니다! 자비스, 당장 꼼꼼하게 다시 수정해오세요.\n🔗 QA 리포트: ${fileUrl}`);
+            sendSlackMessage(`💥 *[김감사]* \`${taskId}\` 맙소사, 에러를 ${errorCount}개나 발견했습니다! 자비스, 당장 꼼꼼하게 다시 수정해오세요.\n🔗 QA 리포트: ${fileUrl}`, "HIGH");
           } else {
             sheet.getRange(rowNum, 3).setValue("최종_승인");
             sheet.getRange(rowNum, 11).setValue(new Date()); // K열 완료 시간
             
-            sendSlackMessage(`✅ *[김감사]* \`${taskId}\` 훌륭합니다. 에러 0개! 깐깐한 제 QA 기준을 완벽하게 통과했습니다.\n🔗 최종 QA 리포트: ${fileUrl}`);
+            sendSlackMessage(`✅ *[김감사]* \`${taskId}\` 훌륭합니다. 에러 0개! 깐깐한 제 QA 기준을 완벽하게 통과했습니다.\n🔗 최종 QA 리포트: ${fileUrl}`, "HIGH");
             
             // Phase 3: 슬랙 알람 발송 연동 (최종 결재)
             try {
@@ -204,7 +214,7 @@ function kimQA_AutoReviewTrigger() {
         } catch(e) {
           sheet.getRange(rowNum, 12).setValue("김감사 QA 에러: " + e.message);
           sheet.getRange(rowNum, 3).setValue("수동_개입_필요");
-          sendSlackMessage(`🚨 *[김감사]* \`${taskId}\` QA 검수 중 시스템 에러가 발생했습니다. (${e.message})`);
+          sendSlackMessage(`🚨 *[김감사]* \`${taskId}\` QA 검수 중 시스템 에러가 발생했습니다. (${e.message})`, "CRITICAL");
         }
       }
     }
@@ -358,7 +368,14 @@ function sendSlackNotification(taskId, rowNum, sheet) {
 /**
  * [헬퍼 함수] 실시간 핑퐁 중계 알림용 슬랙 전송기
  */
-function sendSlackMessage(text) {
+function sendSlackMessage(text, priority = "LOW") {
+  const NOTIFY_PRIORITIES = ["CRITICAL", "HIGH"];
+  
+  if (!NOTIFY_PRIORITIES.includes(priority)) {
+    Logger.log(`[SKIP] 슬랙 알림 스킵 (우선순위: ${priority}): ${text}`);
+    return;
+  }
+
   const webhookUrl = PropertiesService.getScriptProperties().getProperty("SLACK_WEBHOOK_URL");
   if (!webhookUrl) return; // 웹훅 미설정 시 패스
   
@@ -416,5 +433,49 @@ function fetchGitHubRaw(filePath) {
     Logger.log(`[ERROR] 깃허브 RAG API 통신 실패 (${filePath}): ${e.message}`);
     return `[ERROR] RAG 컨텍스트 로딩 실패: 문서를 찾을 수 없습니다. (${filePath})`;
   }
+}
+
+/**
+ * ============================================================================
+ * [헬퍼 함수] QA JSON 에러 카운터 파서 (Phase 2)
+ * ============================================================================
+ */
+function parseErrorCount(claudeResponse) {
+  // 1. JSON 코드 블록 정규식 파싱
+  try {
+    const jsonMatch = claudeResponse.match(/```json\n([\s\S]*?)\n```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : claudeResponse;
+    const result = JSON.parse(jsonStr);
+
+    if (result.total_errors !== undefined) {
+      Logger.log(`[SUCCESS] JSON 완전 파싱 성공: ${result.total_errors}개 에러`);
+      return { errorCount: parseInt(result.total_errors, 10), fullResult: result };
+    }
+  } catch (e) {
+    Logger.log(`[WARNING] JSON.parse 실패: ${e.message}`);
+  }
+
+  // 2. 정규식 백업 (Fallback)
+  try {
+    const patterns = [
+      /total_errors["']?\s*:\s*(\d+)/,
+      /에러.*?(\d+)개/,
+      /(\d+)\s*errors?\s*found/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = claudeResponse.match(pattern);
+      if (match) {
+        Logger.log(`[WARNING] 정규식 백업 사용: ${match[1]}개`);
+        return { errorCount: parseInt(match[1], 10), fullResult: null };
+      }
+    }
+  } catch (e) {
+    Logger.log(`[ERROR] 정규식 파싱도 실패: ${e.message}`);
+  }
+
+  // 3. 파싱 완전 실패
+  Logger.log("[CRITICAL] 에러 카운트 파싱 실패 - 수동 검토 필요");
+  return { errorCount: -1, fullResult: null };
 }
 
