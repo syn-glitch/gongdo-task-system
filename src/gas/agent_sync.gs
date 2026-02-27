@@ -224,40 +224,58 @@ function kimQA_AutoReviewTrigger() {
 }
 
 /**
- * [1회용 헬퍼] 구글 시트 탭이 없을 경우 최초 세팅 (수동 실행용)
+ * 스프레드시트 열릴 때 커스텀 메뉴 생성 (UI 제어판)
  */
-function initAgentTasksSheet() {
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu("🤖 에이전트 제어판")
+    .addItem("V3 시트 포맷 업데이트", "updateAgentTasksV3Sheet")
+    .addToUi();
+}
+
+/**
+ * [버튼 클릭 실행용] V3 시트 템플릿 구조 강제 업데이트
+ * - 기존 탭과 로직 코드가 완벽히 맞물리도록 헤더 구조 및 드롭다운을 최신화합니다.
+ */
+function updateAgentTasksV3Sheet() {
   try {
     const ss = SpreadsheetApp.openById(AGENT_SHEET_ID);
     let sheet = ss.getSheetByName("Agent_Tasks");
     
     if (!sheet) {
       sheet = ss.insertSheet("Agent_Tasks");
-      const headers = [
-        "Task_ID", "요청_내용", "상태", "담당_에이전트", "개발_문서_링크", 
-        "QA_문서_링크", "QA_체크리스트", "에러_카운트", "핑퐁_횟수", 
-        "등록_시간", "완료_시간", "비고"
-      ];
-      
-      // 헤더 서식 입히기
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-        .setFontWeight("bold")
-        .setBackground("#F3F3F3")
-        .setHorizontalAlignment("center");
-        
-      // C열 데이터 유효성 검증(드롭다운)
-      const rule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(["대기중", "개발중", "QA_대기", "QA_진행중", "디버깅_필요", "최종_승인"], true)
-        .setAllowInvalid(false)
-        .build();
-      sheet.getRange("C2:C1000").setDataValidation(rule);
-      
-      Logger.log("✅ Agent_Tasks 탭이 완벽하게 생성되었습니다.");
-    } else {
-      Logger.log("ℹ️ Agent_Tasks 탭이 이미 존재합니다.");
     }
+    
+    // 현재 코드에 맞춘 V3 표준 헤더 (J:등록, K:완료, L:핑퐁 및 비고)
+    const headers = [
+      "Task_ID", "요청_내용", "상태", "담당_에이전트", "개발_문서_링크", 
+      "QA_문서_링크", "QA_체크리스트", "에러_카운트", "여분(사용안함)", 
+      "등록_시간", "완료_시간", "핑퐁_횟수_및_비고"
+    ];
+    
+    // 데이터 보존을 위해 첫 행(헤더)만 덮어씀
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+      .setFontWeight("bold")
+      .setBackground("#F3F3F3")
+      .setHorizontalAlignment("center");
+      
+    // C열 상태 드롭다운 유효성 검증 V3 (수동_개입_필요 추가)
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(["대기중", "개발중", "QA_대기", "QA_진행중", "디버깅_필요", "최종_승인", "수동_개입_필요"], true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange("C2:C1000").setDataValidation(rule);
+    
+    // 가독성을 위한 셀 너비 조정
+    sheet.setColumnWidth(2, 300); // 요청_내용
+    sheet.setColumnWidth(5, 150); // 개발 문서 
+    sheet.setColumnWidth(6, 150); // QA 문서
+    
+    SpreadsheetApp.getUi().alert("✅ V3 시트 업데이트 완료!\n\nL열(핑퐁_횟수) 및 신규 드롭다운 상태값이 시트에 완벽하게 적용되었습니다.");
+    Logger.log("✅ Agent_Tasks V3 구조 동기화 완료");
   } catch (e) {
-    Logger.log("❌ 탭 생성 실패: " + e.message);
+    SpreadsheetApp.getUi().alert("❌ 시트 업데이트 실패: " + e.message);
+    Logger.log("❌ 탭 강제 생성 실패: " + e.message);
   }
 }
 
