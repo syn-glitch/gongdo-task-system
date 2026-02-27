@@ -1,0 +1,3006 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+
+<head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
+    <!-- FullCalendar v6 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <style>
+        :root {
+            /* Dark Theme (Default) */
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --surface-elevated: #2d2d2d;
+            --card: #1e1e1e;
+            --primary: #bb86fc;
+            --primary-variant: #3700b3;
+            --secondary: #03dac6;
+            --text-color: #e0e0e0;
+            --hint-color: #888888;
+            --border: #333333;
+            --danger: #cf6679;
+            --btn-bg: #333333;
+            --btn-text: #e0e0e0;
+            --toast-bg: rgba(255, 255, 255, 0.9);
+            --toast-text: #121212;
+            /* Add more CSS variables as needed during integration */
+        }
+
+        html[data-theme="light"] {
+            --bg-color: #f8f9fa;
+            --surface: #ffffff;
+            --surface-elevated: #f0f0f0;
+            --card: #ffffff;
+            --primary: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary: #03dac6;
+            --text-color: #121212;
+            --hint-color: #666666;
+            --border: #e0e0e0;
+            --danger: #b00020;
+            --btn-bg: #ececec;
+            --btn-text: #121212;
+            --toast-bg: rgba(0, 0, 0, 0.8);
+            --toast-text: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Pretendard', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* GNB (Global Navigation Bar) */
+        .gnb {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .gnb-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .gnb-brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gnb-tabs {
+            display: flex;
+            height: 60px;
+        }
+
+        .gnb-tab {
+            background: transparent;
+            border: none;
+            padding: 0 20px;
+            color: var(--hint-color);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            outline: none;
+            transition: color 0.2s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+        }
+
+        .gnb-tab:hover {
+            color: var(--text-color);
+        }
+
+        .gnb-tab.active {
+            color: var(--primary);
+        }
+
+        .gnb-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+        }
+
+        .gnb-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .theme-btn {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            outline: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .theme-btn:hover {
+            background-color: var(--surface-elevated);
+        }
+
+        .user-badge {
+            background: var(--surface-elevated);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        /* Main Container (Views) */
+        .view-container {
+            flex: 1;
+            display: flex;
+            width: 100vw;
+            height: calc(100vh - 60px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .view-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            animation: fadeIn 0.3s ease-in-out;
+            min-height: 0;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--toast-bg);
+            color: var(--toast-text);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Access Denied Overlay */
+        .access-denied-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: var(--text-color);
+        }
+
+        .access-denied-overlay .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .access-denied-overlay .title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .access-denied-overlay .desc {
+            font-size: 15px;
+            color: var(--hint-color);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* ===== Note Module CSS ===== */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, background-color 0.3s;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .new-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-btn:hover {
+            background: var(--surface-elevated);
+            border-color: var(--primary);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+            min-height: 0;
+        }
+
+        .folder-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .folder-title {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .folder-title:hover {
+            background-color: var(--surface-elevated);
+        }
+
+        .folder-icon {
+            font-size: 16px;
+        }
+
+        .folder-children {
+            display: none;
+            flex-direction: column;
+            padding-left: 20px;
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .folder-item.open .folder-children {
+            display: flex;
+        }
+
+        .file-item {
+            padding: 8px 20px 8px 30px;
+            font-size: 13px;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            background-color: var(--surface-elevated);
+            color: var(--primary);
+        }
+
+        .loading-text {
+            padding: 20px;
+            font-size: 13px;
+            color: var(--hint-color);
+            text-align: center;
+        }
+
+        .sidebar-search {
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-search input {
+            width: 100%;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .sidebar-search input:focus {
+            border-color: var(--primary);
+        }
+
+        .sidebar-search input::placeholder {
+            color: var(--hint-color);
+        }
+
+        .search-result-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .search-result-item:hover {
+            background-color: var(--surface-elevated);
+        }
+
+        .search-result-date {
+            font-size: 12px;
+            color: var(--primary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .search-result-text {
+            font-size: 13px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .highlight {
+            background-color: rgba(187, 134, 252, 0.4);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        html[data-theme="light"] .highlight {
+            background-color: rgba(98, 0, 238, 0.2);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s;
+            min-height: 0;
+        }
+
+        .editor-header {
+            padding: 20px 40px 10px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid transparent;
+        }
+
+        .editor-header h2 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .editor-container {
+            flex: 1;
+            padding: 20px 40px 40px 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 0;
+        }
+
+        #memoInput {
+            flex: 1;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 15px;
+            line-height: 1.6;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            padding: 0;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        #memoInput::placeholder {
+            color: var(--hint-color);
+        }
+
+        #memoViewer {
+            flex: 1;
+            width: 100%;
+            font-size: 15px;
+            line-height: 1.6;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            min-height: 0;
+        }
+
+        .summary-overlay {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            right: 40px;
+            background: var(--surface);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(-10px);
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .summary-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-summary {
+            background: transparent;
+            border: none;
+            color: var(--hint-color);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .summary-content {
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px 20px 40px;
+            color: var(--hint-color);
+            font-size: 13px;
+        }
+
+        .footer-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .save-btn,
+        .action-btn {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .extract-btn,
+        .action-btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-variant));
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 12px rgba(187, 134, 252, 0.3);
+        }
+
+        .save-btn:hover,
+        .extract-btn:hover,
+        .action-btn:hover,
+        .action-btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .save-btn:disabled,
+        .extract-btn:disabled,
+        .action-btn:disabled,
+        .action-btn-primary:disabled {
+            background: var(--btn-bg);
+            color: var(--hint-color);
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 90;
+            transition: opacity 0.3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mobile-overlay.show {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .menu-btn-mobile {
+            display: none;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 60px;
+                bottom: 0;
+                left: 0;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .menu-btn-mobile {
+                display: block;
+            }
+
+            .editor-container {
+                padding: 10px 20px 20px 20px;
+            }
+
+            .editor-header {
+                padding: 10px 20px;
+            }
+
+            .footer {
+                padding: 0 20px 20px 20px;
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .footer .hint {
+                display: none;
+            }
+
+            .footer-buttons {
+                justify-content: stretch;
+            }
+
+            .save-btn,
+            .extract-btn {
+                flex: 1;
+                padding: 12px 16px;
+            }
+
+            .summary-overlay {
+                left: 10px;
+                right: 10px;
+                padding: 16px;
+            }
+
+            .access-denied-overlay .desc {
+                font-size: 15px;
+                color: var(--hint-color);
+                text-align: center;
+                line-height: 1.6;
+            }
+        }
+
+        /* ===== Dashboard Module CSS ===== */
+        .dash-header {
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dash-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .dash-header h1 span {
+            color: var(--primary);
+        }
+
+        .dash-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: var(--surface-elevated);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--border);
+        }
+
+        .new-task-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-variant));
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(187, 134, 252, 0.2);
+        }
+
+        .new-task-btn:hover {
+            opacity: 0.9;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 16px;
+            padding: 20px 32px;
+            flex-wrap: wrap;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 24px;
+            min-width: 120px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .summary-card .count {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .summary-card .label {
+            font-size: 12px;
+            color: var(--hint-color);
+            margin-top: 4px;
+        }
+
+        /* 통계 색상 */
+        .count-progress {
+            color: #64b5f6;
+        }
+
+        .count-waiting {
+            color: #ffb74d;
+        }
+
+        .count-hold {
+            color: #e57373;
+        }
+
+        .count-total {
+            color: var(--primary);
+        }
+
+        .dash-tabs {
+            display: flex;
+            gap: 16px;
+            margin: 0 32px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .dash-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 16px;
+            color: var(--hint-color);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            position: relative;
+            outline: none;
+        }
+
+        .dash-tab-btn:hover {
+            color: var(--text-color);
+        }
+
+        .dash-tab-btn.active {
+            color: var(--primary);
+        }
+
+        .dash-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        /* [Phase 21] 타임 트래킹 전용 스타일 */
+        .count-focus {
+            color: #ff5252;
+            text-shadow: 0 0 10px rgba(255, 82, 82, 0.3);
+        }
+
+        .duration-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--hint-color);
+            background: var(--surface-elevated);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .duration-active {
+            color: #ff5252;
+            background: rgba(255, 82, 82, 0.1);
+        }
+
+        .task-list-wrapper {
+            flex: 1;
+            padding: 20px 32px 40px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .task-table th {
+            background: var(--surface-elevated);
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--hint-color);
+            text-align: left;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .task-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .task-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .task-table tr:hover td {
+            background: rgba(187, 134, 252, 0.05);
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-진행중 {
+            background: rgba(100, 181, 246, 0.2);
+            color: #64b5f6;
+        }
+
+        .badge-대기 {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .badge-보류 {
+            background: rgba(229, 115, 115, 0.2);
+            color: #e57373;
+        }
+
+        .due-tag {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .due-overdue {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .due-today {
+            color: var(--warning, #ff9800);
+            font-weight: 600;
+        }
+
+        .due-tomorrow {
+            color: var(--warning, #ff9800);
+        }
+
+        .due-normal {
+            color: var(--hint-color);
+        }
+
+        .status-select {
+            background: var(--surface-elevated);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .status-select:focus {
+            border-color: var(--primary);
+        }
+
+        .loading,
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--hint-color);
+            font-size: 15px;
+        }
+
+        .empty-state .emoji {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Modals */
+        .dash-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 150;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dash-modal-overlay.show {
+            display: flex;
+        }
+
+        .dash-modal {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 28px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .dash-modal h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--hint-color);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            background: var(--surface-elevated);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Dashboard Mobile Responsive */
+        @media (max-width: 768px) {
+            .dash-header {
+                padding: 16px 20px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .summary-bar {
+                padding: 16px 20px;
+                gap: 10px;
+            }
+
+            .summary-card {
+                flex: 1 1 calc(50% - 10px);
+                min-width: auto;
+                padding: 12px;
+            }
+
+            .dash-tabs {
+                margin: 0 20px;
+            }
+
+            .task-list-wrapper {
+                padding: 16px 20px 40px;
+            }
+
+            .task-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+
+
+        /* V2 Memo Block */
+        .memo-block {
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        html[data-theme="dark"] .memo-block {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .memo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .memo-time {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .memo-block:hover .action-buttons,
+        .memo-block.touched .action-buttons {
+            opacity: 1;
+        }
+
+        .action-buttons button {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            transition: all 0.2s;
+        }
+
+        .action-buttons button:hover {
+            background: var(--surface);
+        }
+
+        .action-buttons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-delete.danger {
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .action-add-task {
+            color: var(--primary);
+            border-color: var(--primary) !important;
+        }
+
+        .action-delete.danger:hover {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .memo-content {
+            font-size: 15px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
+        .memo-edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .edit-input {
+            width: 100%;
+            min-height: 100px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn-save-sm,
+        .btn-cancel-sm {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            font-weight: 500;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-save-sm {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-cancel-sm {
+            background: transparent;
+            color: var(--hint-color);
+            border: 1px solid var(--border);
+        }
+
+        /* FullCalendar Theme Tweaks */
+        .fc {
+            --fc-border-color: var(--border);
+            --fc-button-bg-color: var(--surface-elevated);
+            --fc-button-border-color: var(--border);
+            --fc-button-hover-bg-color: var(--surface);
+            --fc-button-active-bg-color: var(--primary);
+            --fc-page-bg-color: var(--bg-color);
+            --fc-list-event-hover-bg-color: rgba(187, 134, 252, 0.05);
+            font-family: inherit;
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .fc .fc-col-header-cell-cushion {
+            color: var(--hint-color);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .fc .fc-daygrid-day-number {
+            color: var(--hint-color);
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .fc .fc-event {
+            border: none;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .fc .fc-day-today {
+            background: rgba(187, 134, 252, 0.05) !important;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons button {
+                min-width: 44px;
+                min-height: 44px;
+                font-size: 18px;
+            }
+        }
+
+        /* ===== [Phase 23] Kanban & Calendar CSS ===== */
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            padding: 20px 32px;
+            flex: 1;
+            overflow-x: auto;
+            align-items: flex-start;
+            min-height: 0;
+            background: var(--bg-color);
+        }
+
+        .kanban-column {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 320px;
+            min-width: 300px;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s;
+        }
+
+        .kanban-column-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .kanban-column-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kanban-task-count {
+            background: var(--surface-elevated);
+            color: var(--hint-color);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .kanban-task-list {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .kanban-card {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            position: relative;
+            user-select: none;
+        }
+
+        .kanban-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .kanban-card .title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .kanban-card .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--hint-color);
+        }
+
+        .kanban-card .project-tag {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 드래그 시각적 피드백 */
+        .kanban-column.drag-over {
+            border-color: var(--primary);
+            background: rgba(187, 134, 252, 0.05);
+        }
+
+        /* 에러 모달 디자인 */
+        .error-modal-header {
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .error-modal-body {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: rgba(207, 102, 121, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid var(--danger);
+        }
+
+        /* 캘린더 컨테이너 */
+        #calendar {
+            flex: 1;
+            padding: 20px 32px;
+            min-height: 0;
+            background: var(--bg-color);
+        }
+
+        /* 모바일 스와이프 전용 레이아웃 */
+        @media (max-width: 768px) {
+            .kanban-board {
+                padding: 12px;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            .kanban-board::-webkit-scrollbar {
+                display: none;
+            }
+
+            .kanban-column {
+                width: calc(100vw - 40px);
+                scroll-snap-align: center;
+                margin-right: 12px;
+            }
+        }
+
+        .judy-float-btn {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
+            animation: judyBounce 0.5s ease;
+        }
+
+        .judy-float-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+
+        @keyframes judyBounce {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Global Navigation Bar -->
+    <div class="gnb">
+        <div class="gnb-left">
+            <div class="gnb-brand">
+                <span>🐰</span> Judy Workspace
+            </div>
+            <div class="gnb-tabs">
+                <button class="gnb-tab" id="navNote" onclick="switchMainView('note')">📝 내 노트</button>
+                <button class="gnb-tab" id="navTasks" onclick="switchMainView('tasks')">📊 내 업무</button>
+                <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
+                <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
+            </div>
+        </div>
+        <div class="gnb-right">
+            <span id="userBadge" class="user-badge">인증 중...</span>
+            <button id="themeToggleBtn" class="theme-btn" title="테마 변경" onclick="toggleTheme()">☀️</button>
+        </div>
+    </div>
+
+    <!-- Workspace Views -->
+    <div class="view-container">
+
+        <!-- View 1: Judy Note -->
+        <div id="viewNote" class="view-panel" style="flex-direction: row;">
+            <!-- Left Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3>내 폴더</h3>
+                    <button id="newMemoBtn" class="new-btn">+ 새 메모</button>
+                </div>
+                <div class="sidebar-search">
+                    <input type="text" id="searchInput" placeholder="키워드/태그 검색 (Enter)" autocomplete="off" />
+                </div>
+                <div class="sidebar-content" id="folderList">
+                    <div class="loading-text">기록을 불러오려면 로딩을 기다려주세요.</div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Editor Header (Visible when viewing past memo) -->
+                <div class="editor-header" id="editorHeader" style="display: none;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button id="menuBtnMobile" class="menu-btn-mobile" title="메뉴 열기">☰</button>
+                        <h2 id="viewTitle">읽기 모드</h2>
+                    </div>
+                    <button id="summarizeBtn" class="action-btn-primary">✨ AI 내용 요약</button>
+                </div>
+
+                <div class="editor-container">
+                    <!-- AI Summary Overlay -->
+                    <div class="summary-overlay" id="summaryOverlay">
+                        <div class="summary-title">
+                            <span>✨ AI 요약 결과</span>
+                            <button class="close-summary" id="closeSummaryBtn">✕</button>
+                        </div>
+                        <div class="summary-content" id="summaryContent">요약된 내용이 여기에 나타납니다.</div>
+                    </div>
+
+                    <textarea id="memoInput"
+                        placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(텍스트를 드래그하면 🐰 업무 등록 버튼이 나타납니다)"></textarea>
+                    <div id="memoViewer" style="display:none;"></div>
+                </div>
+
+                <!-- Footer (Visible when writing new memo) -->
+                <div class="footer" id="editorFooter">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button id="menuBtnMobile2" class="menu-btn-mobile" title="메뉴 열기">☰</button>
+                        <span class="hint">저장: Cmd + Enter (또는 Ctrl + Enter)</span>
+                    </div>
+                    <div class="footer-buttons">
+                        <button id="saveBtn" class="save-btn">일반 저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mobileOverlay" class="mobile-overlay"></div>
+        </div>
+
+        <!-- 🐰 Judy Floating Task Button (드래그로 텍스트 선택 시 노출) -->
+        <button class="judy-float-btn" id="judyFloatBtn">
+            <span class="judy-icon">🐰</span> 업무 등록
+        </button>
+
+        <!-- View 2: Dashboard -->
+        <div id="viewTasks" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <!-- Dashboard 내부 콘텐츠는 자체 스크롤 영역을 가짐 -->
+            <div style="display:flex; flex-direction:column; height:100%;">
+
+                <div class="dash-header">
+                    <h1>📋 <span>내 업무 현황</span></h1>
+                    <div class="dash-actions">
+                        <button class="new-task-btn" onclick="openRegModal()">+ 새 업무 등록</button>
+                        <button class="refresh-btn" onclick="loadTasks()">🔄 새로고침</button>
+                    </div>
+                </div>
+
+                <div class="summary-bar" id="summaryBar"></div>
+
+                <div class="dash-tabs" id="tabsBar" style="display:none;">
+                    <button class="dash-tab-btn active" onclick="switchTaskTab('active')" id="tab-active">📌 진행 중
+                        업무</button>
+                    <button class="dash-tab-btn" onclick="switchTaskTab('completed')" id="tab-completed">✅ 완료된
+                        업무</button>
+                </div>
+
+                <div class="task-list-wrapper" id="taskListWrapper">
+                    <div id="taskList">
+                        <div class="loading">업무 리스트를 불러오는 중...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 3: Kanban Board -->
+        <div id="viewKanban" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>📋 <span>칸반 보드</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadKanban()">🔄 새로고침</button>
+                    </div>
+                </div>
+                <div class="kanban-board" id="kanbanBoard">
+                    <div class="loading">데이터 로딩 중...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 4: Custom Calendar -->
+        <div id="viewCalendar" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>📅 <span>업무 캘린더</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadCalendar()">🔄 새로고침</button>
+                    </div>
+                </div>
+                <!-- FullCalendar 컨테이너 -->
+                <div id="calendar"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 업무 등록 모달 -->
+    <div class="dash-modal-overlay" id="regModalOverlay" onclick="if(event.target===this)closeRegModal()">
+        <div class="dash-modal">
+            <h2>➕ 새 업무 등록</h2>
+            <div class="form-group">
+                <label>프로젝트 *</label>
+                <select id="formProject">
+                    <option value="">로딩 중...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>업무 제목 *</label>
+                <input type="text" id="formTitle" placeholder="업무 제목을 입력하세요">
+            </div>
+            <div class="form-group">
+                <label>업무 내용</label>
+                <textarea id="formDesc" placeholder="상세 내용 (선택)"></textarea>
+            </div>
+            <div class="form-group">
+                <label>마감일</label>
+                <input type="date" id="formDue">
+            </div>
+            <div class="form-group">
+                <label>상태</label>
+                <select id="formStatus">
+                    <option value="대기">⏸ 대기</option>
+                    <option value="진행중">▶ 진행중</option>
+                    <option value="보류">🔴 보류</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeRegModal()">취소</button>
+                <button class="btn-submit" id="submitRegBtn" onclick="submitNewTask()">등록하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 업무 수정 모달 -->
+    <div class="dash-modal-overlay" id="editModalOverlay" onclick="if(event.target===this)closeEditModal()">
+        <div class="dash-modal">
+            <h2>📝 업무 상세 및 수정</h2>
+            <input type="hidden" id="editRowNum">
+            <div class="form-group">
+                <label>업무 제목 *</label>
+                <input type="text" id="editTitle" placeholder="업무 제목">
+            </div>
+            <div class="form-group">
+                <label>상세 내용</label>
+                <textarea id="editDesc" placeholder="상세 내용"></textarea>
+            </div>
+            <div class="form-group" style="display:flex; gap:16px;">
+                <div style="flex:1;">
+                    <label>마감일</label>
+                    <input type="date" id="editDue">
+                </div>
+                <div style="flex:1;">
+                    <label>상태</label>
+                    <select id="editStatus">
+                        <option value="대기">⏸ 대기</option>
+                        <option value="진행중">▶ 진행중</option>
+                        <option value="보류">🔴 보류</option>
+                        <option value="완료">✅ 완료</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeEditModal()">닫기</button>
+                <button class="btn-submit" id="submitEditBtn" onclick="submitEditedTask()">수정하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast -->
+    <div id="toast" class="toast">
+        <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <!-- Access Denied Overlay -->
+    <div id="accessDeniedOverlay" class="access-denied-overlay" style="display: none;">
+        <div class="icon">⛔</div>
+        <div class="title">접근 권한이 없습니다</div>
+        <div class="desc" id="accessDeniedMsg">비정상적인 접근입니다.<br>슬랙에서 다시 링크를 발급받아주세요.</div>
+    </div>
+
+    <!-- 🚨 Concurrency Error Modal (Critical Level) -->
+    <div id="errorModal" class="dash-modal-overlay" style="display: none; z-index: 100001; padding: 20px;">
+        <div class="dash-modal" style="width: 100%; max-width: 400px; border-top: 5px solid var(--danger);">
+            <div class="error-modal-header">
+                <span>⚠️</span> 동시 편집 충돌 발생
+            </div>
+            <div class="error-modal-body" id="errorModalMsg">
+                다른 사용자가 현재 업무를 수정하고 있습니다.<br>데이터 정합성을 위해 새로고침 후 다시 시도해주세요.
+            </div>
+            <div class="modal-actions" style="margin-top: 0;">
+                <button class="btn-submit" style="background: var(--danger); width: 100%;"
+                    onclick="location.reload()">새로고침하여 복구하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URL/Backend Parameters
+        const initialPage = '<?= initialPage ?>';
+        const magicToken = '<?= token ?>';
+        const initUserId = '<?= userId ?>';
+        const initUserName = '<?= userName ?>';
+
+        // Global State
+        let currentHtmlTheme = 'dark';
+        let g_userId = null;
+        let g_userName = null;
+
+        // Elements
+        const accessDeniedOverlay = document.getElementById('accessDeniedOverlay');
+        const accessDeniedMsg = document.getElementById('accessDeniedMsg');
+        const userBadge = document.getElementById('userBadge');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const htmlEl = document.documentElement;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Theme init
+            const savedTheme = localStorage.getItem('judy_workspace_theme') || 'dark';
+            setTheme(savedTheme);
+
+            // 2. Auth Flow
+            // If we have token, it's a Note entry. If we have userId/userName, it's a direct Tasks entry.
+            if (magicToken) {
+                validateMagicToken(magicToken);
+            } else if (initUserId && initUserName) {
+                // 이미 주디 내업무 명령어를 타고온 경우
+                setAuthenticatedUser(initUserId, initUserName);
+                switchMainView(initialPage || 'tasks');
+            } else {
+                // 둘다 없으면 미인가
+                showAccessDenied('만료되었거나 잘못된 접속 정보입니다.<br>슬랙에서 다시 접속하세요.');
+            }
+        });
+
+        // --- Authentication ---
+        function validateMagicToken(token) {
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result.valid) {
+                        // result doesn't have userId currently, maybe we can fetch it or just use userName.
+                        setAuthenticatedUser(null, result.name);
+
+                        // Clean URL
+                        if (window.history.replaceState) {
+                            const cleanUrl = window.location.href.split('?')[0];
+                            window.history.replaceState({}, document.title, cleanUrl);
+                        }
+                        switchMainView(initialPage === 'tasks' ? 'tasks' : 'note');
+                    } else {
+                        showAccessDenied(result.reason);
+                    }
+                })
+                .withFailureHandler((err) => {
+                    showAccessDenied('인증 서버 연결에 실패했습니다.<br>새로고침 하거나 슬랙에서 다시 접속하세요.');
+                })
+                .validateToken(token);
+        }
+
+        function setAuthenticatedUser(uid, uname) {
+            g_userId = uid;
+            g_userName = uname;
+            userBadge.textContent = "👤 " + uname + " 님";
+
+            // [Phase 21] 관리자 여부 확인 (트래킹 및 메모 편집 제어)
+            window.isAdmin = ["송용남", "정혜림"].includes(uname);
+            window.FEATURE_MEMO_EDIT_ENABLED_USERS = ["송용남", "정혜림"];
+
+            // 모듈 초기화
+            initNoteModule();
+            // initTasksModule();
+        }
+
+        function showAccessDenied(reason) {
+            userBadge.textContent = '⛔ 미인가';
+            accessDeniedMsg.innerHTML = reason;
+            accessDeniedOverlay.style.display = 'flex';
+        }
+
+        // --- View Switching ---
+        function switchMainView(viewName) {
+            document.querySelectorAll('.gnb-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+
+            const navBtn = document.getElementById('nav' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+            const viewPanel = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+
+            if (navBtn) navBtn.classList.add('active');
+            if (viewPanel) viewPanel.classList.add('active');
+
+            if (viewName === 'tasks' && !window._tasksInitialized) {
+                if (typeof initTasksModule === 'function') initTasksModule();
+                window._tasksInitialized = true;
+            } else if (viewName === 'kanban' && !window._kanbanInitialized) {
+                loadKanban();
+                window._kanbanInitialized = true;
+            } else if (viewName === 'calendar' && !window._calendarInitialized) {
+                initCalendarModule();
+                window._calendarInitialized = true;
+            }
+        }
+
+        // --- Theme & Toast ---
+        function toggleTheme() {
+            const newTheme = currentHtmlTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        function setTheme(theme) {
+            currentHtmlTheme = theme;
+            htmlEl.setAttribute('data-theme', theme);
+            themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('judy_workspace_theme', theme);
+        }
+
+        let toastTimeout;
+        function showToast(msg, isError = false) {
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ==========================================
+        // Note Module Logic
+        // ==========================================
+        let currentMode = 'write';
+        let cachedSidebarData = null;
+
+        const memoInput = document.getElementById('memoInput');
+        const memoViewer = document.getElementById('memoViewer');
+        const folderList = document.getElementById('folderList');
+        const searchInput = document.getElementById('searchInput');
+        const editorHeader = document.getElementById('editorHeader');
+        const editorFooter = document.getElementById('editorFooter');
+        const viewTitle = document.getElementById('viewTitle');
+        const summaryOverlay = document.getElementById('summaryOverlay');
+        const summaryContent = document.getElementById('summaryContent');
+        const saveBtn = document.getElementById('saveBtn');
+        const judyFloatBtn = document.getElementById('judyFloatBtn');
+        const summarizeBtn = document.getElementById('summarizeBtn');
+        const newMemoBtn = document.getElementById('newMemoBtn');
+        const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        // 단축키
+        if (memoInput) {
+            memoInput.addEventListener('keydown', (e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentMode === 'write') saveMemo('saveFromWeb');
+                }
+            });
+        }
+
+        // 모바일 사이드바
+        function toggleMobileMenu() {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('show');
+        }
+        function closeMobileMenu() {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.remove('show');
+        }
+        document.getElementById('menuBtnMobile').addEventListener('click', toggleMobileMenu);
+        document.getElementById('menuBtnMobile2').addEventListener('click', toggleMobileMenu);
+        mobileOverlay.addEventListener('click', closeMobileMenu);
+
+        // 모드 전환
+        if (newMemoBtn) newMemoBtn.addEventListener('click', () => setToWriteMode());
+        function setToWriteMode() {
+            currentMode = 'write';
+            editorHeader.style.display = 'none';
+            editorFooter.style.display = 'flex';
+            memoInput.style.display = 'block';
+            memoViewer.style.display = 'none';
+            memoInput.value = '';
+            memoInput.focus();
+            summaryOverlay.classList.remove('show');
+            closeMobileMenu();
+        }
+
+        function setToReadMode(title, contentOrMemos, dateStr) {
+            currentMode = 'read';
+            editorHeader.style.display = 'flex';
+            editorFooter.style.display = 'none';
+            viewTitle.textContent = title;
+            memoInput.style.display = 'none';
+            memoViewer.style.display = 'flex';
+            memoViewer.style.flexDirection = 'column';
+            memoViewer.innerHTML = '';
+
+            if (Array.isArray(contentOrMemos)) {
+                contentOrMemos.forEach(m => {
+                    const block = createMemoBlock(dateStr, m.time, m.content);
+                    memoViewer.appendChild(block);
+                });
+            } else {
+                // 단일 텍스트 모드 (검색 등)
+                // dateStr과 timeStr이 없는 경우를 대비한 처리
+                memoViewer.textContent = contentOrMemos.trim();
+            }
+
+            summaryOverlay.classList.remove('show');
+            closeMobileMenu();
+        }
+
+        // 사이드바 로딩 (인증 완료 시 호출됨)
+        function initNoteModule() {
+            loadSidebarData(g_userName);
+            if (memoInput) memoInput.focus();
+        }
+
+        function loadSidebarData(userName) {
+            if (!folderList) return;
+            folderList.innerHTML = '<div class="loading-text">폴더 정보를 불러오는 중...</div>';
+            if (searchInput) searchInput.value = '';
+            google.script.run
+                .withSuccessHandler((data) => {
+                    cachedSidebarData = data;
+                    renderSidebar(data);
+                })
+                .withFailureHandler((err) => {
+                    folderList.innerHTML = `<div class="loading-text" style="color:var(--danger);">데이터를 불러오지 못했습니다.</div>`;
+                })
+                .getArchivedMemos(userName);
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value.trim();
+                    if (!query) return renderSidebar(cachedSidebarData);
+                    folderList.innerHTML = '<div class="loading-text">검색 중... 🔍</div>';
+                    google.script.run
+                        .withSuccessHandler((results) => renderSearchResults(results, query))
+                        .withFailureHandler(() => { folderList.innerHTML = '<div class="loading-text" style="color:var(--danger);">검색 실패</div>'; })
+                        .searchArchivedMemos(g_userName, query);
+                }
+            });
+        }
+
+        function renderSearchResults(results, query) {
+            folderList.innerHTML = '';
+            const clearBtn = document.createElement('div');
+            clearBtn.className = 'loading-text';
+            clearBtn.style.cursor = 'pointer';
+            clearBtn.style.color = 'var(--primary)';
+            clearBtn.textContent = '← 폴더 목록으로 돌아가기';
+            clearBtn.addEventListener('click', () => { searchInput.value = ''; renderSidebar(cachedSidebarData); });
+            folderList.appendChild(clearBtn);
+
+            if (!results || results.length === 0) {
+                folderList.innerHTML += '<div class="loading-text">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            results.forEach(res => {
+                const d = document.createElement('div');
+                d.className = 'search-result-item';
+                const dateDiv = document.createElement('div'); dateDiv.className = 'search-result-date'; dateDiv.textContent = `${res.date} ${res.time}`;
+                const textDiv = document.createElement('div'); textDiv.className = 'search-result-text';
+                const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safeQuery})`, 'gi');
+                let escapedContent = res.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                escapedContent = escapedContent.replace(regex, '<span class="highlight">$1</span>');
+                textDiv.innerHTML = escapedContent;
+                d.appendChild(dateDiv); d.appendChild(textDiv);
+
+                // 검색 결과 클릭 시 createMemoBlock을 사용해 렌더링하도록 ㅂ변경
+                d.addEventListener('click', () => {
+                    setToReadMode(res.date + " 검색 결과", [{ time: res.time, content: res.content }], res.date);
+                });
+                folderList.appendChild(d);
+            });
+        }
+
+        function renderSidebar(data) {
+            if (!data || data.length === 0) {
+                folderList.innerHTML = '<div class="loading-text">작성된 메모가 없습니다.</div>';
+                return;
+            }
+            folderList.innerHTML = '';
+            data.forEach(monthData => {
+                const folderDiv = document.createElement('div'); folderDiv.className = 'folder-item';
+                const titleDiv = document.createElement('div'); titleDiv.className = 'folder-title';
+                titleDiv.innerHTML = `<span class="folder-icon">📁</span> ${monthData.month} 업무일지`;
+                const childrenDiv = document.createElement('div'); childrenDiv.className = 'folder-children';
+
+                monthData.days.forEach(dayData => {
+                    const fileDiv = document.createElement('div'); fileDiv.className = 'file-item'; fileDiv.textContent = `📄 ${dayData.date}`;
+                    fileDiv.addEventListener('click', () => {
+                        setToReadMode(dayData.date, dayData.memos, dayData.date);
+                    });
+                    childrenDiv.appendChild(fileDiv);
+                });
+
+                titleDiv.addEventListener('click', () => folderDiv.classList.toggle('open'));
+                folderDiv.appendChild(titleDiv); folderDiv.appendChild(childrenDiv);
+                folderList.appendChild(folderDiv);
+            });
+            if (document.querySelector('.folder-item')) document.querySelector('.folder-item').classList.add('open');
+        }
+
+        // 저장 및 AI 요약
+        if (saveBtn) saveBtn.addEventListener('click', () => saveMemo());
+        if (closeSummaryBtn) closeSummaryBtn.addEventListener('click', () => summaryOverlay.classList.remove('show'));
+
+        // ===== 🐰 드래그 선택 플로팅 버튼 로직 =====
+        let _selectedTextForTask = '';
+
+        function handleTextSelection(e) {
+            // 노트 탭이 활성 상태일 때만 작동
+            if (!document.getElementById('viewNote').classList.contains('active')) return;
+
+            const selection = window.getSelection();
+            let text = selection.toString().trim();
+            let isTextarea = false;
+
+            // textarea 내부 선택 확인 (추가됨)
+            if (!text && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+                const ta = document.activeElement;
+                if (ta.selectionStart !== ta.selectionEnd) {
+                    text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+                    isTextarea = true;
+                }
+            }
+
+            if (text.length < 5) {
+                judyFloatBtn.style.display = 'none';
+                _selectedTextForTask = '';
+                return;
+            }
+
+            _selectedTextForTask = text;
+
+            const btnWidth = 120;
+            let left = 0, top = 0;
+
+            if (isTextarea && e) {
+                // textarea의 경우 마우스 위치 기반 보정
+                left = e.clientX - (btnWidth / 2);
+                top = e.clientY - 42;
+                if (top < 8) top = e.clientY + 12; // 화면 위를 벗어나면 마우스 아래로
+            } else if (selection.rangeCount > 0) {
+                // 일반 텍스트는 Range 기반
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                left = rect.left + (rect.width / 2) - (btnWidth / 2);
+                top = rect.top - 42;
+            } else if (e) {
+                left = e.clientX - (btnWidth / 2);
+                top = e.clientY - 42;
+            }
+
+            // 좌우/상하 최종 보정
+            if (left < 8) left = 8;
+            if (left + btnWidth > window.innerWidth - 8) left = window.innerWidth - btnWidth - 8;
+            if (top < 8) top = 8;
+
+            judyFloatBtn.style.left = left + 'px';
+            judyFloatBtn.style.top = top + 'px';
+            judyFloatBtn.style.display = 'flex';
+        }
+
+        // mouseup 이벤트로 텍스트 선택 감지 (읽기/쓰기 모드 모두)
+        document.addEventListener('mouseup', (e) => {
+            // 버튼 내부 클릭 시 무시
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            setTimeout(() => handleTextSelection(e), 50); // delay 약간 늘림
+        });
+        document.addEventListener('touchend', (e) => {
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            setTimeout(() => handleTextSelection(e), 50);
+        });
+
+        // 다른 곳 클릭 시 버튼 숨기기
+        document.addEventListener('mousedown', (e) => {
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            judyFloatBtn.style.display = 'none';
+        });
+        document.addEventListener('touchstart', (e) => {
+            if (e.target === judyFloatBtn || judyFloatBtn.contains(e.target)) return;
+            judyFloatBtn.style.display = 'none';
+        });
+
+        // 플로팅 버튼 클릭 시 AI 파싱 후 모달 오픈
+        judyFloatBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // 포커스 잃음 방지 및 브라우저 기본동작 제어
+            e.stopPropagation();
+        });
+
+        judyFloatBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!_selectedTextForTask) return;
+            if (!g_userName) return showToast('⛔ 인증된 사용자가 없습니다.', true);
+
+            judyFloatBtn.style.display = 'none';
+            const selectedText = _selectedTextForTask;
+            _selectedTextForTask = '';
+            window.getSelection().removeAllRanges();
+
+            showToast('🐰 AI가 선택된 내용을 분석 중입니다...');
+
+            google.script.run
+                .withSuccessHandler((res) => {
+                    if (res && res.success && res.data) {
+                        showToast('✨ 업무 추출 완료! 등록 폼을 확인해주세요.');
+                        switchMainView('tasks');
+                        setTimeout(() => { openRegModal(res.data); }, 200);
+                    } else {
+                        showToast('❌ ' + (res ? res.message : 'AI 분석 실패'), true);
+                    }
+                })
+                .withFailureHandler((err) => {
+                    showToast('❌ 서버 통신 에러', true);
+                })
+                .parseTaskFromMemoWeb(g_userName, selectedText);
+        });
+
+        function saveMemo() {
+            const text = memoInput ? memoInput.value.trim() : '';
+            if (!g_userName) return showToast('⛔ 인증된 사용자가 없습니다.', true);
+            if (!text) { if (memoInput) memoInput.focus(); return; }
+
+            saveBtn.disabled = true;
+            const prevSave = saveBtn.textContent;
+            saveBtn.textContent = "저장 중...";
+
+            google.script.run
+                .withSuccessHandler((res) => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = prevSave;
+                    if (res && res.success) {
+                        memoInput.value = "";
+                        memoInput.focus();
+                        loadSidebarData(g_userName);
+                        showToast('✅ ' + (res.message || '저장되었습니다.'));
+                    } else {
+                        showToast('❌ 에러: ' + (res ? res.message : '알 수 없는 에러'), true);
+                    }
+                })
+                .withFailureHandler((err) => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = prevSave;
+                    showToast('❌ 서버 통신 에러가 발생했습니다.', true);
+                })
+                .saveFromWeb(g_userName, text);
+        }
+
+        if (summarizeBtn) summarizeBtn.addEventListener('click', () => {
+            const text = memoViewer ? memoViewer.textContent.trim() : '';
+            if (!text) return;
+            summarizeBtn.disabled = true; summarizeBtn.textContent = "요약 중... 🪄";
+            google.script.run
+                .withSuccessHandler((res) => {
+                    summarizeBtn.disabled = false; summarizeBtn.textContent = "✨ AI 내용 요약";
+                    if (res.success) { summaryContent.textContent = res.summary; summaryOverlay.classList.add('show'); }
+                    else showToast("❌ 요약 실패: " + res.message, true);
+                })
+                .withFailureHandler(() => {
+                    summarizeBtn.disabled = false; summarizeBtn.textContent = "✨ AI 내용 요약";
+                    showToast("❌ 서버 통신 에러가 발생했습니다.", true);
+                })
+                .summarizeMemoContent(text, g_userName);
+        });
+
+        // ==========================================
+        // Tasks Dashboard Module Logic
+        // ==========================================
+        let currentTasks = [];
+        let taskCurrentTab = 'active';
+        let projectsLoaded = false;
+
+        function initTasksModule() {
+            // Dashboard는 초기에 보여질 때, 혹은 백그라운드에서 한 번만 로드
+            loadTasks();
+        }
+
+        function loadTasks() {
+            const listObj = document.getElementById('taskList');
+            if (!listObj) return;
+            listObj.innerHTML = '<div class="loading">업무 리스트를 불러오는 중...</div>';
+
+            // web_app.gs 의 getMyTasksForWeb(userId) 호출
+            // userId가 없으면 userName이라도 전달하여 시트 조회 매칭 보장
+            google.script.run
+                .withSuccessHandler(renderTasks)
+                .withFailureHandler(err => {
+                    listObj.innerHTML = `<div class="loading" style="color:var(--danger);">❌ 업무를 불러오지 못했습니다.<br>${err.message}</div>`;
+                })
+                .getMyTasksForWeb(g_userId || g_userName);
+        }
+
+        function switchTaskTab(tab) {
+            taskCurrentTab = tab;
+            document.getElementById('tab-active').classList.toggle('active', tab === 'active');
+            document.getElementById('tab-completed').classList.toggle('active', tab === 'completed');
+            renderTaskTable();
+        }
+
+        function renderTasks(tasks) {
+            currentTasks = tasks || [];
+            if (!tasks || tasks.length === 0) {
+                document.getElementById('summaryBar').innerHTML = '';
+                document.getElementById('tabsBar').style.display = 'none';
+                document.getElementById('taskList').innerHTML =
+                    '<div class="empty-state"><div class="emoji">🎉</div><p>등록된 업무가 없습니다!</p></div>';
+                return;
+            }
+
+            document.getElementById('tabsBar').style.display = 'flex';
+
+            const counts = { '진행중': 0, '대기': 0, '보류': 0, '완료': 0 };
+            tasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+            const activeCount = counts['진행중'] + counts['대기'] + counts['보류'];
+
+            // [Phase 21] 오늘 총 몰입 시간 계산 (관리자 전용)
+            let totalFocusMin = 0;
+            if (window.isAdmin) {
+                tasks.forEach(t => {
+                    if (t.durationMin) totalFocusMin += t.durationMin;
+                });
+            }
+            const focusHours = Math.floor(totalFocusMin / 60);
+            const focusMin = totalFocusMin % 60;
+
+            let summaryHtml = `
+                <div class="summary-card"><div class="count count-total">${activeCount}</div><div class="label">전체 (진행중)</div></div>
+                <div class="summary-card"><div class="count count-progress">${counts['진행중']}</div><div class="label">▶ 진행중</div></div>
+                <div class="summary-card"><div class="count count-waiting">${counts['대기']}</div><div class="label">⏸ 대기</div></div>
+                <div class="summary-card"><div class="count count-hold">${counts['보류']}</div><div class="label">🔴 보류</div></div>
+                <div class="summary-card" style="border-left:1px solid var(--border); border-radius:0;"><div class="count" style="color:var(--primary);">${counts['완료']}</div><div class="label">✅ 완료</div></div>
+            `;
+
+            if (window.isAdmin) {
+                summaryHtml += `
+                    <div class="summary-card" style="border-left: 2px solid var(--danger); background: rgba(255, 82, 82, 0.05);">
+                        <div class="count count-focus">${focusHours}h ${focusMin}m</div>
+                        <div class="label">🔥 오늘의 몰입</div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('summaryBar').innerHTML = summaryHtml;
+            renderTaskTable();
+        }
+
+        function renderTaskTable() {
+            let filteredTasks = currentTasks;
+            if (taskCurrentTab === 'active') {
+                filteredTasks = currentTasks.filter(t => t.status !== '완료');
+            } else {
+                filteredTasks = currentTasks.filter(t => t.status === '완료');
+            }
+
+            if (filteredTasks.length === 0) {
+                document.getElementById('taskList').innerHTML =
+                    '<div class="empty-state"><div class="emoji">🎉</div><p>해당 탭에 업무가 없습니다!</p></div>';
+                return;
+            }
+
+            let html = `<table class="task-table">
+                <thead><tr>
+                    <th>ID</th><th>업무 제목</th><th>프로젝트</th><th>마감일</th><th>상태</th><th>변경</th>
+                </tr></thead><tbody>`;
+
+            filteredTasks.forEach(t => {
+                const dueHtml = getDueHtml(t.dDays, t.dueDate, t.status);
+
+                // [Phase 21] 소요 시간 뱃지 생성 (관리자 전용)
+                let durationBadge = '';
+                if (window.isAdmin) {
+                    if (t.status === '완료' && t.durationMin) {
+                        const h = Math.floor(t.durationMin / 60);
+                        const m = t.durationMin % 60;
+                        durationBadge = `<div class="duration-badge">⏱️ ${h > 0 ? h + 'h ' : ''}${m}m 소요</div>`;
+                    } else if (t.status === '진행중' && t.startTime) {
+                        const elapsedMs = new Date() - new Date(t.startTime);
+                        const elapsedMin = Math.floor(elapsedMs / (1000 * 60));
+                        const h = Math.floor(elapsedMin / 60);
+                        const m = elapsedMin % 60;
+                        durationBadge = `<div class="duration-badge duration-active">🔥 ${h > 0 ? h + 'h ' : ''}${m}m 돌파 중</div>`;
+                    }
+                }
+
+                html += `<tr id="row-${t.row}" class="clickable-row" onclick="openEditModal(${t.row})">
+                    <td style="font-weight:600; color:var(--primary);">${t.id || '-'}</td>
+                    <td>
+                        <div>${t.title}</div>
+                        ${durationBadge}
+                    </td>
+                    <td style="color:var(--hint-color); font-size:13px;">${t.project}</td>
+                    <td>${dueHtml}</td>
+                    <td><span class="status-badge badge-${t.status}">${getStatusEmoji(t.status)} ${t.status}</span></td>
+                    <td onclick="event.stopPropagation()">
+                        <select class="status-select" onchange="changeTaskStatus(${t.row}, this.value, '${t.id}')">
+                            <option value="진행중" ${t.status === '진행중' ? 'selected' : ''}>▶ 진행중</option>
+                            <option value="대기" ${t.status === '대기' ? 'selected' : ''}>⏸ 대기</option>
+                            <option value="보류" ${t.status === '보류' ? 'selected' : ''}>🔴 보류</option>
+                            <option value="완료" ${t.status === '완료' ? 'selected' : ''}>✅ 완료</option>
+                        </select>
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('taskList').innerHTML = html;
+        }
+
+        function getDueHtml(dDays, dueDate, status) {
+            if (status === '완료') return '<span class="due-tag due-normal">✅ 마감됨</span>';
+            if (dDays === null || dDays === undefined) return '<span class="due-tag due-normal">-</span>';
+            if (dDays < 0) return `<span class="due-tag due-overdue">🚨 ${Math.abs(dDays)}일 초과</span>`;
+            if (dDays === 0) return `<span class="due-tag due-today">🔥 오늘!</span>`;
+            if (dDays === 1) return `<span class="due-tag due-tomorrow">⚠️ 내일</span>`;
+            return `<span class="due-tag due-normal">📅 ${dueDate}</span>`;
+        }
+
+        function getStatusEmoji(s) {
+            return s === '진행중' ? '▶' : s === '대기' ? '⏸' : s === '보류' ? '🔴' : '✅';
+        }
+
+        function changeTaskStatus(row, newStatus, taskId) {
+            const task = currentTasks.find(t => t.row === row);
+            const oldStatus = task ? task.status : "";
+
+            showToast('⏳ 상태 변경 중...');
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        showToast('✅ ' + (taskId || '') + ' → ' + newStatus + ' 완료!');
+                        if (newStatus === '완료') loadTasks();
+                    } else {
+                        handleApiError(res.message, () => {
+                            // Revert in UI if list view (re-render)
+                            renderTaskTable();
+                        });
+                    }
+                })
+                .withFailureHandler(err => handleApiError(err.message))
+                .changeTaskStatusFromWeb(row, newStatus, g_userName);
+        }
+
+        /**
+         * [Phase 23] 통합 에러 핸들러
+         */
+        function handleApiError(msg, revertCallback) {
+            if (msg === "ERR_LOCK_TIMEOUT") {
+                // Level 2 Core Error: 중앙 모달 노출
+                document.getElementById('errorModal').style.display = 'flex';
+                document.getElementById('errorModalMsg').innerHTML =
+                    `다른 사용자가 현재 업무를 수정하고 있습니다.<br><b>데이터 정합성을 위해 새로고침 후 다시 시도해주세요.</b>`;
+            } else {
+                // Level 1 Networking Error: 토스트 노출
+                showToast('❌ ' + msg, true);
+                if (revertCallback) revertCallback();
+            }
+        }
+
+        // ==========================================
+        // Modal Control
+        // ==========================================
+        function openRegModal(prefillData = null) {
+            document.getElementById('regModalOverlay').classList.add('show');
+            document.getElementById('formTitle').value = '';
+            document.getElementById('formDesc').value = '';
+            document.getElementById('formDue').value = '';
+            document.getElementById('formStatus').value = '대기';
+
+            // [Phase 4] 추출 데이터가 있으면 폼에 채워넣기
+            if (prefillData) {
+                if (prefillData.title) document.getElementById('formTitle').value = prefillData.title;
+                if (prefillData.desc) document.getElementById('formDesc').value = prefillData.desc;
+                if (prefillData.due) document.getElementById('formDue').value = prefillData.due;
+            }
+
+            if (!projectsLoaded) loadProjectsList();
+        }
+        function closeRegModal() { document.getElementById('regModalOverlay').classList.remove('show'); }
+
+        function loadProjectsList() {
+            google.script.run
+                .withSuccessHandler(projects => {
+                    const sel = document.getElementById('formProject');
+                    sel.innerHTML = '';
+                    projects.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.value; opt.textContent = p.text.text || p.text;
+                        sel.appendChild(opt);
+                    });
+                    projectsLoaded = true;
+                })
+                .withFailureHandler(err => {
+                    document.getElementById('formProject').innerHTML = '<option>지표 로드 실패</option>';
+                })
+                .getProjectOptionsForWeb();
+        }
+
+        function submitNewTask() {
+            const projectSel = document.getElementById('formProject');
+            const projectCode = projectSel.value;
+            const projectName = projectCode ? projectSel.options[projectSel.selectedIndex].text : "";
+            const title = document.getElementById('formTitle').value.trim();
+            const desc = document.getElementById('formDesc').value.trim();
+            const due = document.getElementById('formDue').value;
+            const status = document.getElementById('formStatus').value;
+
+            if (!title) return showToast('❌ 제목을 입력하세요', true);
+
+            const btn = document.getElementById('submitRegBtn');
+            btn.disabled = true; btn.textContent = '등록 중...';
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    btn.disabled = false; btn.textContent = '등록하기';
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        closeRegModal(); loadTasks();
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .withFailureHandler(err => {
+                    btn.disabled = false; btn.textContent = '등록하기';
+                    showToast('❌ ' + err.message, true);
+                })
+                .registerTaskFromWeb(g_userId || g_userName, projectCode, projectName, title, desc, due, status);
+        }
+
+        // === 업무 상세/수정 모달 ===
+        function openEditModal(rowNum) {
+            const task = currentTasks.find(t => t.row === rowNum);
+            if (!task) return;
+            document.getElementById('editRowNum').value = task.row;
+            document.getElementById('editTitle').value = task.title || '';
+            document.getElementById('editDesc').value = task.desc || '';
+            document.getElementById('editDue').value = task.rawDueStr || '';
+            document.getElementById('editStatus').value = task.status || '대기';
+            document.getElementById('editModalOverlay').classList.add('show');
+        }
+        function closeEditModal() { document.getElementById('editModalOverlay').classList.remove('show'); }
+
+        function submitEditedTask() {
+            const rowNum = parseInt(document.getElementById('editRowNum').value, 10);
+            const title = document.getElementById('editTitle').value.trim();
+            const desc = document.getElementById('editDesc').value.trim();
+            const due = document.getElementById('editDue').value;
+            const status = document.getElementById('editStatus').value;
+
+            if (!title) return showToast('❌ 제목을 입력하세요', true);
+
+            const btn = document.getElementById('submitEditBtn');
+            btn.disabled = true; btn.textContent = '수정 중...';
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    btn.disabled = false; btn.textContent = '수정하기';
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        closeEditModal(); loadTasks();
+                    } else { handleApiError(res.message); }
+                })
+                .withFailureHandler(err => {
+                    btn.disabled = false; btn.textContent = '수정하기';
+                    handleApiError(err.message);
+                })
+                .updateTaskFromWeb(rowNum, title, desc, due, status, g_userName);
+        }
+
+        // ==========================================
+        // Kanban Module Logic [Phase 23]
+        // ==========================================
+        let kanbanTasks = [];
+
+        function loadKanban() {
+            const board = document.getElementById('kanbanBoard');
+            board.innerHTML = '<div class="loading">칸반 데이터를 불러오는 중...</div>';
+
+            google.script.run
+                .withSuccessHandler(tasks => {
+                    kanbanTasks = tasks || [];
+                    renderKanban();
+                })
+                .withFailureHandler(err => {
+                    board.innerHTML = `<div class="loading" style="color:var(--danger);">❌ 데이터를 불러오지 못했습니다.<br>${err.message}</div>`;
+                })
+                .getAllTasksForWeb(g_userId || g_userName);
+        }
+
+        function renderKanban() {
+            const board = document.getElementById('kanbanBoard');
+            board.innerHTML = '';
+
+            const columns = [
+                { id: '대기', title: '⏸ 대기', emoji: '⏸' },
+                { id: '진행중', title: '▶ 진행 중', emoji: '▶' },
+                { id: '보류', title: '🔴 보류', emoji: '🔴' }
+            ];
+
+            columns.forEach(col => {
+                const colEl = document.createElement('div');
+                colEl.className = 'kanban-column';
+                colEl.id = `col-${col.id}`;
+                colEl.dataset.status = col.id;
+
+                const filtered = kanbanTasks.filter(t => t.status === col.id);
+
+                colEl.innerHTML = `
+                    <div class="kanban-column-header">
+                        <h3>${col.emoji} ${col.title}</h3>
+                        <span class="kanban-task-count">${filtered.length}</span>
+                    </div>
+                    <div class="kanban-task-list" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                        <!-- Cards will be injected here -->
+                    </div>
+                `;
+
+                const listEl = colEl.querySelector('.kanban-task-list');
+                filtered.forEach(task => {
+                    const card = createKanbanCard(task);
+                    listEl.appendChild(card);
+                });
+
+                board.appendChild(colEl);
+            });
+        }
+
+        function createKanbanCard(task) {
+            const card = document.createElement('div');
+            card.className = 'kanban-card';
+            card.draggable = true;
+            card.id = `task-${task.id}`;
+            card.dataset.row = task.row;
+            card.dataset.id = task.id;
+            card.dataset.status = task.status;
+
+            const dueHtml = task.dDays !== null ? `<span class="${task.dDays < 0 ? 'due-overdue' : ''}">${task.dueDate}</span>` : '-';
+
+            card.innerHTML = `
+                <div class="title">${task.title}</div>
+                <div class="meta">
+                    <span class="project-tag">${task.project}</span>
+                    <span class="due-tag">${dueHtml}</span>
+                </div>
+            `;
+
+            card.ondragstart = handleDragStart;
+            card.ondragend = handleDragEnd;
+            card.onclick = () => openEditModal(task.row);
+
+            return card;
+        }
+
+        // --- Drag & Drop Handlers ---
+        let draggedCard = null;
+
+        function handleDragStart(e) {
+            draggedCard = e.currentTarget;
+            draggedCard.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', draggedCard.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            if (draggedCard) draggedCard.classList.remove('dragging');
+            draggedCard = null;
+            document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const col = e.currentTarget.closest('.kanban-column');
+            if (col) col.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            const col = e.currentTarget.closest('.kanban-column');
+            if (col) col.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const listEl = e.currentTarget;
+            const col = listEl.closest('.kanban-column');
+            col.classList.remove('drag-over');
+
+            const newStatus = col.dataset.status;
+            const taskId = e.dataTransfer.getData('text/plain');
+            const card = document.getElementById(`task-${taskId}`);
+
+            if (!card || card.dataset.status === newStatus) return;
+
+            const oldStatus = card.dataset.status;
+            const rowNum = parseInt(card.dataset.row, 10);
+
+            // --- [Optimistic UI] ---
+            // 1. UI 즉시 이동
+            listEl.appendChild(card);
+            card.dataset.status = newStatus;
+            updateColumnCount();
+
+            // 2. 서버 통신
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        showToast(`✅ ${taskId} 상태 변경 완료!`);
+                        // 내부 데이터 동기화
+                        const t = kanbanTasks.find(x => x.id === taskId);
+                        if (t) t.status = newStatus;
+                    } else {
+                        // Level 2 에러 여부 확인 및 롤백
+                        handleApiError(res.message, () => {
+                            rollbackCard(card, oldStatus);
+                        });
+                    }
+                })
+                .withFailureHandler(err => {
+                    handleApiError(err.message, () => {
+                        rollbackCard(card, oldStatus);
+                    });
+                })
+                .changeTaskStatusFromWeb(rowNum, newStatus, g_userName);
+        }
+
+        function rollbackCard(card, oldStatus) {
+            const oldColList = document.querySelector(`#col-${oldStatus} .kanban-task-list`);
+            if (oldColList) {
+                oldColList.appendChild(card);
+                card.dataset.status = oldStatus;
+                updateColumnCount();
+                showToast('🚨 동기화 실패: 원래 상태로 되돌립니다.', true);
+            }
+        }
+
+        function updateColumnCount() {
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                const count = col.querySelectorAll('.kanban-card').length;
+                col.querySelector('.kanban-task-count').textContent = count;
+            });
+        }
+
+        // ==========================================
+        // Calendar Module Logic [Phase 23]
+        // ==========================================
+        let calendar = null;
+
+        function initCalendarModule() {
+            const calendarEl = document.getElementById('calendar');
+            if (!calendarEl) return;
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                height: 'parent',
+                editable: true,
+                droppable: true,
+                eventClick: function (info) {
+                    if (info.event.extendedProps.row) {
+                        openEditModal(info.event.extendedProps.row);
+                    }
+                },
+                eventDrop: handleCalendarEventDrop
+            });
+
+            calendar.render();
+            loadCalendar();
+        }
+
+        function loadCalendar() {
+            if (!calendar) return;
+
+            showToast('📅 일정 불러오는 중...');
+            google.script.run
+                .withSuccessHandler(tasks => {
+                    const events = tasks.filter(t => t.rawDueStr).map(t => ({
+                        id: t.id,
+                        title: `[${t.project}] ${t.title}`,
+                        start: t.rawDueStr,
+                        allDay: true,
+                        extendedProps: {
+                            row: t.row,
+                            status: t.status
+                        },
+                        color: t.status === '진행중' ? '#64b5f6' : (t.status === '대기' ? '#ffb74d' : '#888888')
+                    }));
+
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(events);
+                })
+                .withFailureHandler(err => showToast('❌ 캘린더 로드 실패: ' + err.message, true))
+                .getAllTasksForWeb(g_userId || g_userName);
+        }
+
+        function handleCalendarEventDrop(info) {
+            const rowNum = info.event.extendedProps.row;
+            const newDate = info.event.startStr;
+            const taskId = info.event.id;
+
+            showToast(`⏳ ${taskId} 마감일 변경 중...`);
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        showToast(`✅ ${taskId} 마감일이 ${newDate}로 변경되었습니다.`);
+                        // 내부 데이터 동기화 (캐시된 데이터 업데이트)
+                        const t = kanbanTasks.find(x => x.id === taskId);
+                        if (t) {
+                            t.rawDueStr = newDate;
+                            // MM/DD 포맷 업데이트
+                            const d = new Date(newDate);
+                            t.dueDate = (d.getMonth() + 1) + "/" + d.getDate();
+                        }
+                    } else {
+                        handleApiError(res.message, () => {
+                            info.revert();
+                        });
+                    }
+                })
+                .withFailureHandler(err => {
+                    handleApiError(err.message, () => {
+                        info.revert();
+                    });
+                })
+                .changeTaskDueDateFromWeb(rowNum, newDate, g_userName);
+        }
+
+        // ==========================================
+        // Note V2 Actions: Create, Edit, Toggle, Delete
+        // ==========================================
+        function createMemoBlock(dateStr, timeStr, originalContent) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'memo-block';
+
+            let currentContent = originalContent;
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'memo-header';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'memo-time';
+            timeSpan.textContent = `[${timeStr}]`;
+            headerDiv.appendChild(timeSpan);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'action-buttons';
+            const btnAddTask = document.createElement('button'); btnAddTask.className = 'action-add-task'; btnAddTask.innerHTML = '📋'; btnAddTask.title = '업무 등록하기';
+            const btnEdit = document.createElement('button'); btnEdit.className = 'action-edit'; btnEdit.innerHTML = '✏️'; btnEdit.title = '수정';
+            const btnDone = document.createElement('button'); btnDone.className = 'action-done'; btnDone.innerHTML = '✓'; btnDone.title = '완료(취소선)';
+            const btnDel = document.createElement('button'); btnDel.className = 'action-delete danger'; btnDel.innerHTML = '🗑️'; btnDel.title = '삭제';
+
+            actionsDiv.appendChild(btnAddTask);
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnDone);
+            actionsDiv.appendChild(btnDel);
+            headerDiv.appendChild(actionsDiv);
+
+            if (!window.FEATURE_MEMO_EDIT_ENABLED_USERS.includes(g_userName)) {
+                actionsDiv.style.display = 'none';
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'memo-content';
+            contentDiv.textContent = currentContent;
+
+            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                contentDiv.style.textDecoration = 'line-through';
+                contentDiv.style.color = 'var(--hint-color)';
+            }
+
+            const editForm = document.createElement('div');
+            editForm.className = 'memo-edit-form';
+            editForm.style.display = 'none';
+            const textarea = document.createElement('textarea');
+            textarea.className = 'edit-input';
+            const editActions = document.createElement('div');
+            editActions.className = 'edit-actions';
+            const btnSaveEdit = document.createElement('button'); btnSaveEdit.className = 'btn-save-sm'; btnSaveEdit.textContent = '저장';
+            const btnCancelEdit = document.createElement('button'); btnCancelEdit.className = 'btn-cancel-sm'; btnCancelEdit.textContent = '취소';
+
+            editActions.appendChild(btnCancelEdit);
+            editActions.appendChild(btnSaveEdit);
+            editForm.appendChild(textarea);
+            editForm.appendChild(editActions);
+
+            wrapper.appendChild(headerDiv);
+            wrapper.appendChild(contentDiv);
+            wrapper.appendChild(editForm);
+
+            btnEdit.addEventListener('click', () => {
+                contentDiv.style.display = 'none';
+                editForm.style.display = 'flex';
+                let editableText = currentContent;
+                if (editableText.startsWith('~~') && editableText.endsWith('~~')) {
+                    editableText = editableText.substring(2, editableText.length - 2);
+                }
+                textarea.value = editableText;
+                textarea.focus();
+            });
+
+            btnCancelEdit.addEventListener('click', () => {
+                contentDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            });
+
+            btnSaveEdit.addEventListener('click', () => {
+                const newText = textarea.value.trim();
+                if (!newText || newText === currentContent) { btnCancelEdit.click(); return; }
+                btnSaveEdit.disabled = true; btnSaveEdit.textContent = '저장 중...';
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
+                        if (res.success) {
+                            currentContent = res.newContent;
+                            contentDiv.textContent = currentContent;
+                            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                                contentDiv.style.textDecoration = 'line-through';
+                                contentDiv.style.color = 'var(--hint-color)';
+                            } else {
+                                contentDiv.style.textDecoration = 'none';
+                                contentDiv.style.color = '';
+                            }
+                            btnCancelEdit.click();
+                            showToast('메모가 수정되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            showToast('❌ 수정 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
+                        showToast('❌ 서버 통신 에러', true);
+                    })
+                    .editArchivedMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent, newContent: newText });
+            });
+
+            btnDone.addEventListener('click', () => {
+                btnDone.disabled = true;
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btnDone.disabled = false;
+                        if (res.success) {
+                            currentContent = res.newContent;
+                            contentDiv.textContent = currentContent;
+                            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                                contentDiv.style.textDecoration = 'line-through';
+                                contentDiv.style.color = 'var(--hint-color)';
+                            } else {
+                                contentDiv.style.textDecoration = 'none';
+                                contentDiv.style.color = '';
+                            }
+                            showToast('상태가 변경되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            showToast('❌ 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        btnDone.disabled = false;
+                        showToast('❌ 통신 에러', true);
+                    })
+                    .toggleStrikethroughMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent });
+            });
+
+            btnAddTask.addEventListener('mousedown', (e) => {
+                // 클릭 시 포커스 이동으로 인한 텍스트 선택(Selection) 해제 방지
+                e.preventDefault();
+            });
+
+            btnAddTask.addEventListener('click', () => {
+                const selection = window.getSelection();
+                let selectedText = selection.toString().trim();
+
+                // 에디터(textarea) 내부의 텍스트가 선택된 경우 보정
+                if (!selectedText && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+                    const ta = document.activeElement;
+                    if (ta.selectionStart !== ta.selectionEnd) {
+                        selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+                    }
+                }
+
+                if (selectedText.length >= 2) {
+                    // 선택된 텍스트가 있다면 해당 텍스트를 제목으로 채움
+                    openRegModal({ title: selectedText });
+                    return;
+                }
+
+                // 선택된 텍스트가 없다면 전체 메모 내용을 기본 제목으로 사용
+                let cleanContent = currentContent;
+                if (cleanContent.startsWith('~~') && cleanContent.endsWith('~~')) {
+                    cleanContent = cleanContent.substring(2, cleanContent.length - 2);
+                }
+                openRegModal({ title: cleanContent });
+            });
+
+            btnDel.addEventListener('click', () => {
+                executeDeleteFlow(wrapper, g_userName, dateStr, timeStr, currentContent);
+            });
+
+            wrapper.addEventListener('touchstart', () => {
+                wrapper.classList.add('touched');
+                setTimeout(() => wrapper.classList.remove('touched'), 3000);
+            });
+
+            return wrapper;
+        }
+
+        let currentDeleteAction = null;
+        function executeDeleteFlow(memoBlock, userName, dateStr, timeStr, originalContent) {
+            const preview = originalContent.length > 50 ? originalContent.substring(0, 50) + "..." : originalContent;
+            document.getElementById('confirmMsg').innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
+            currentDeleteAction = () => {
+                document.getElementById('confirmModal').style.display = 'none';
+                const btnDel = memoBlock.querySelector('.action-delete');
+                if (btnDel) btnDel.disabled = true;
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) {
+                            memoBlock.style.transition = 'opacity 0.3s';
+                            memoBlock.style.opacity = '0';
+                            setTimeout(() => memoBlock.remove(), 300);
+                            showToast('🗑️ 메모가 삭제되었습니다.');
+                            cachedSidebarData = null;
+                        } else {
+                            if (btnDel) btnDel.disabled = false;
+                            showToast('❌ 삭제 실패: ' + res.message, true);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        if (btnDel) btnDel.disabled = false;
+                        showToast('❌ 통신 에러', true);
+                    })
+                    .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
+            }
+            document.getElementById('confirmModal').style.display = 'flex';
+            document.getElementById('confirmCancelBtn').focus();
+        }
+
+        document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+            document.getElementById('confirmModal').style.display = 'none';
+            currentDeleteAction = null;
+        });
+        document.getElementById('confirmOkBtn').addEventListener('click', () => {
+            if (currentDeleteAction) currentDeleteAction();
+        });
+
+        // 초기 포커스
+        if (memoInput) memoInput.focus();
+
+    </script>
+</body>
+
+</html>

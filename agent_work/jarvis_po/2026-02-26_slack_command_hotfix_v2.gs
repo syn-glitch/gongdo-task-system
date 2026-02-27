@@ -583,14 +583,10 @@ function handleModalSubmission(payloadStr) {
     }
     
     // 1. 임시 공간에 데이터 저장 (담당자 ID 추가)
-    // [v3 핫픽스] 대용량 JSON 저장은 속도가 빠른 CacheService로, 키 관리는 PropertiesService로 하이브리드 저장
     const taskData = { project, projectCode, title, desc, username, ssId, dueDate, userId, assignedUserId };
     const props = PropertiesService.getScriptProperties();
-    const cache = CacheService.getScriptCache();
     const uniqueId = "TASK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
-    
-    props.setProperty(uniqueId, "1"); // 1바이트 플래그 기록 (매우 빠름)
-    cache.put(uniqueId, JSON.stringify(taskData), 600); // 10분간 캐시로 유지 (매우 빠름)
+    props.setProperty(uniqueId, JSON.stringify(taskData));
     
     // 2. 알람 예약 (백그라운드에서 시트 기록)
     ScriptApp.newTrigger("processAsyncTasks")
@@ -598,25 +594,7 @@ function handleModalSubmission(payloadStr) {
       .after(1) 
       .create();
     
-    // 3. 모달 제출 즉시 사용자에게 "등록 중" 메시지 전송 (Optimistic UI 피드백)
-    const responsePayload = {
-      "response_action": "update",
-      "view": {
-        "type": "modal",
-        "title": { "type": "plain_text", "text": "등록 중..." },
-        "blocks": [
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": "⏳ *업무를 등록하고 있습니다...*\n구글 시트와 캘린더에 저장 중이니 잠시만 기다려주세요."
-            }
-          }
-        ]
-      }
-    };
-    return ContentService.createTextOutput(JSON.stringify(responsePayload))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput("");
   }
   
   return ContentService.createTextOutput("");
@@ -635,19 +613,12 @@ function processAsyncTasks(e) {
     }
   }
 
-  const cache = CacheService.getScriptCache();
   const props = PropertiesService.getScriptProperties();
   const allProps = props.getProperties();
   
   for (const key in allProps) {
     if (key.startsWith("TASK_")) {
-      const cachedData = cache.get(key);
-      if (!cachedData) {
-        // 캐시 데이터가 만료되거나 비어있으면 찌꺼기 키만 남은 것이므로 삭제하고 무시
-        props.deleteProperty(key);
-        continue;
-      }
-      const data = JSON.parse(cachedData);
+      const data = JSON.parse(allProps[key]);
       
       try {
         const ss = SpreadsheetApp.openById(data.ssId);
@@ -758,7 +729,6 @@ function processAsyncTasks(e) {
       } finally {
         // 성공하든 실패하든 무조건 큐에서 삭제하여 고아(Orphaned) 찌꺼기가 남는 것을 영구 방지
         props.deleteProperty(key);
-        cache.remove(key); // 캐시 메모리 해제
       }
     }
   }
@@ -1067,49 +1037,4 @@ function handleStatusChange(payloadStr) {
   });
 
   return ContentService.createTextOutput("");
-}
-
-/**
- * [QA 제안 v2] 프로젝트 캐시 워밍업 함수
- * - 매 10분마다 실행하여 캐시 만료 방지
- * - 스크립트 편집기 → 트리거 → 매 10분 실행으로 수동 등록 요망
- */
-function warmupProjectCache() {
-  try {
-    Logger.log("=== 프로젝트 캐시 워밍업 시작 ===");
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Projects");
-    if (!sheet || sheet.getLastRow() < 2) {
-      Logger.log("[WARN] Projects 시트가 비어있거나 존재하지 않음");
-      return;
-    }
-
-    const data = sheet.getDataRange().getValues();
-    const options = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const name = String(data[i][0]).trim();
-      const code = String(data[i][1]).trim();
-      const active = String(data[i][2]).trim();
-
-      if (name && code && active !== "미사용") {
-        options.push({
-          text: { type: "plain_text", text: name },
-          value: code
-        });
-      }
-    }
-
-    const result = options.length > 0
-      ? options
-      : [{ text: { type: "plain_text", text: "기본 프로젝트" }, value: "DEFAULT" }];
-
-    const cache = CacheService.getScriptCache();
-    cache.put("PROJECT_OPTIONS_CACHE", JSON.stringify(result), 3600); // 1시간 캐싱
-
-    Logger.log(`[SUCCESS] 캐시 워밍업 완료: ${result.length}개 프로젝트`);
-  } catch (e) {
-    Logger.log("[ERROR] warmupProjectCache 실패: " + e.message);
-  }
 }
