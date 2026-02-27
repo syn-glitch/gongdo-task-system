@@ -57,7 +57,9 @@ function jarvis_AutoDevelopmentTrigger() {
                             `위의 기존 코드 컨텍스트와 룰북을 철저히 분석하여, 기존 아키텍처 및 CSS 구조와 100% 호환되는 최적의 기획서 및 수정 코드를 마크다운으로 산출하세요.`;
           
           const devDocContent = callOpenAIAPI(usrPrompt, sysPrompt);
-          const fileUrl = createDriveFile(taskId + "_Jarvis_Dev_Doc", devDocContent);
+          // [Phase 4] 드라이브 대신 GitHub 리포지토리로 바로 Commit
+          const gitPath = `agent_work/tasks/${taskId}/Jarvis_Dev_Doc.md`;
+          const fileUrl = uploadToGitHub(gitPath, devDocContent, `feat(agent): 자비스 ${taskId} 1차 개발 기획서 작성`);
           
           sheet.getRange(rowNum, 5).setValue(fileUrl);  // 개발_문서_링크 (E)
           sheet.getRange(rowNum, 10).setValue(new Date());// 등록_시간 (J)
@@ -86,7 +88,7 @@ function jarvis_AutoDevelopmentTrigger() {
         // Phase 2 연동: F열(QA 문서 링크)의 불합격 사유(.md)를 읽어와서 코드 수정
         try {
           const qaUrl = data[i][5]; // F: QA 문서 링크
-          const qaContent = getDriveFileContent(qaUrl);
+          const qaContent = getGitHubFileContent(qaUrl);
           
           let pingPongNum = parseInt(data[i][11], 10); // L: 핑퐁_횟수
           if (isNaN(pingPongNum)) pingPongNum = 0;
@@ -103,7 +105,9 @@ function jarvis_AutoDevelopmentTrigger() {
           const usrPrompt = "이전 QA 피드백 내용:\n" + qaContent + "\n\n결과를 바탕으로 버그를 고치고 수정된 문서를 산출하세요.";
           
           const devDocContent = callOpenAIAPI(usrPrompt, sysPrompt);
-          const fileUrl = createDriveFile(taskId + `_Jarvis_Dev_Fix_v${newPingPong}`, devDocContent);
+          // [Phase 4] 드라이브 대신 GitHub 리포지토리로 바로 Commit
+          const gitPath = `agent_work/tasks/${taskId}/Jarvis_Dev_Fix_v${newPingPong}.md`;
+          const fileUrl = uploadToGitHub(gitPath, devDocContent, `fix(agent): 자비스 ${taskId} ${newPingPong}차 디버깅 소스 작성`);
           
           sheet.getRange(rowNum, 5).setValue(fileUrl);
           sheet.getRange(rowNum, 12).setValue(newPingPong); // L열 (핑퐁_횟수) 기록 업데이트
@@ -153,7 +157,7 @@ function kimQA_AutoReviewTrigger() {
         // Phase 2: E열(개발 문서 링크)을 분석하여 에러 검출 로직
         try {
           const devUrl = data[i][4]; // E: 개발 문서 링크
-          const devContent = getDriveFileContent(devUrl);
+          const devContent = getGitHubFileContent(devUrl);
           
           // [RAG 연동 - Phase 1] 깃허브에서 최신 룰북 자동 로드
           const qaRules = fetchGitHubRaw("qa/QA_PROCESS_V2.md");
@@ -187,7 +191,16 @@ function kimQA_AutoReviewTrigger() {
           
           const errorCount = parsedQA.errorCount;
 
-          const fileUrl = createDriveFile(taskId + "_Kim_QA_Report", qaResultText);
+          // [Phase 4] 드라이브 대신 GitHub 리포지토리로 바로 Commit
+          let pingPongNum = parseInt(data[i][11], 10);
+          if (isNaN(pingPongNum)) pingPongNum = 0;
+          
+          const gitPath = `agent_work/tasks/${taskId}/Kim_QA_Report_v${pingPongNum}.md`;
+          const commitMsg = errorCount > 0 
+              ? `test(agent): 김감사 ${taskId} QA 검수 (에러 ${errorCount}건 반려)` 
+              : `test(agent): 김감사 ${taskId} QA 검수 (최종 통과)`;
+              
+          const fileUrl = uploadToGitHub(gitPath, qaResultText, commitMsg);
           
           sheet.getRange(rowNum, 6).setValue(fileUrl); // F열 QA 문서
           sheet.getRange(rowNum, 8).setValue(errorCount); // H열 에러 카운트
@@ -319,29 +332,69 @@ function callOpenAIAPI(userPrompt, systemPrompt) {
 }
 
 /**
- * 구글 드라이브 파일 읽기 (DriveApp)
+ * [Phase 4 함수] GitHub File 업로드 (DriveApp 대체)
+ * 지정된 경로에 파일을 커밋하고, 확인할 수 있는 브라우저 주소를 리턴합니다.
  */
-function getDriveFileContent(driveLink) {
-  if (!driveLink) return "내용 없음";
-  const fileIdMatch = driveLink.match(/[-\w]{25,}/);
-  if (!fileIdMatch) return "올바르지 않은 구글 드라이브 링크";
+function uploadToGitHub(filePath, content, commitMessage) {
+  const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+  if (!GITHUB_TOKEN) throw new Error("GITHUB_TOKEN이 설정되지 않았습니다.");
   
+  const repo = "syn-glitch/gongdo-task-system";
+  const branch = "main";
+  const url = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+  
+  // 1. 기존 파일 sha 존재 여부 확인 (덮어쓰기를 위함)
+  let sha = null;
   try {
-    const file = DriveApp.getFileById(fileIdMatch[0]);
-    return file.getBlob().getDataAsString();
-  } catch(e) {
-    return "문서를 읽어올 수 없습니다: " + e.message;
+    const getRes = UrlFetchApp.fetch(url, {
+      headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+      muteHttpExceptions: true
+    });
+    if (getRes.getResponseCode() === 200) {
+      sha = JSON.parse(getRes.getContentText()).sha;
+    }
+  } catch(e) {}
+  
+  // 2. Base64 인코딩 후 PUT Commit 전송
+  const payload = {
+    message: commitMessage || `Auto-generated: ${filePath}`,
+    content: Utilities.base64Encode(Utilities.newBlob(content).getBytes()),
+    branch: branch
+  };
+  
+  if (sha) payload.sha = sha;
+  
+  const options = {
+    method: "put",
+    contentType: "application/json",
+    headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  const response = UrlFetchApp.fetch(url, options);
+  if (response.getResponseCode() === 200 || response.getResponseCode() === 201) {
+    return `https://github.com/${repo}/blob/${branch}/${filePath}`;
+  } else {
+    throw new Error("GitHub 업로드 실패: " + response.getContentText());
   }
 }
 
 /**
- * 구글 드라이브에 마크다운 문서 생성 및 링크 반환
+ * [Phase 4 함수] GitHub URL 읽어오기 (getDriveFileContent 대체)
  */
-function createDriveFile(fileName, content) {
-  const file = DriveApp.createFile(fileName + ".md", content, MimeType.PLAIN_TEXT);
-  // 외부 열람이 가능하도록 권한 수정
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return file.getUrl();
+function getGitHubFileContent(githubUrl) {
+  if (!githubUrl || !githubUrl.includes("github.com")) return "문서 내용 없음";
+  
+  // https://github.com/syn-glitch/gongdo/blob/main/agent_work/... 형식을
+  // api.github.com/repos/.../contents/... 주소로 변환
+  const repo = "syn-glitch/gongdo-task-system";
+  const filePathMatch = githubUrl.match(/blob\/main\/(.+)$/);
+  
+  if (!filePathMatch) return `[API 읽기용 URL 변환 실패] - ${githubUrl}`;
+  
+  const filePath = filePathMatch[1];
+  return fetchGitHubRaw(filePath); // 이미 만들어둔 RAG 함수 재활용!
 }
 
 /**
