@@ -46,8 +46,15 @@ function jarvis_AutoDevelopmentTrigger() {
         
         // Phase 2: OpenAI (GPT) 기반 요구사항 분석 및 로컬(구글 드라이브) 문서 생성 처리 로직
         try {
-          const sysPrompt = "당신은 구글 앱스 스크립트 특급 개발자 에이전트 자비스(Jarvis)입니다. 사용자의 요구사항을 받아 완벽한 구조의 코드를 작성하고 마크다운 문서로 보고서를 제출합니다.";
-          const usrPrompt = "요청 사항:\n" + reqContent + "\n\n요구사항을 분석하여 개발된 코드 및 기획서를 마크다운으로 작성해주세요.";
+          // [RAG 연동 - Phase 1] 문맥 파악을 위한 깃허브 원본 로드 (10분 캐시)
+          const coreCode = fetchGitHubRaw("src/frontend/judy_workspace.html");
+          const teamRules = fetchGitHubRaw("qa/qa_team_rules.md");
+          
+          const sysPrompt = "당신은 구글 앱스 스크립트 특급 개발자 에이전트 자비스(Jarvis)입니다. 사용자의 요구사항을 받은 후, RAG로 주입된 기존 소스 코드와 완벽하게 호환되도록 개발하고 마크다운 문서로 보고서를 제출합니다.";
+          const usrPrompt = `요청 사항:\n${reqContent}\n\n` + 
+                            `=== [RAG 1] 기존 핵심 소스 코드 (judy_workspace.html) ===\n${coreCode}\n\n` +
+                            `=== [RAG 2] 팀 운영 규칙 ===\n${teamRules}\n\n` +
+                            `위의 기존 코드 컨텍스트와 룰북을 철저히 분석하여, 기존 아키텍처 및 CSS 구조와 100% 호환되는 최적의 기획서 및 수정 코드를 마크다운으로 산출하세요.`;
           
           const devDocContent = callOpenAIAPI(usrPrompt, sysPrompt);
           const fileUrl = createDriveFile(taskId + "_Jarvis_Dev_Doc", devDocContent);
@@ -148,8 +155,15 @@ function kimQA_AutoReviewTrigger() {
           const devUrl = data[i][4]; // E: 개발 문서 링크
           const devContent = getDriveFileContent(devUrl);
           
-          const sysPrompt = "당신은 최고의 QA 팀장 김감사입니다. 제출된 코드를 읽고 매우 꼼꼼한 코드 에러 검수와 리뷰 분석 보고서를 작성하세요. 맨 마지막 줄에 JSON 형태로 에러 갯수를 표기하세요! (예: {\"errorCount\": 2})";
-          const qaPrompt = `개발 문서 내용: \n${devContent}\n\n이 문서를 철저히 QA하여 버그를 검출하세요.`;
+          // [RAG 연동 - Phase 1] 깃허브에서 최신 룰북 자동 로드
+          const qaRules = fetchGitHubRaw("qa/QA_PROCESS_V2.md");
+          const teamRules = fetchGitHubRaw("qa/qa_team_rules.md");
+          
+          const sysPrompt = "당신은 최고의 QA 팀장 김감사입니다. 제출된 코드를 읽고 깃허브의 RAG 룰북 기준에 따라 매우 꼼꼼하게 에러를 검수하세요. 맨 마지막 줄에 JSON 형태로 에러 갯수를 표기하세요! (예: {\"errorCount\": 2})";
+          const qaPrompt = `=== 자비스가 개발한 코드 산출물 ===\n${devContent}\n\n` +
+                           `=== [RAG 1] 공식 QA 프로세스 룰북 ===\n${qaRules}\n\n` +
+                           `=== [RAG 2] 팀 운영 규칙 ===\n${teamRules}\n\n` +
+                           `위 RAG 룰북(QA Phase 조건 등) 규칙을 엄격하게 적용하여 제출된 코드를 1:1로 검수하고, 치명적 결함 및 보안 위협을 철저히 찾아내세요.`;
           
           const qaResultText = callOpenAIAPI(qaPrompt, sysPrompt);
           
@@ -357,3 +371,50 @@ function sendSlackMessage(text) {
   };
   UrlFetchApp.fetch(webhookUrl, options);
 }
+
+/**
+ * ============================================================================
+ * [헬퍼 함수] GitHub RAG 연동 기능 (Phase 1)
+ * ============================================================================
+ */
+function fetchGitHubRaw(filePath) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = "GITHUB_RAW_" + filePath.replace(/\//g, "_");
+
+  // 1. 캐시 히트 체크 (10분 보관)
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    Logger.log(`[CACHE HIT] 깃허브 RAG 연동 캐싱 로드: ${filePath}`);
+    return cached;
+  }
+
+  Logger.log(`[CACHE MISS] 깃허브 RAG API 호출: ${filePath}`);
+
+  // 2. GitHub Raw API 호출
+  // 스크립트 속성에 GITHUB_TOKEN(선택 사항)을 등록해 두면 Rate Limit가 크게 늘어납니다.
+  const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+  const repo = "syn-glitch/gongdo-task-system";
+  const branch = "main";
+  const url = `https://raw.githubusercontent.com/${repo}/${branch}/${filePath}`;
+
+  try {
+    const options = { muteHttpExceptions: true };
+    if (GITHUB_TOKEN) {
+      options.headers = { "Authorization": `token ${GITHUB_TOKEN}` };
+    }
+    
+    const response = UrlFetchApp.fetch(url, options);
+
+    if (response.getResponseCode() === 200) {
+      const content = response.getContentText();
+      cache.put(cacheKey, content, 600); // 10분(600초) 캐시 보관
+      return content;
+    } else {
+      throw new Error(`HTTP ${response.getResponseCode()}`);
+    }
+  } catch (e) {
+    Logger.log(`[ERROR] 깃허브 RAG API 통신 실패 (${filePath}): ${e.message}`);
+    return `[ERROR] RAG 컨텍스트 로딩 실패: 문서를 찾을 수 없습니다. (${filePath})`;
+  }
+}
+
