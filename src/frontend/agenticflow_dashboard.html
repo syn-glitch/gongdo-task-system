@@ -654,13 +654,18 @@
             const initial = AGENT_INITIALS[team] || "?";
             const isRejected = task["상태"] === "DEVELOPING" && pingpong > 0;
 
+            const isWowTask = taskId && taskId.includes('-W');
+
             const card = document.createElement('div');
-            card.className = `bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-${colorClass}/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable`;
+            card.className = `bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-${colorClass}/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable relative`;
             if (isRejected) card.classList.add('pingponging');
             card.setAttribute('draggable', 'true');
             card.setAttribute('data-id', taskId);
 
             card.innerHTML = `
+                ${isWowTask ? `<div class="absolute -top-1 -left-1 bg-gradient-to-tr from-wowTeam to-yellow-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-20 flex items-center">
+                    <span class="mr-1">🌟</span> WOW
+                </div>` : ''}
                 ${isRejected ? `<div class="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center ring-2 ring-white dark:ring-gray-800 z-20">
                     <svg class="w-3 h-3 mr-0.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -675,7 +680,7 @@
                         ${initial}
                     </div>
                 </div>
-                <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1">${title}</h3>
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1 ${isWowTask ? 'mt-1' : ''}">${title}</h3>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
                     <div class="bg-${colorClass} h-full rounded-full w-[${progress}%]"></div>
                 </div>
