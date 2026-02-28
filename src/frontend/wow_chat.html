@@ -310,9 +310,15 @@
         });
 
         chatInput.addEventListener('keydown', function (e) {
+            // Fix: Prevention of duplicate submission during Korean IME composition
+            if (e.isComposing || e.keyCode === 229) return;
+
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (!sendBtn.disabled) chatForm.dispatchEvent(new Event('submit'));
+                if (!sendBtn.disabled) {
+                    // Trigger submit through the form's submit button or method
+                    chatForm.requestSubmit();
+                }
             }
         });
 
@@ -429,10 +435,10 @@
 
             if (isUser) {
                 msgDiv.innerHTML = `
-                    <div class="max-w-[75%] md:max-w-[60%] flex flex-col space-y-1 items-end">
+                    <div class="max-w-[85%] md:max-w-[70%] flex flex-col space-y-1 items-end">
                         <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mr-1">나 • ${time}</span>
-                        <div class="bg-userMsg text-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md leading-relaxed text-[15px] break-words">
-                            ${text.replace(/\n/g, '<br>')}
+                        <div class="bg-userMsg text-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md leading-relaxed text-[15px] break-words whitespace-pre-wrap">
+                            ${text}
                         </div>
                     </div>
                 `;
@@ -441,9 +447,9 @@
                     <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-wowTeam to-yellow-400 flex items-center justify-center shrink-0 shadow-md">
                         <span class="text-white text-xs font-bold">W</span>
                     </div>
-                    <div class="max-w-[75%] md:max-w-[60%] flex flex-col space-y-1 items-start">
+                    <div class="max-w-[85%] md:max-w-[70%] flex flex-col space-y-1 items-start">
                         <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium ml-1">WOW 매니저 • ${time}</span>
-                        <div class="bg-white dark:bg-darkPanel text-slate-800 dark:text-slate-200 px-4 py-3 border border-slate-100 dark:border-slate-800 rounded-2xl rounded-bl-sm shadow-sm leading-relaxed text-[15px]">
+                        <div class="bg-white dark:bg-darkPanel text-slate-800 dark:text-slate-200 px-4 py-3 border border-slate-100 dark:border-slate-800 rounded-2xl rounded-bl-sm shadow-sm leading-relaxed text-[15px] whitespace-pre-wrap">
                             ${text}
                         </div>
                     </div>
