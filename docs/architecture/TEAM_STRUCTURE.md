@@ -29,21 +29,30 @@
                           │
                           │ (요구사항 하달 및 최종 승인)
                           │
-        ┌─────────────────┴─────────────────┐
-        │                                   │
-        ▼                                   ▼
-┌──────────────────┐              ┌──────────────────┐
-│  🤵 자비스 팀    │ ←─ 핑퐁 ─→   │  🕵️ 김감사 팀   │
-│  (Dev Team)      │   (개발-QA)   │  (QA Team)       │
-│  총 4명          │              │  총 4명          │
-└──────────────────┘              └──────────────────┘
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ 🤵 자비스 팀  │  │ 🕵️ 김감사 팀  │  │ 🔧 강철 팀    │
+│ (Dev Team)   │  │ (QA Team)    │  │ (AX Team)    │
+│  총 5명      │  │  총 4명      │  │  총 4명      │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       └─────────┬───────┴─────────┬───────┘
+                 │                 │
+                 ▼                 ▼
+        ┌──────────────┐  ┌──────────────┐
+        │ 📝 꼼꼼이 팀   │  │ 🏴 벙커 팀    │
+        │ (Docs Team)  │  │ (Infra Team) │
+        │  총 2명      │  │  총 6명      │
+        └──────────────┘  └──────────────┘
 ```
 
 ---
 
 ## 👥 팀별 상세 구성
 
-### 🤵 자비스 개발 팀 (Dev Team) - 4명
+### 🤵 자비스 개발 팀 (Dev Team) - 5명
 
 **팀 미션**: 빠르고 혁신적인 기능 개발
 
@@ -51,17 +60,20 @@
 
 **팀 구성원**:
 ```
-자비스 팀 (4명)
+자비스 팀 (5명)
 ├── 1. 🤵 자비스 (Jarvis) - Product Owner (PO)
 │   └── 역할: 요구사항 분석, 기획서 작성, 프로젝트 관리
 │
-├── 2. 🎨 벨라 (Bella) - UX/UI Designer
+├── 2. 👨‍💻 알렉스 (Alex) - Tech Lead
+│   └── 역할: 아키텍처 설계, 코드 리뷰, 기술 검증
+│
+├── 3. 🎨 벨라 (Bella) - UX/UI Designer
 │   └── 역할: 디자인 시스템, 사용자 경험 설계
 │
-├── 3. 👩‍💻 에이다 (Ada) - Backend Developer
+├── 4. 👩‍💻 에이다 (Ada) - Backend Developer
 │   └── 역할: GAS 백엔드 로직, API 연동, 데이터베이스
 │
-└── 4. 👧 클로이 (Chloe) - Frontend Developer
+└── 5. 👧 클로이 (Chloe) - Frontend Developer
     └── 역할: UI 구현, SPA 개발, 반응형 웹
 ```
 
@@ -115,6 +127,117 @@
 - 통합 QA: `qa/qa_reviews/integrated/YYYY-MM-DD_*_final_qa_report.md`
 
 **상세 문서**: [../../qa/qa_team_overview.md](../../qa/qa_team_overview.md)
+
+---
+
+### 🔧 강철 AX 팀 (Architecture eXcellence Team) - 4명
+
+**팀 미션**: 기술 부채 해결, 리팩토링, 보안 강화, 성능 최적화
+
+**팀 리더**: 강철 (Kang Cheol) - AX Team Lead
+
+**팀 구성원**:
+```
+강철 AX 팀 (4명)
+├── 1. 🔧 강철 (Kang Cheol) - AX Team Lead
+│   └── 역할: 기술 부채 관리, 개선 우선순위 설정, 통합 검토
+│
+├── 2. 🏗️ 리팩터 (Refactor) - Code Quality Specialist
+│   └── 역할: 코드 품질 개선, 중복 제거, Clean Code 적용
+│
+├── 3. 🔐 보안전문가 (Security Engineer) - Security Specialist
+│   └── 역할: 보안 취약점 제거, API 키 관리, 동시성 제어
+│
+└── 4. 📊 성능전문가 (Performance Engineer) - Performance Specialist
+    └── 역할: 성능 최적화, 캐싱 전략, GAS 타임아웃 회피
+```
+
+**주요 책임**:
+- ✅ 김감사 QA팀에서 발견된 구조적 이슈 해결
+- ✅ 자비스 팀의 레거시 코드 리팩토링 요청 처리
+- ✅ 기술 부채 백로그 관리 및 해결
+- ✅ 보안 강화 및 성능 최적화
+
+**산출물**:
+- 기술 부채: `ax/technical_debt_backlog.md`
+- 리팩토링: `ax/refactoring/YYYY-MM-DD_*.md`
+- 보안 강화: `ax/security/YYYY-MM-DD_*.md`
+- 성능 최적화: `ax/performance/YYYY-MM-DD_*.md`
+
+**상세 문서**: [../../ax/ax_team_overview.md](../../ax/ax_team_overview.md)
+
+---
+
+### 📝 꼼꼼이 문서 팀 (Documentation Team) - 2명
+
+**팀 미션**: 문서 체계 정리, 템플릿 관리, 문서 작성 가이드 제공
+
+**팀 리더**: 꼼꼼이 (Kkoomkkoom) - Docs Team Lead
+
+**팀 구성원**:
+```
+꼼꼼이 문서 팀 (2명)
+├── 1. 📝 꼼꼼이 (Kkoomkkoom) - Docs Team Lead
+│   └── 역할: 문서 체계 설계, 폴더 구조 관리, 문서 표준화
+│
+└── 2. 📚 아키비스트 (Archivist) - Document Archivist
+    └── 역할: 문서 아카이빙, 버전 관리, 히스토리 추적
+```
+
+**주요 책임**:
+- ✅ 전사 문서 체계 및 폴더 구조 설계
+- ✅ 문서 작성 가이드라인 및 템플릿 제공
+- ✅ 팀 간 문서 표준 통일
+- ✅ 문서 변경 이력 관리
+
+**산출물**:
+- 템플릿: `teams/kkoomkkoom-docs/templates/`
+- 가이드: `teams/kkoomkkoom-docs/style-guide/`
+- 백로그: `teams/kkoomkkoom-docs/backlog/`
+
+**상세 문서**: [../../teams/kkoomkkoom-docs/README.md](../../teams/kkoomkkoom-docs/README.md)
+
+---
+
+### 🏴 벙커 인프라 팀 (Bunker Infra Team) - 6명 (예정)
+
+**팀 미션**: 백오피스 자동화, 인프라 관리, 배포 자동화
+
+**팀 리더**: 송PO (Song Project Owner) - Bunker Team Lead
+
+**팀 구성원**:
+```
+벙커 인프라 팀 (6명) — 신규 구축 예정
+├── 1. 🧠 송PO (Song PO) - Team Leader & Orchestrator
+│   └── 역할: 자동화 요청 분석, 태스크 분해, 팀원 배분
+│
+├── 2. 📊 정DA (Jeong DA) - Data Analyst
+│   └── 역할: 데이터 분석, 스프레드시트 설계, PDF 추출
+│
+├── 3. 📝 박DC (Park DC) - Document Creator
+│   └── 역할: 문서 생성 (마크다운 → docx/hwpx/pptx)
+│
+├── 4. 📢 김CM (Kim CM) - Communications Manager
+│   └── 역할: 사내 공지, Slack 정리, 커뮤니케이션
+│
+├── 5. 🎨 최AR (Choi AR) - Art Director
+│   └── 역할: 디자인, 브랜드 가이드, UI 테마 설계
+│
+└── 6. 🔧 윤SK (Yoon SK) - Skill Engineer
+    └── 역할: 신규 스킬 개발, 스킬 성능 평가, 팀 역량 확장
+```
+
+**주요 책임**:
+- ✅ 백오피스 업무 자동화 (급여, 보고서, 발송 등)
+- ✅ 인프라 관리 및 배포 자동화
+- ✅ 시스템 모니터링 및 운영 매뉴얼 작성
+
+**산출물**:
+- 인프라: `teams/bunker/infrastructure/`
+- 배포: `teams/bunker/deployment/`
+- 런북: `teams/bunker/runbooks/`
+
+**상세 문서**: [../../teams/bunker/README.md](../../teams/bunker/README.md)
 
 ---
 
@@ -333,21 +456,30 @@ Total QA 시간: 25분 (실제 대기 시간 15분)
 
 ## 🚀 향후 확장 계획
 
-### Phase 1: 현재 (2개 팀)
+### Phase 1: 초기 구축 (완료)
 ```
-자비스 개발 팀 (4명) + 김감사 QA 팀 (4명) = 총 8명
+자비스 개발 팀 (5명) + 김감사 QA 팀 (4명) = 총 9명
 ```
 
-### Phase 2: 확장 (예정)
+### Phase 2: AX 팀 추가 (완료)
 ```
-자비스 개발 팀 (4명)
+자비스 개발 팀 (5명)
 김감사 QA 팀 (4명)
-+ DevOps 팀 (2명) ← 배포 자동화, 모니터링
-+ Data 팀 (2명) ← 데이터 분석, BI 대시보드
-= 총 12명
++ 강철 AX 팀 (4명) ← 기술 부채, 리팩토링, 보안, 성능
+= 총 13명
 ```
 
-### Phase 3: AI 팩토리 (비전)
+### Phase 3: 문서·인프라 팀 추가 (진행중)
+```
+자비스 개발 팀 (5명)
+김감사 QA 팀 (4명)
+강철 AX 팀 (4명)
++ 꼼꼼이 문서 팀 (2명) ← 문서 체계, 템플릿, 가이드
++ 벙커 인프라 팀 (6명 예정) ← 백오피스 자동화, 배포
+= 총 21명
+```
+
+### Phase 4: AI 팩토리 (비전)
 ```
 • 완전 자동화: 팀장님 요구사항 입력 → 자동 배포
 • RAG 연동: GitHub 최신 룰북 실시간 동기화
@@ -373,9 +505,10 @@ Total QA 시간: 25분 (실제 대기 시간 15분)
 
 ---
 
-**문서 버전**: v1.0
-**최종 수정**: 2026-02-27
+**문서 버전**: v2.0
+**최종 수정**: 2026-02-28
 **다음 리뷰**: 2026-03-27 (1개월 후)
 **작성자**: 김감사 (QA Team Lead)
+**v2.0 업데이트**: 꼼꼼이 (Docs Team Lead) - 5개 팀 체계로 확장
 
 > **"독립된 팀, 명확한 협업, 완벽한 품질"** - 공도 개발실 조직 원칙
