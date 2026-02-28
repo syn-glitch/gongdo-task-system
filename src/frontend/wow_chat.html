@@ -328,7 +328,7 @@
 
             if (!session || (now - session.lastActive) > SESSION_TIMEOUT_MS) {
                 // Garbage Collection: clear old session and reset
-                session = { turns: 0, lastActive: now, id: `SESSION-${now}` };
+                session = { turns: 0, lastActive: now, id: `SESSION-${now}`, wish: '' };
             } else {
                 session.lastActive = now;
             }
@@ -348,30 +348,41 @@
         // -------------------------------------------------------------
         // Webhook Mock & Fallback UI
         // -------------------------------------------------------------
-        async function runWebhook(payload) {
-            // Mock Fallback UI Trigger
+        const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzwGOfeRe6QEpRackNBIPYoY25YRutHHYkllNWfUTgRpV06Fxk7BjSrfok16AccOzwR/exec";
+
+        async function runWebhook(contentStr) {
             const spinnerId = `spinner-${Date.now()}`;
             addMessageToChat('WOW', `<div id="${spinnerId}" class="flex items-center space-x-2 text-slate-500"><svg class="w-4 h-4 animate-spin text-wowTeam" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>벙커팀 시트로 태스크 전송 중...</span></div>`);
 
-            await new Promise(r => setTimeout(r, 2000)); // Simulate delay
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ type: 'WOW_TASK', content: contentStr })
+                });
 
-            // Randomly succeed or fail for demo purposes
-            const success = Math.random() > 0.3; // 70% chance of success
-            const spinnerEl = document.getElementById(spinnerId);
-
-            if (spinnerEl) {
-                if (success) {
-                    spinnerEl.parentElement.innerHTML = "✅ 완벽히 정리되었습니다! 지금 바로 <b>쉬운설명서</b>가 기획안을 만들고, <b>연결이</b>가 자비스 및 벙커팀에게 보낼 태스크 패키지를 작성했습니다.<br><br>👉 대시보드에서 해당 태스크의 상태가 `PLANNING`으로 등록되는 것을 확인해 보세요!";
-                    phaseIndicator.innerText = "종료(Completed)";
-                    setTimeout(() => alert('🎉 태스크 패키지가 생성되어 벙커팀 시트에 등록되었습니다!'), 500);
-                } else {
-                    spinnerEl.parentElement.innerHTML = `<span class="text-red-500 font-bold">⚠️ V4 웹훅 통신 지연</span><br>잠시 서버 통신에 문제가 발생했습니다. (Timeout).<br><button onclick="alert('재전송 로직 실행!')" class="mt-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-sm rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition">🔄 재전송 시도</button>`;
+                const spinnerEl = document.getElementById(spinnerId);
+                if (spinnerEl) {
+                    spinnerEl.parentElement.innerHTML = "✅ 완벽히 정리되었습니다! 지금 바로 <b>쉬운설명서</b>가 기획안을 만들고, <b>연결이</b>가 자비스 및 벙커팀에게 보낼 태스크 패키지를 작성했습니다.<br><br>👉 대시보드에서 해당 태스크 내역이 `PLANNING` 상태로 반영되었는지 확인해 보세요!";
+                    document.getElementById('current-phase').innerText = "종료(Completed)";
+                }
+            } catch (error) {
+                console.error("Webhook Error:", error);
+                const spinnerEl = document.getElementById(spinnerId);
+                if (spinnerEl) {
+                    const safeContent = contentStr.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    spinnerEl.parentElement.innerHTML = `<span class="text-red-500 font-bold">⚠️ V4 웹훅 통신 지연</span><br>잠시 서버 통신에 문제가 발생했습니다. (${error.message}).<br><button onclick="runWebhook('${safeContent}')" class="mt-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-sm rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm">🔄 재전송 시도</button>`;
                 }
             }
         }
 
         async function simulateWOWResponse(userMsg) {
             let session = initSession();
+
+            if (session.turns === 0) {
+                session.wish = userMsg;
+            }
 
             if (session.turns >= MAX_TURNS) {
                 addMessageToChat('WOW', "제가 이해하기엔 너무 복잡한 요구사항 같습니다. 😅<br>이 건은 더 정확한 파악을 위해 <b>벙커팀 송PO님과 직접 미팅</b>을 권장해 드립니다. <br><button class='mt-2 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg'>일정 잡기</button>");
@@ -402,7 +413,7 @@
 
             } else if (userMsg.includes('맞아') || userMsg.includes('맞습니다')) {
                 phaseIndicator.innerText = "요청 처리 중...";
-                runWebhook({ type: 'WOW_TASK', content: '휴가 연동' });
+                runWebhook(session.wish || '사용자 요청 (세션 누락)');
                 return; // runWebhook will handle the response
             }
 
