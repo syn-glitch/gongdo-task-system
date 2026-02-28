@@ -58,7 +58,7 @@ function doPost(e) {
       
     } finally {
       // 락 해제
-      lock.release();
+      lock.releaseLock();
     }
   } catch (error) {
     Logger.log("[FATAL] doPost 에러: " + error.message);
