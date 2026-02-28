@@ -11,6 +11,37 @@ const AGENT_SHEET_ID = "1gluWChHpmWWVRxgPpteOwcebE54mH1XK7a15NRc1-kU"; // UI 모
 const STATE_JSON_DIR = "agent_work/states/"; // GitHub 내 상태 파일 경로
 
 /**
+ * [Phase 4] 대시보드 데이터 조회를 위한 GET 엔드포인트
+ */
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.openById(AGENT_SHEET_ID);
+    const sheet = ss.getSheetByName("Agent_Tasks");
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const rows = data.slice(1);
+    
+    const jsonData = rows.map(row => {
+      let obj = {};
+      headers.forEach((h, i) => obj[h] = row[i]);
+      return obj;
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      data: jsonData
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.message })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * [Phase 2 & 3] 하네스 Webhook 수신 엔드포인트
  * - 기존 1분 트리거 폴링 방식 완전 대체
  */
