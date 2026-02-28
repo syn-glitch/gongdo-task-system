@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V4 핑퐁 웹훅 시뮬레이터 (팀장님 전용)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+        <div class="bg-blue-600 p-6 text-white">
+            <h1 class="text-xl font-bold flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                V4 핑퐁 시스템 모의 테스트기
+            </h1>
+            <p class="text-blue-100 text-sm mt-2 opacity-90">터미널 없이 클릭 한 번으로 가상의 "QA 반려" 데이터를 전송합니다.</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">전송 대상 (Webhook URL)</label>
+                <input type="text" readonly
+                    value="https://script.google.com/macros/s/AKfycbx_4mNeMZm7MXA9LrYz1bDfd6u1hoCR8Asvj9L4V1-zeceyKIHV-TEXGwUWCeivmNmR/exec"
+                    class="w-full bg-gray-50 border border-gray-300 text-gray-500 text-xs rounded-lg p-2.5 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">전송할 가상 데이터 (Payload)</label>
+                <div class="bg-gray-800 rounded-lg p-3 overflow-auto">
+                    <pre class="text-[11px] text-green-400 font-mono leading-relaxed">
+{
+  "task_id": "T-20260228-TEST",
+  "action": "SUBMIT_QA",
+  "qa_feedback": {
+    "qa_status": "REJECTED",
+    "pingpong_increment": true,
+    "rejection_reason": "테스트: 백엔드 타임아웃 미적용"
+  },
+  "used_tokens": 1500
+}</pre>
+                </div>
+            </div>
+
+            <!-- 결과 표시창 -->
+            <div id="result-box" class="hidden rounded-lg p-4 text-sm font-medium border">
+            </div>
+
+            <button id="send-btn" onclick="sendWebhook()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex justify-center items-center transition-colors shadow-md">
+                <span>🚀 김감사 "반려(REJECTED)" 데이터 쏘기</span>
+                <div id="loading" class="loader ml-3 hidden"></div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx_4mNeMZm7MXA9LrYz1bDfd6u1hoCR8Asvj9L4V1-zeceyKIHV-TEXGwUWCeivmNmR/exec";
+        const PAYLOAD = {
+            task_id: "T-20260228-TEST",
+            action: "SUBMIT_QA",
+            qa_feedback: {
+                qa_status: "REJECTED",
+                pingpong_increment: true,
+                rejection_reason: "테스트: 백엔드 타임아웃 미적용"
+            },
+            used_tokens: 1500
+        };
+
+        async function sendWebhook() {
+            const btn = document.getElementById('send-btn');
+            const loading = document.getElementById('loading');
+            const resultBox = document.getElementById('result-box');
+
+            // 상태 초기화
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            loading.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+            resultBox.className = "rounded-lg p-4 text-sm font-medium border";
+
+            try {
+                // fetch: no-cors 모드를 사용하면 브라우저 보안 이슈(CORS)를 우회하여 요청을 강제로 보낼 수 있습니다.
+                // 구글 Apps Script 특성상 클라이언트에서 강제로 던져야 합니다.
+                // 단, no-cors는 응답 내용을 읽을 수 없습니다. (Opaque 응답)
+                // 따라서 던지는 역할만 수행하고 무조건 성공으로 취급합니다.
+
+                // Content-Type을 text/plain으로 속여서 Preflight 에러를 피하는 트릭입니다. (GAS는 이를 JSON으로 처리 가능)
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(PAYLOAD)
+                });
+
+                // no-cors이므로 response.ok는 false로 나옵니다만, 에러가 나지 않았다면 전송된 것입니다.
+                showResult(true, "✅ 데이터 전송 성공! (구글 시트의 상태가 변했는지 확인해 보세요!)");
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                showResult(false, "❌ 전송 에러: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+                loading.classList.add('hidden');
+            }
+        }
+
+        function showResult(isSuccess, message) {
+            const resultBox = document.getElementById('result-box');
+            resultBox.classList.remove('hidden');
+            if (isSuccess) {
+                resultBox.classList.add('bg-green-50', 'border-green-200', 'text-green-700');
+            } else {
+                resultBox.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+            }
+            resultBox.innerText = message;
+        }
+    </script>
+</body>
+
+</html>
