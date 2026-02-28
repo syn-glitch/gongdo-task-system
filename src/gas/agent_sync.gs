@@ -206,14 +206,46 @@ function updateDashboardUI(taskId, stateObj) {
         }
     }
     
-    // 찾은 경우 상태 및 핑퐁카운트 업데이트
+    // 찾은 경우 상태 및 핑퐁카운트 업데이트 (V4 칼럼 매핑)
     if (targetRow > -1) {
         sheet.getRange(targetRow, 3).setValue(stateObj.current_stage);
+        sheet.getRange(targetRow, 11).setValue(stateObj.assigned_team);
         sheet.getRange(targetRow, 12).setValue(stateObj.pingpong_count);
+        sheet.getRange(targetRow, 13).setValue(stateObj.token_usage.used + " / " + stateObj.token_usage.total_budget);
     }
   } catch (e) {
     Logger.log("UI 시트 업데이트 실패: " + e.message);
   }
+}
+
+/**
+ * 🚀 [V4 시트 원클릭 업그레이드 유틸리티] 🚀
+ * 팀장님께서 Apps Script 편집기에서 이 함수를 선택하고 "실행"을 누르시면,
+ * 과거 V3 시트 양식을 V4 최신 규격으로 자동 세팅해줍니다.
+ */
+function upgradeSheetToV4() {
+  const ss = SpreadsheetApp.openById(AGENT_SHEET_ID);
+  const sheet = ss.getSheetByName("Agent_Tasks");
+  if (!sheet) return;
+  
+  // 1. 헤더 업그레이드 (K, L, M 열 확장)
+  sheet.getRange("K1").setValue("할당_팀(V4)").setBackground("#1e40af").setFontColor("white").setFontWeight("bold");
+  sheet.getRange("L1").setValue("핑퐁_카운트").setBackground("#b91c1c").setFontColor("white").setFontWeight("bold");
+  sheet.getRange("M1").setValue("토큰사용량(V4)").setBackground("#1e40af").setFontColor("white").setFontWeight("bold");
+
+  // 2. 상태(C열) 드롭다운을 V4 시스템 생태계와 100% 동기화
+  const v4States = [
+    "요청됨",
+    "PLANNING", 
+    "DEVELOPING", 
+    "QA_REVIEW", 
+    "OPTIMIZING", 
+    "DOCUMENTING", 
+    "ESCALATED", 
+    "COMPLETED"
+  ];
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(v4States, true).build();
+  sheet.getRange("C2:C").setDataValidation(rule);
 }
 
 /**
