@@ -246,9 +246,9 @@
                     </svg>
                 </button>
 
-                <textarea id="chat-input" rows="1"
+                <textarea id="chat-input" rows="1" maxlength="500"
                     class="flex-1 bg-transparent border-0 focus:ring-0 resize-none py-3.5 px-2 text-[15px] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 self-center leading-relaxed max-h-32"
-                    placeholder="만들고 싶은 것을 이야기해주세요... (Shift+Enter로 줄바꿈)"></textarea>
+                    placeholder="만들고 싶은 것을 이야기해주세요... (최대 500자, Shift+Enter 줄바꿈)"></textarea>
 
                 <button type="submit" id="send-btn"
                     class="m-2 p-2.5 bg-wowTeam hover:bg-orange-500 text-white rounded-xl shadow-md shadow-wowTeam/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 self-end"
@@ -316,7 +316,72 @@
             }
         });
 
+        // -------------------------------------------------------------
+        // Session Management & GC
+        // -------------------------------------------------------------
+        const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 1 hr
+        const MAX_TURNS = 7;
+
+        function initSession() {
+            const now = Date.now();
+            let session = JSON.parse(sessionStorage.getItem('wow_session'));
+
+            if (!session || (now - session.lastActive) > SESSION_TIMEOUT_MS) {
+                // Garbage Collection: clear old session and reset
+                session = { turns: 0, lastActive: now, id: `SESSION-${now}` };
+            } else {
+                session.lastActive = now;
+            }
+            sessionStorage.setItem('wow_session', JSON.stringify(session));
+            return session;
+        }
+
+        // -------------------------------------------------------------
+        // Sanitization
+        // -------------------------------------------------------------
+        function sanitizeInput(str) {
+            const div = document.createElement('div');
+            div.textContent = str; // Escapes HTML entities
+            return div.innerHTML;
+        }
+
+        // -------------------------------------------------------------
+        // Webhook Mock & Fallback UI
+        // -------------------------------------------------------------
+        async function runWebhook(payload) {
+            // Mock Fallback UI Trigger
+            const spinnerId = `spinner-${Date.now()}`;
+            addMessageToChat('WOW', `<div id="${spinnerId}" class="flex items-center space-x-2 text-slate-500"><svg class="w-4 h-4 animate-spin text-wowTeam" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>벙커팀 시트로 태스크 전송 중...</span></div>`);
+
+            await new Promise(r => setTimeout(r, 2000)); // Simulate delay
+
+            // Randomly succeed or fail for demo purposes
+            const success = Math.random() > 0.3; // 70% chance of success
+            const spinnerEl = document.getElementById(spinnerId);
+
+            if (spinnerEl) {
+                if (success) {
+                    spinnerEl.parentElement.innerHTML = "✅ 완벽히 정리되었습니다! 지금 바로 <b>쉬운설명서</b>가 기획안을 만들고, <b>연결이</b>가 자비스 및 벙커팀에게 보낼 태스크 패키지를 작성했습니다.<br><br>👉 대시보드에서 해당 태스크의 상태가 `PLANNING`으로 등록되는 것을 확인해 보세요!";
+                    phaseIndicator.innerText = "종료(Completed)";
+                    setTimeout(() => alert('🎉 태스크 패키지가 생성되어 벙커팀 시트에 등록되었습니다!'), 500);
+                } else {
+                    spinnerEl.parentElement.innerHTML = `<span class="text-red-500 font-bold">⚠️ V4 웹훅 통신 지연</span><br>잠시 서버 통신에 문제가 발생했습니다. (Timeout).<br><button onclick="alert('재전송 로직 실행!')" class="mt-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-sm rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition">🔄 재전송 시도</button>`;
+                }
+            }
+        }
+
         async function simulateWOWResponse(userMsg) {
+            let session = initSession();
+
+            if (session.turns >= MAX_TURNS) {
+                addMessageToChat('WOW', "제가 이해하기엔 너무 복잡한 요구사항 같습니다. 😅<br>이 건은 더 정확한 파악을 위해 <b>벙커팀 송PO님과 직접 미팅</b>을 권장해 드립니다. <br><button class='mt-2 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg'>일정 잡기</button>");
+                phaseIndicator.innerText = "종료(Failover)";
+                return;
+            }
+
+            session.turns += 1;
+            sessionStorage.setItem('wow_session', JSON.stringify(session));
+
             typingIndicator.style.display = 'flex';
             scrollToBottom();
 
@@ -326,7 +391,7 @@
 
             let responseText = "좋은 아이디어네요! 구체적으로 어떤 불편함을 해소하고 싶으신지 상황을 조금만 더 설명해 주시겠어요?";
 
-            // Hardcoded mock scenario based on 송PO's concept
+            // Hardcoded mock scenario
             if (userMsg.includes('휴가')) {
                 responseText = "와! 🏖️ 정말 편리하겠네요! (공감) 그럼 구글 캘린더를 쓰시는 건가요? 아니면 회사 자체 캘린더 시스템에 연동해야 할까요?";
                 phaseIndicator.innerText = "현황 파악(As-Is)";
@@ -336,11 +401,9 @@
                 phaseIndicator.innerText = "확인(Confirm)";
 
             } else if (userMsg.includes('맞아') || userMsg.includes('맞습니다')) {
-                responseText = "✅ 완벽히 정리되었습니다! 지금 바로 <b>쉬운설명서</b>가 기획안을 만들고, <b>연결이</b>가 자비스 개발팀과 벙커팀에게 보낼 태스크 패키지를 작성합니다.<br><br>👉 대시보드에서 `Task_ID: 20260228-CHAT01`의 상태가 `PLANNING`으로 등록되는 것을 확인해 보세요!";
-                phaseIndicator.innerText = "종료(Completed)";
-
-                // Demo: Send fake webhook logic or show confetti
-                setTimeout(() => alert('🎉 태스크 패키지가 생성되어 벙커팀 시트에 등록되었습니다! (Mock)'), 1000);
+                phaseIndicator.innerText = "요청 처리 중...";
+                runWebhook({ type: 'WOW_TASK', content: '휴가 연동' });
+                return; // runWebhook will handle the response
             }
 
             addMessageToChat('WOW', responseText);
@@ -396,11 +459,12 @@
             chatInput.style.height = 'auto';
             sendBtn.disabled = true;
 
-            // Add user msg
-            addMessageToChat('USER', text);
+            // Add sanitized user msg
+            const safeText = sanitizeInput(text);
+            addMessageToChat('USER', safeText);
 
             // Trigger WOW response
-            simulateWOWResponse(text);
+            simulateWOWResponse(safeText);
         });
     </script>
 </body>
