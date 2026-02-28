@@ -1,6 +1,6 @@
 # 🕵️ 김감사 QA 전문 에이전트 팀 소개 및 워크플로우
 
-**문서 스펙**: v2.1
+**문서 스펙**: v2.2
 **업데이트**: 2026-02-27
 **소속**: 공도 업무 관리 시스템 품질관리실
 
@@ -28,11 +28,12 @@
 
 ### 2. 🔍 테스터 (Tester) - Functional QA Specialist
 - **한줄 소개**: "코드의 논리적 빈틈을 파고들어 모든 예외 상황을 격파하는 로직 헌터"
-- **핵심 역량 및 스택**: `Unit/Integration Test`, `Regression Test`, `Edge Case 분석`, `JSON Schema 검증`, `Logger 분석`
+- **핵심 역량 및 스택**: `Unit/Integration Test`, `Regression Test`, `Edge Case 분석`, `JSON Schema 검증`, `Logger 분석`, `AI 응답 품질 검증`
 - **담당 업무 (R&R)**:
   - 함수별 입출력값 검증 및 비즈니스 로직 완결성 테스트
   - 백엔드 API와 프론트엔드 간의 데이터 정합성 확인
   - `null`, `undefined`, 빈 값 등 엣지 케이스에서의 방어 로직(Try-Catch) 검증
+  - **AI 기능 검증**: LLM 기반 요약/추출 기능의 일관성 및 정확도 평가 (프롬프트 변경 시 회귀 테스트 필수)
 - **장착된 전문 스킬 (Skills)**:
   - `Google Testing Blog Principles`: "Functional Core, Imperative Shell" 아키텍처 기반 테스트 원칙. (출처: [Google Testing Blog](https://testing.googleblog.com/))
   - `ISTQB Functional Testing`: 비즈니스 사양에 기반한 명세 테스트 기법. (출처: [ISTQB Glossary](https://glossary.istqb.org/en/term/functional-testing))
@@ -51,11 +52,13 @@
 
 ### 4. 🎨 UX 검증관 (UX Validator) - User Experience QA Specialist
 - **한줄 소개**: "사용자의 시선에서 인터페이스의 미세한 불편함까지 잡아내는 감성 검증가"
-- **핵심 역량 및 스택**: `반응형 웹`, `WCAG 2.1 (접근성)`, `디자인 시스템 일관성`, `애니메이션 성능`, `에러 메시지 직관성`
+- **핵심 역량 및 스택**: `반응형 웹`, `WCAG 2.1 (접근성)`, `디자인 시스템 일관성`, `애니메이션 성능`, `에러 메시지 직관성`, `모바일 UX`, `드래그 앤 드롭 UX`
 - **담당 업무 (R&R)**:
   - 디자인 시스템 룰 준수 여부 및 해상도별 레이아웃 깨짐 검증
   - 로딩 상태(Spinner) 및 사용자 피드백(Toast/Modal)의 적절성 확인
   - 키보드 내비게이션 및 스크린 리더 대응 등 웹 접근성 검토
+  - **모바일 접근성**: 터치 타겟 크기(최소 44x44px), 스와이프 제스처, 뷰포트 대응 검증
+  - **인터랙션 품질**: 드래그 앤 드롭 시각적 피드백, 애니메이션 프레임 드롭 여부, 성능 병목 지점 파악
 - **장착된 전문 스킬 (Skills)**:
   - `Web Content Accessibility Guidelines (WCAG) 2.1`: 웹 콘텐츠 접근성 표준. (출처: [W3C WCAG 2.1](https://www.w3.org/TR/WCAG21/))
   - `Material Design 3 (A11y)`: 구글의 디자인 시스템 접근성 설계 원칙. (출처: [Material Design Accessibility](https://m3.material.io/foundations/accessible-design/))
@@ -101,6 +104,108 @@
 - **시간 단축**: 기존 1인 직렬 처리 대비 57% 시간 단축 (35분 → 15분)
 - **품질 극대화**: 기능, 보안, UX의 3중 필터링을 통한 무결점 배포 지향
 - **투명성**: 모든 검증 내역의 문서화 및 이력 관리
+
+---
+
+## 📊 검증 품질 지표 (QA Metrics)
+
+김감사 팀은 다음 지표를 통해 QA 프로세스의 효율성과 제품 품질을 측정합니다.
+
+### 프로세스 효율성 지표
+- **평균 QA 소요 시간**: 15분 (목표 기준)
+- **검증 완료율**: 요청 대비 당일 완료 비율
+- **병렬 처리 효율**: 3개 영역 동시 검증 시간 절감률
+
+### 품질 지표
+- **Critical Bug Detection Rate**: QA 단계에서 발견한 치명적 버그 수
+- **Escaped Defects**: 배포 후 사용자 환경에서 발견된 버그 수 (목표: 0건)
+- **재작업률(Rework Rate)**: 반려 후 재검수 요청 비율
+
+### 영역별 검증 완성도
+- **기능 테스트 커버리지**: 핵심 비즈니스 로직 검증률
+- **보안 취약점 발견 건수**: OWASP 기준 위험도별 집계
+- **UX 개선 제안 수락률**: 제안 대비 실제 반영 비율
+
+---
+
+## 🚨 에러 레벨 분류 기준 (Error Severity Classification)
+
+QA 팀은 발견된 이슈를 다음 3단계로 분류하여 대응합니다.
+
+### Level 1: Networking Error (네트워크/통신 오류)
+- **정의**: 일시적 네트워크 문제, API 타임아웃, 외부 서비스 장애
+- **사용자 영향**: 재시도 가능, 데이터 손실 없음
+- **대응 방식**: Toast 메시지로 사용자에게 안내
+- **예시**: `showToast('❌ 서버 통신 에러가 발생했습니다.', true)`
+
+### Level 2: Core Logic Error (핵심 로직 오류)
+- **정의**: 동시성 충돌(`ERR_LOCK_TIMEOUT`), 데이터 정합성 이슈, 비즈니스 로직 실패
+- **사용자 영향**: 작업 중단 필요, 새로고침 후 재시도 권장
+- **대응 방식**: 전면 모달 알림 + 새로고침 유도
+- **예시**:
+  ```javascript
+  // handleApiError() 함수에서 처리
+  if (msg === "ERR_LOCK_TIMEOUT") {
+      document.getElementById('errorModal').style.display = 'flex';
+  }
+  ```
+
+### Level 3: Data Corruption (데이터 무결성 손상)
+- **정의**: 데이터베이스 손상, 권한 우회, 보안 침해 감지
+- **사용자 영향**: 시스템 전체 안정성 위협
+- **대응 방식**: **즉시 배포 중단** + 긴급 핫픽스 + 관리자 알림
+- **프로세스**: 김감사 → 자비스 PO → 팀장님 보고 라인 즉시 가동
+
+---
+
+## 🔐 AI 기능 검증 가이드라인
+
+### AI 응답 품질 평가 기준
+1. **일관성(Consistency)**: 동일 입력에 대한 응답 편차 ±10% 이내
+2. **정확도(Accuracy)**: 사용자 의도 파악 정확률 95% 이상
+3. **응답 시간(Latency)**: 평균 3초 이내 응답 (Gemini API 기준)
+
+### 검증 대상 AI 기능
+- **`summarizeMemoContent()`**: 메모 요약 기능
+  - 핵심 정보 누락 여부 확인
+  - 요약문 길이 적절성 (원문의 30% 이하)
+  - 문맥 왜곡 여부 검증
+
+- **`parseTaskFromMemoWeb()`**: AI 업무 추출 기능
+  - 제목/내용/마감일 파싱 정확도
+  - 프로젝트 자동 분류 적절성
+  - 엣지 케이스: 숫자 없는 텍스트, 날짜 형식 다양성
+
+### 프롬프트 변경 시 필수 회귀 테스트
+- 기존 프롬프트로 검증된 10개 샘플 케이스 재검증
+- A/B 테스트: 기존 vs 신규 프롬프트 품질 비교
+- 김감사 최종 승인 없이 프롬프트 변경 금지
+
+---
+
+## 📋 배포 전 최종 체크리스트 (Release Checklist)
+
+김감사가 최종 승인 전 반드시 확인하는 항목입니다.
+
+### 기능 검증 (Tester 담당)
+- [ ] 모든 API 엔드포인트 정상 응답 확인
+- [ ] 엣지 케이스(null, undefined, 빈 배열) 방어 로직 작동
+- [ ] 브라우저 콘솔에 에러 로그 0건
+
+### 보안 검증 (Security Auditor 담당)
+- [ ] 하드코딩된 API 키/비밀번호 0건
+- [ ] 사용자 입력값 Sanitize 처리 완료
+- [ ] LockService 타임아웃 예외 처리 구현
+
+### UX 검증 (UX Validator 담당)
+- [ ] 모바일(768px 이하) 레이아웃 깨짐 없음
+- [ ] 로딩 중 스피너 표시 및 버튼 비활성화 처리
+- [ ] 에러 메시지 사용자 친화적 문구 사용
+
+### 문서화
+- [ ] 변경 사항 CHANGELOG.md 업데이트
+- [ ] QA 리포트 `qa/qa_reviews/` 폴더 저장
+- [ ] 버전 번호 업데이트 (v2.1 → v2.2)
 
 ---
 
