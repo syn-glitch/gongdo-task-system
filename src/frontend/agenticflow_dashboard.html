@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,162 +28,290 @@
     <style>
         /* Pingpong animation for the bouncing task card */
         @keyframes pingpong-bounce {
-            0%, 100% { transform: translateX(0) scale(1.02); border-color: #f97316; box-shadow: 0 0 15px rgba(249, 115, 22, 0.5); }
-            50% { transform: translateX(10px) scale(1); border-color: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); }
+
+            0%,
+            100% {
+                transform: translateX(0) scale(1.02);
+                border-color: #f97316;
+                box-shadow: 0 0 15px rgba(249, 115, 22, 0.4);
+            }
+
+            50% {
+                transform: translateX(10px) scale(1);
+                border-color: #ef4444;
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+            }
         }
+
         .pingponging {
             animation: pingpong-bounce 1s ease-in-out infinite;
             border-width: 2px;
         }
-        
-        /* Custom scrollbar */
+
+        /* Custom scrollbar - adapting to light/dark */
         ::-webkit-scrollbar {
             width: 6px;
         }
-        ::-webkit-scrollbar-track {
+
+        .dark ::-webkit-scrollbar-track {
             background: #111827;
         }
-        ::-webkit-scrollbar-thumb {
+
+        .dark ::-webkit-scrollbar-thumb {
             background: #4B5563;
             border-radius: 4px;
         }
-        ::-webkit-scrollbar-thumb:hover {
+
+        .dark ::-webkit-scrollbar-thumb:hover {
             background: #6B7280;
         }
-        
+
+        ::-webkit-scrollbar-track {
+            background: #f3f4f6;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
         /* Drag and Drop outline */
         .drag-over {
             border: 2px dashed #8b5cf6 !important;
             background-color: rgba(139, 92, 246, 0.1);
         }
+
+        /* Transitions for theme switching */
+        * {
+            transition-property: background-color, border-color, color, fill, stroke;
+            transition-duration: 200ms;
+        }
     </style>
+
+    <!-- Theme setup script before body to prevent flicker -->
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
 </head>
-<body class="bg-dark text-white font-sans antialiased h-screen flex overflow-hidden">
+
+<body class="bg-gray-50 dark:bg-dark text-gray-800 dark:text-white font-sans antialiased h-screen flex overflow-hidden">
 
     <!-- Sidebar Navigation -->
-    <nav class="w-20 bg-darkPanel flex flex-col items-center py-6 border-r border-gray-800 shrink-0">
-        <div class="bg-jarvis text-white p-2 rounded-xl mb-8 shadow-lg">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    <nav
+        class="w-20 bg-white dark:bg-darkPanel flex flex-col items-center py-6 border-r border-gray-200 dark:border-gray-800 shrink-0 select-none">
+        <div class="bg-jarvis text-white p-2 rounded-xl mb-8 shadow-lg shadow-jarvis/30">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                </path>
+            </svg>
         </div>
         <div class="flex flex-col space-y-6 w-full">
             <a href="#" class="flex flex-col items-center text-jarvis relative group">
                 <div class="absolute left-0 top-1/2 -mt-4 h-8 w-1 bg-jarvis rounded-r-md"></div>
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                    </path>
+                </svg>
                 <span class="text-[10px] font-medium">Dashboard</span>
             </a>
-            <a href="#" class="flex flex-col items-center text-gray-500 hover:text-gray-300 transition-colors">
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <a href="#"
+                class="flex flex-col items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                    </path>
+                </svg>
                 <span class="text-[10px]">Metrics</span>
             </a>
-            <a href="#" class="flex flex-col items-center text-gray-500 hover:text-gray-300 transition-colors">
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <a href="#"
+                class="flex flex-col items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                    </path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
                 <span class="text-[10px]">Settings</span>
             </a>
         </div>
         <div class="mt-auto">
-            <img src="https://ui-avatars.com/api/?name=PO&background=3b82f6&color=fff" class="w-10 h-10 rounded-full border-2 border-gray-700">
+            <img src="https://ui-avatars.com/api/?name=PO&background=3b82f6&color=fff"
+                class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700">
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gradient-to-br from-gray-900 to-[#0B1121]">
-        
+    <main
+        class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 dark:bg-gradient-to-br dark:from-gray-900 dark:to-[#0B1121]">
+
         <!-- Topbar -->
-        <header class="h-16 flex items-center justify-between px-8 border-b border-gray-800">
-            <h1 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
-                Agent Workflow Pipeline <span class="text-sm font-normal text-gray-500 ml-2">v4.0.0</span>
+        <header
+            class="h-16 flex items-center justify-between px-8 bg-white dark:bg-transparent border-b border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-none z-10">
+            <h1
+                class="text-2xl font-bold tracking-tight text-gray-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-gray-100 dark:to-gray-400 flex items-center">
+                Agent Workflow Pipeline
+                <span
+                    class="text-sm font-normal text-gray-500 ml-3 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">v4.0.0</span>
             </h1>
             <div class="flex items-center space-x-4">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle"
+                    class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full focus:outline-none transition-colors">
+                    <!-- Dark mode icon (moon) - visible when light mode is active -->
+                    <svg id="theme-toggle-dark-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <!-- Light mode icon (sun) - visible when dark mode is active -->
+                    <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                            fill-rule="evenodd" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+
                 <div class="relative">
-                    <input type="text" placeholder="Global Search (Task ID, Feature...)" class="bg-gray-800 border-none rounded-full py-1.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-jarvis focus:outline-none w-64 text-gray-200 placeholder-gray-500">
-                    <svg class="w-4 h-4 text-gray-400 absolute left-4 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" placeholder="Global Search (Task ID, Feature...)"
+                        class="bg-gray-100 dark:bg-gray-800 border-none rounded-full py-1.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-jarvis focus:outline-none w-64 text-gray-800 dark:text-gray-200 placeholder-gray-500 transition-colors">
+                    <svg class="w-4 h-4 text-gray-400 absolute left-4 top-2.5" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
                 </div>
-                <button class="bg-jarvis text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-opacity-90 transition-colors shadow-lg shadow-jarvis/20">+ New Task</button>
+                <button
+                    class="bg-jarvis text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-opacity-90 transition-colors shadow-lg shadow-jarvis/20">+
+                    New Task</button>
             </div>
         </header>
 
         <!-- Kanban Board Scrollable Area -->
-        <div class="flex-1 overflow-x-auto overflow-y-hidden p-6">
-            <div class="flex space-x-6 h-full min-w-max pb-2" id="kanban-board">
-                
+        <div class="flex-1 overflow-x-auto overflow-y-hidden p-6 relative">
+            <div class="flex space-x-6 h-full min-w-max pb-2 absolute inset-6" id="kanban-board">
+
                 <!-- 1. Bunker (Planning) -->
-                <div class="w-72 flex flex-col">
+                <div class="w-72 flex flex-col h-full">
                     <!-- Column Header -->
-                    <div class="bg-darkPanel border-t-4 border-bunker rounded-t-xl p-4 flex items-center justify-between shadow-md">
+                    <div
+                        class="bg-white dark:bg-darkPanel border-t-4 border-bunker rounded-t-xl p-4 flex items-center justify-between shadow-sm dark:shadow-md border border-gray-200 dark:border-transparent">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded bg-bunker/20 flex items-center justify-center mr-3 text-bunker">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <div
+                                class="w-8 h-8 rounded bg-bunker/10 dark:bg-bunker/20 flex items-center justify-center mr-3 text-bunker">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                                    </path>
+                                </svg>
                             </div>
                             <div>
-                                <h2 class="font-bold text-gray-100">Bunker</h2>
-                                <p class="text-[11px] text-gray-400">PLANNING / DATA</p>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100">Bunker</h2>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">PLANNING / DATA</p>
                             </div>
                         </div>
-                        <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">2</span>
+                        <span
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">2</span>
                     </div>
                     <!-- Column Body -->
-                    <div class="bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-800 border-t-0 dropzone" data-stage="PLANNING">
-                        
+                    <div class="bg-gray-100/50 dark:bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-200 dark:border-gray-800 border-t-0 dropzone"
+                        data-stage="PLANNING">
+
                         <!-- Task Card -->
-                        <div class="bg-gray-800 rounded-lg p-3 cursor-grab hover:bg-gray-700 border border-gray-700 transition-colors draggable" draggable="true" data-id="T-001">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-bunker/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable"
+                            draggable="true" data-id="T-001">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="bg-blue-900/50 text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-700/50">T-001</span>
-                                <div class="w-5 h-5 rounded-full bg-bunker flex items-center justify-center text-[9px] font-bold text-white" title="송PO">송</div>
+                                <span
+                                    class="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/50 font-medium tracking-wide">T-001</span>
+                                <div class="w-5 h-5 rounded-full bg-bunker flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+                                    title="송PO">송</div>
                             </div>
-                            <h3 class="text-sm font-medium mb-1">매출 집계 자동화 대상 분석</h3>
-                            <div class="w-full bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1">매출 집계 자동화 대상 분석</h3>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
                                 <div class="bg-bunker h-full rounded-full w-[45%]"></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
 
                 <!-- 2. Jarvis (Development) -->
-                <div class="w-72 flex flex-col">
-                    <div class="bg-darkPanel border-t-4 border-jarvis rounded-t-xl p-4 flex items-center justify-between shadow-md">
+                <div class="w-72 flex flex-col h-full">
+                    <div
+                        class="bg-white dark:bg-darkPanel border-t-4 border-jarvis rounded-t-xl p-4 flex items-center justify-between shadow-sm dark:shadow-md border border-gray-200 dark:border-transparent">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded bg-jarvis/20 flex items-center justify-center mr-3 text-jarvis">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            <div
+                                class="w-8 h-8 rounded bg-jarvis/10 dark:bg-jarvis/20 flex items-center justify-center mr-3 text-jarvis">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                </svg>
                             </div>
                             <div>
-                                <h2 class="font-bold text-gray-100">Jarvis</h2>
-                                <p class="text-[11px] text-gray-400">DEVELOPMENT</p>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100">Jarvis</h2>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">DEVELOPMENT</p>
                             </div>
                         </div>
-                        <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">3</span>
+                        <span
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">3</span>
                     </div>
-                    <div class="bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-800 border-t-0 dropzone" data-stage="DEVELOPING">
-                        
+                    <div class="bg-gray-100/50 dark:bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-200 dark:border-gray-800 border-t-0 dropzone"
+                        data-stage="DEVELOPING">
+
                         <!-- Task Card (Normal) -->
-                        <div class="bg-gray-800 rounded-lg p-3 cursor-grab hover:bg-gray-700 border border-gray-700 transition-colors draggable" draggable="true" data-id="T-002">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-jarvis/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable"
+                            draggable="true" data-id="T-002">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="bg-blue-900/50 text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-700/50">T-002</span>
+                                <span
+                                    class="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/50 font-medium tracking-wide">T-002</span>
                                 <div class="flex -space-x-1">
-                                    <div class="w-5 h-5 rounded-full bg-jarvis flex items-center justify-center text-[9px] font-bold border border-gray-800 z-10">알</div>
-                                    <div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold border border-gray-800">에</div>
+                                    <div
+                                        class="w-5 h-5 rounded-full bg-jarvis flex items-center justify-center text-[9px] font-bold text-white border border-white dark:border-gray-800 z-10 shadow-sm">
+                                        알</div>
+                                    <div
+                                        class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white border border-white dark:border-gray-800 shadow-sm">
+                                        에</div>
                                 </div>
                             </div>
-                            <h3 class="text-sm font-medium mb-1">Slack Webhook 연동 API 작성</h3>
-                            <div class="w-full bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1">Slack Webhook 연동 API 작성
+                            </h3>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
                                 <div class="bg-jarvis h-full rounded-full w-[80%]"></div>
                             </div>
                         </div>
 
                         <!-- 🚨 Pingponging Task Card -->
-                        <div class="bg-gray-800 rounded-lg p-3 border-gray-700 draggable pingponging relative" draggable="true" data-id="T-003">
-                            <div class="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow flex items-center">
-                                <svg class="w-3 h-3 mr-0.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-gray-200 dark:border-gray-700 draggable pingponging relative shadow-sm"
+                            draggable="true" data-id="T-003">
+                            <div
+                                class="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center ring-2 ring-white dark:ring-gray-800 z-20">
+                                <svg class="w-3 h-3 mr-0.5 animate-spin" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
+                                </svg>
                                 핑퐁 중! (2/3)
                             </div>
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="bg-orange-900/50 text-orange-300 text-[10px] px-1.5 py-0.5 rounded border border-orange-700/50">T-003 (REJECTED)</span>
-                                <div class="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center text-[9px] font-bold text-white z-10" title="김감사">김</div>
+                            <div class="flex justify-between items-start mb-2 relative z-10">
+                                <span
+                                    class="bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 text-[10px] px-1.5 py-0.5 rounded border border-orange-200 dark:border-orange-700/50 font-medium tracking-wide">T-003
+                                    (REJECTED)</span>
+                                <div class="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+                                    title="김감사">김</div>
                             </div>
-                            <h3 class="text-sm font-medium mb-1 text-orange-100">휴가 관리 앱 버그 수정</h3>
-                            <p class="text-xs text-orange-400 mt-1 line-clamp-2">"LockService 타임아웃 미적용 됨. 동시성 에러 위험."</p>
-                            <div class="w-full bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
-                                <div class="bg-orange-500 h-full rounded-full w-[10%] progress-bar-striped progress-bar-animated"></div>
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-orange-100 mb-1">휴가 관리 앱 버그 수정</h3>
+                            <p
+                                class="text-[11px] text-orange-600 dark:text-orange-400 mt-1 line-clamp-2 bg-orange-50 dark:bg-transparent p-1.5 dark:p-0 rounded border border-orange-100 dark:border-transparent">
+                                "LockService 타임아웃 미적용 됨. 동시성 에러 위험."</p>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
+                                <div class="bg-orange-500 h-full rounded-full w-[10%]"></div>
                             </div>
                         </div>
 
@@ -190,76 +319,117 @@
                 </div>
 
                 <!-- 3. Kim QA (Testing) -->
-                <div class="w-72 flex flex-col">
-                    <div class="bg-darkPanel border-t-4 border-kimqa rounded-t-xl p-4 flex items-center justify-between shadow-md">
+                <div class="w-72 flex flex-col h-full">
+                    <div
+                        class="bg-white dark:bg-darkPanel border-t-4 border-kimqa rounded-t-xl p-4 flex items-center justify-between shadow-sm dark:shadow-md border border-gray-200 dark:border-transparent">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded bg-kimqa/20 flex items-center justify-center mr-3 text-kimqa">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div
+                                class="w-8 h-8 rounded bg-kimqa/10 dark:bg-kimqa/20 flex items-center justify-center mr-3 text-kimqa">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
                             </div>
                             <div>
-                                <h2 class="font-bold text-gray-100">Kim QA</h2>
-                                <p class="text-[11px] text-gray-400">QUALITY ASSURANCE</p>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100">Kim QA</h2>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">QUALITY ASSURANCE</p>
                             </div>
                         </div>
-                        <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">1</span>
+                        <span
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">1</span>
                     </div>
-                    <div class="bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-800 border-t-0 dropzone" data-stage="QA_REVIEW">
-                        <div class="bg-gray-800 rounded-lg p-3 cursor-grab hover:bg-gray-700 border border-gray-700 transition-colors draggable" draggable="true" data-id="T-004">
+                    <div class="bg-gray-100/50 dark:bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-200 dark:border-gray-800 border-t-0 dropzone"
+                        data-stage="QA_REVIEW">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-kimqa/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable"
+                            draggable="true" data-id="T-004">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="bg-blue-900/50 text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-700/50">T-004</span>
-                                <div class="w-5 h-5 rounded-full bg-kimqa flex items-center justify-center text-[9px] font-bold text-white">김</div>
+                                <span
+                                    class="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/50 font-medium tracking-wide">T-004</span>
+                                <div
+                                    class="w-5 h-5 rounded-full bg-kimqa flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                                    김</div>
                             </div>
-                            <h3 class="text-sm font-medium mb-1">인사평가 시트 접근성 검증</h3>
-                            <div class="flex text-[10px] text-gray-400 mt-2 items-center">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1">인사평가 시트 접근성 검증</h3>
+                            <div
+                                class="flex text-[10px] text-gray-500 dark:text-gray-400 mt-2 items-center bg-gray-50 dark:bg-gray-900/50 p-1 rounded">
+                                <svg class="w-3 h-3 mr-1 text-gray-400 dark:text-gray-500 animate-pulse" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
                                 검사중 (Elaps: 2m)
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- 4. Gangcheol (Optimization) -->
-                ... <div class="hidden">강철/꼼꼼이 탭 생략을 예방하기 위해 간소화 작성</div>
-                <div class="w-72 flex flex-col">
-                    <div class="bg-darkPanel border-t-4 border-gangcheol rounded-t-xl p-4 flex items-center justify-between shadow-md">
+                <div class="w-72 flex flex-col h-full">
+                    <div
+                        class="bg-white dark:bg-darkPanel border-t-4 border-gangcheol rounded-t-xl p-4 flex items-center justify-between shadow-sm dark:shadow-md border border-gray-200 dark:border-transparent">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded bg-gangcheol/20 flex items-center justify-center mr-3 text-gangcheol">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <div
+                                class="w-8 h-8 rounded bg-gangcheol/10 dark:bg-gangcheol/20 flex items-center justify-center mr-3 text-gangcheol">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
                             </div>
                             <div>
-                                <h2 class="font-bold text-gray-100">Gangcheol</h2>
-                                <p class="text-[11px] text-gray-400">OPTIMIZATION</p>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100">Gangcheol</h2>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">OPTIMIZATION</p>
                             </div>
                         </div>
-                        <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">0</span>
+                        <span
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium">0</span>
                     </div>
-                    <div class="bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-800 border-t-0 dropzone" data-stage="OPTIMIZING">
-                        <div class="text-center text-gray-500 text-xs py-4 border-2 border-dashed border-gray-700 rounded-lg">대기 중인 태스크가 없습니다.</div>
+                    <div class="bg-gray-100/50 dark:bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-200 dark:border-gray-800 border-t-0 dropzone"
+                        data-stage="OPTIMIZING">
+                        <div
+                            class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 text-xs h-32 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg m-2">
+                            <svg class="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
+                                </path>
+                            </svg>
+                            대기 중인 태스크가 없습니다
+                        </div>
                     </div>
                 </div>
 
                 <!-- 5. Kkoomkkoom (Documentation) -->
-                <div class="w-72 flex flex-col">
-                    <div class="bg-darkPanel border-t-4 border-kkoomkkoom rounded-t-xl p-4 flex items-center justify-between shadow-md">
+                <div class="w-72 flex flex-col h-full pr-6"> <!-- added pr-6 here to fix end margin -->
+                    <div
+                        class="bg-white dark:bg-darkPanel border-t-4 border-kkoomkkoom rounded-t-xl p-4 flex items-center justify-between shadow-sm dark:shadow-md border border-gray-200 dark:border-transparent">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded bg-kkoomkkoom/20 flex items-center justify-center mr-3 text-kkoomkkoom">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <div
+                                class="w-8 h-8 rounded bg-kkoomkkoom/10 dark:bg-kkoomkkoom/20 flex items-center justify-center mr-3 text-kkoomkkoom">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
                             </div>
                             <div>
-                                <h2 class="font-bold text-gray-100">Kkoomkkoom</h2>
-                                <p class="text-[11px] text-gray-400">DOCUMENTATION</p>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100">Kkoomkkoom</h2>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">DOCUMENTATION</p>
                             </div>
                         </div>
-                        <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">1</span>
+                        <span
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">1</span>
                     </div>
-                    <div class="bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-800 border-t-0 dropzone" data-stage="DOCUMENTING">
-                         <div class="bg-gray-800 rounded-lg p-3 cursor-grab hover:bg-gray-700 border border-gray-700 transition-colors draggable" draggable="true" data-id="T-000">
+                    <div class="bg-gray-100/50 dark:bg-darkPanel/50 flex-1 rounded-b-xl p-3 flex flex-col space-y-3 overflow-y-auto border border-gray-200 dark:border-gray-800 border-t-0 dropzone"
+                        data-stage="DOCUMENTING">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-grab hover:border-kkoomkkoom/50 border border-gray-200 dark:border-gray-700 shadow-sm transition-all draggable"
+                            draggable="true" data-id="T-000">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="bg-green-900/50 text-green-300 text-[10px] px-1.5 py-0.5 rounded border border-green-700/50">T-000</span>
-                                <div class="w-5 h-5 rounded-full bg-kkoomkkoom flex items-center justify-center text-[9px] font-bold text-black text-white">꼼</div>
+                                <span
+                                    class="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-[10px] px-1.5 py-0.5 rounded border border-green-200 dark:border-green-700/50 font-medium tracking-wide">T-000</span>
+                                <div
+                                    class="w-5 h-5 rounded-full bg-kkoomkkoom flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                                    꼼</div>
                             </div>
-                            <h3 class="text-sm font-medium mb-1">V4 핑퐁 시스템 매뉴얼 작성</h3>
-                            <div class="w-full bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1">V4 핑퐁 시스템 매뉴얼 작성</h3>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
                                 <div class="bg-kkoomkkoom h-full rounded-full w-[95%]"></div>
                             </div>
                         </div>
@@ -270,57 +440,67 @@
     </main>
 
     <!-- Right Sidebar (Logs & Analytics) -->
-    <aside class="w-80 bg-darkPanel border-l border-gray-800 flex flex-col shrink-0">
+    <aside class="w-80 bg-white dark:bg-darkPanel border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0">
         <!-- Agent Activity Logs -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
-                <h2 class="font-bold text-sm text-gray-200 uppercase tracking-wider">Agent Activity Logs</h2>
-                <div class="flex space-x-1">
-                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                    <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            <div
+                class="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-transparent">
+                <h2 class="font-bold text-sm text-gray-700 dark:text-gray-200 uppercase tracking-wider">Agent Activity
+                    Logs</h2>
+                <div class="flex space-x-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-sm shadow-yellow-500/50"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm shadow-green-500/50"></span>
                 </div>
             </div>
-            <div class="p-4 flex-1 overflow-y-auto space-y-4 text-xs font-mono">
+            <div class="p-5 flex-1 overflow-y-auto space-y-5 text-xs font-mono">
                 <!-- Log Entry -->
-                <div class="flex">
-                    <div class="flex flex-col items-center mr-3 relative pb-4">
-                        <div class="w-2 h-2 rounded-full bg-kimqa z-10"></div>
-                        <div class="w-px h-full bg-gray-700 absolute top-2 pb-4"></div>
+                <div class="flex group">
+                    <div class="flex flex-col items-center mr-4 relative pb-2">
+                        <div
+                            class="w-2.5 h-2.5 rounded-full bg-kimqa z-10 ring-2 ring-white dark:ring-darkPanel group-hover:scale-125 transition-transform">
+                        </div>
+                        <div class="w-px h-full bg-gray-200 dark:bg-gray-700 absolute top-2 pb-2"></div>
                     </div>
-                    <div class="pt-0.5 pb-2">
-                        <span class="text-gray-500">21:05:12</span>
-                        <div class="mt-1">
+                    <div class="pt-0 pb-3 w-full">
+                        <span class="text-gray-400 dark:text-gray-500 text-[10px]">21:05:12</span>
+                        <div class="mt-1 leading-relaxed text-gray-700 dark:text-gray-300">
                             <span class="text-kimqa font-bold">Kim_QA</span> rejected T-003. QA Status: REJECTED.
-                            <div class="mt-1 bg-gray-800 p-2 rounded border border-gray-700 text-gray-400 break-words">
+                            <div
+                                class="mt-2 bg-gray-50 dark:bg-gray-800 p-2.5 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 break-words shadow-sm">
                                 {"reason": "ERR_LOCK_TIMEOUT issue"}
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- Log Entry -->
-                <div class="flex">
-                    <div class="flex flex-col items-center mr-3 relative pb-4">
-                        <div class="w-2 h-2 rounded-full bg-jarvis z-10"></div>
-                        <div class="w-px h-full bg-gray-700 absolute top-2 pb-4"></div>
+                <div class="flex group">
+                    <div class="flex flex-col items-center mr-4 relative pb-2">
+                        <div
+                            class="w-2.5 h-2.5 rounded-full bg-jarvis z-10 ring-2 ring-white dark:ring-darkPanel group-hover:scale-125 transition-transform">
+                        </div>
+                        <div class="w-px h-full bg-gray-200 dark:bg-gray-700 absolute top-2 pb-2"></div>
                     </div>
-                    <div class="pt-0.5 pb-2">
-                        <span class="text-gray-500">21:05:15</span>
-                        <div class="mt-1">
+                    <div class="pt-0 pb-3">
+                        <span class="text-gray-400 dark:text-gray-500 text-[10px]">21:05:15</span>
+                        <div class="mt-1 leading-relaxed text-gray-700 dark:text-gray-300">
                             <span class="text-jarvis font-bold">Jarvis_Ada</span> started debugging T-003.
                         </div>
                     </div>
                 </div>
-                 <!-- Log Entry -->
-                <div class="flex">
-                    <div class="flex flex-col items-center mr-3 relative pb-4">
-                        <div class="w-2 h-2 rounded-full bg-bunker z-10"></div>
-                        <div class="w-px h-full bg-gray-700 absolute top-2"></div>
+                <!-- Log Entry -->
+                <div class="flex group">
+                    <div class="flex flex-col items-center mr-4 relative">
+                        <div
+                            class="w-2.5 h-2.5 rounded-full bg-bunker z-10 ring-2 ring-white dark:ring-darkPanel group-hover:scale-125 transition-transform">
+                        </div>
+                        <div class="w-px h-full bg-transparent absolute top-2"></div>
                     </div>
-                    <div class="pt-0.5 pb-2">
-                        <span class="text-gray-500">21:10:02</span>
-                        <div class="mt-1">
-                            <span class="text-bunker font-bold">Bunker_SongPO</span> routed T-004 to Kim_QA for evaluation.
+                    <div class="pt-0">
+                        <span class="text-gray-400 dark:text-gray-500 text-[10px]">21:10:02</span>
+                        <div class="mt-1 leading-relaxed text-gray-700 dark:text-gray-300">
+                            <span class="text-bunker font-bold">Bunker_SongPO</span> routed T-004 to Kim_QA for
+                            evaluation.
                         </div>
                     </div>
                 </div>
@@ -328,55 +508,108 @@
         </div>
 
         <!-- Cost & Analytics Chart -->
-        <div class="h-1/3 border-t border-gray-800 p-4 bg-gray-900/50 flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-bold text-sm text-gray-200">Token Usage (Monthly)</h2>
-                <span class="text-xs text-jarvis bg-jarvis/10 px-2 py-0.5 rounded border border-jarvis/30">Live</span>
+        <div
+            class="h-1/3 border-t border-gray-200 dark:border-gray-800 p-5 bg-gray-50 dark:bg-gray-900/50 flex flex-col">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="font-bold text-sm text-gray-800 dark:text-gray-200">Token Usage (Monthly)</h2>
+                <span
+                    class="text-[10px] font-bold text-jarvis bg-jarvis/10 px-2 py-0.5 rounded border border-jarvis/30 uppercase tracking-wide">Live</span>
             </div>
-            <div class="flex justify-between items-end mb-4">
+            <div class="flex justify-between items-end mb-5">
                 <div>
-                    <div class="text-2xl font-bold text-white tracking-tight">84.2<span class="text-sm text-gray-500 font-normal">%</span></div>
-                    <div class="text-[10px] text-gray-400 mt-1">842,000 / 1,000,000 Tokens</div>
+                    <div class="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">84.2<span
+                            class="text-lg text-gray-400 dark:text-gray-500 font-normal">%</span></div>
+                    <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 font-medium">842,000 / 1,000,000
+                        Tokens</div>
                 </div>
                 <!-- Mini Alert Indicator -->
-                <div class="flex items-center text-orange-400 text-xs">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Approaching Limit
+                <div
+                    class="flex items-center text-orange-500 dark:text-orange-400 text-xs font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded border border-orange-200 dark:border-orange-800">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Near Limit
                 </div>
             </div>
-            
-            <div class="flex-1 relative w-full overflow-hidden">
-                <!-- Fallback static bar for demonstration in case chart context crashes -->
-                <div class="absolute inset-0 flex flex-col justify-end">
-                    <div class="w-full flex h-6 rounded-full overflow-hidden border border-gray-700">
-                        <div class="bg-jarvis h-full w-[40%]" title="Jarvis: 40%"></div>
-                        <div class="bg-kimqa h-full w-[25%]" title="Kim QA: 25%"></div>
-                        <div class="bg-bunker h-full w-[10%]" title="Bunker: 10%"></div>
-                        <div class="bg-kkoomkkoom h-full w-[9%]" title="Kkoomkkoom: 9%"></div>
+
+            <div class="flex-1 relative w-full overflow-hidden flex flex-col justify-end pb-2">
+                <div
+                    class="w-full flex h-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shadow-inner bg-gray-100 dark:bg-gray-800">
+                    <div class="bg-jarvis h-full w-[40%] transition-all duration-1000 ease-out" title="Jarvis: 40%">
                     </div>
-                    <div class="flex justify-between text-[9px] text-gray-500 mt-2 px-1">
-                        <div class="flex items-center"><span class="w-2 h-2 bg-jarvis rounded-full mr-1"></span>Jarvis</div>
-                        <div class="flex items-center"><span class="w-2 h-2 bg-kimqa rounded-full mr-1"></span>QA</div>
-                        <div class="flex items-center"><span class="w-2 h-2 bg-bunker rounded-full mr-1"></span>Bunker</div>
+                    <div class="bg-kimqa h-full w-[25%] transition-all duration-1000 ease-out" title="Kim QA: 25%">
                     </div>
+                    <div class="bg-bunker h-full w-[10%] transition-all duration-1000 ease-out" title="Bunker: 10%">
+                    </div>
+                    <div class="bg-kkoomkkoom h-full w-[9%] transition-all duration-1000 ease-out"
+                        title="Kkoomkkoom: 9%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-3 px-1 font-medium">
+                    <div class="flex items-center"><span
+                            class="w-2.5 h-2.5 bg-jarvis rounded-full mr-1.5 shadow-sm"></span>Jarvis</div>
+                    <div class="flex items-center"><span
+                            class="w-2.5 h-2.5 bg-kimqa rounded-full mr-1.5 shadow-sm"></span>QA</div>
+                    <div class="flex items-center"><span
+                            class="w-2.5 h-2.5 bg-bunker rounded-full mr-1.5 shadow-sm"></span>Bunker</div>
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- Client-side Interaction Script for Mockup Presentation -->
+    <!-- Client-side Scripts -->
     <script>
+        // -------------------------------------------------------------
+        // Theme Toggle Logic
+        // -------------------------------------------------------------
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Initial icon state
+        if (document.documentElement.classList.contains('dark')) {
+            lightIcon.classList.remove('hidden');
+        } else {
+            darkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function () {
+            // Toggle icons
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            // Toggle theme
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        });
+
+        // -------------------------------------------------------------
         // HTML5 Drag and Drop for UI demonstration
+        // -------------------------------------------------------------
         const draggables = document.querySelectorAll('.draggable');
         const dropzones = document.querySelectorAll('.dropzone');
 
         draggables.forEach(draggable => {
             draggable.addEventListener('dragstart', () => {
                 draggable.classList.add('opacity-50');
+                draggable.classList.add('scale-95');
+                // Remove pingpong anim temporarily while dragging if it has it
+                if (draggable.classList.contains('pingponging')) {
+                    draggable.style.animation = 'none';
+                }
             });
 
             draggable.addEventListener('dragend', () => {
                 draggable.classList.remove('opacity-50');
+                draggable.classList.remove('scale-95');
+                if (draggable.classList.contains('pingponging')) {
+                    draggable.style.animation = '';
+                }
             });
         });
 
@@ -394,13 +627,13 @@
                 e.preventDefault();
                 zone.classList.remove('drag-over');
                 const draggable = document.querySelector('.opacity-50');
-                if(draggable) {
+                if (draggable) {
                     zone.appendChild(draggable);
-                    // Mock update to state representation
                     console.log(`Task moved to: ${zone.dataset.stage}`);
                 }
             });
         });
     </script>
 </body>
+
 </html>
