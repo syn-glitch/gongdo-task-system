@@ -83,7 +83,7 @@ var SLACK_WEBHOOK = PropertiesService.getScriptProperties().getProperty('SLACK_W
 - **현재 상태**: 🔴 Backlog
 - **담당자**: 성능전문가
 - **예상 공수**: 8시간
-- **마감일**: 2026-03-03
+- **마감일**: ~~2026-03-03~~ → **2026-03-10** (김감사 QA 피드백 반영: 성능전문가 과부하 방지)
 
 **상세 설명**:
 시트 읽기 작업이 매번 실행되어 페이지 로드가 느림.

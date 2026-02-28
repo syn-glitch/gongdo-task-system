@@ -214,23 +214,23 @@
             </div>
         </div>
 
-    </main>
-
-    <!-- Typing Indicator (Hidden by default) -->
-    <div id="typing-indicator" class="px-6 pb-2 hidden items-end space-x-3 msg-enter">
-        <div
-            class="w-8 h-8 rounded-full bg-gradient-to-tr from-wowTeam to-yellow-400 flex items-center justify-center shrink-0 shadow-md opacity-70">
-            <span class="text-white text-xs font-bold">W</span>
-        </div>
-        <div
-            class="bg-white dark:bg-darkPanel p-3 rounded-2xl rounded-bl-sm border border-slate-100 dark:border-slate-800 flex items-center shadow-sm">
-            <div class="flex space-x-1.5">
-                <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
-                <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
-                <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
+        <!-- Typing Indicator (Hidden by default) -->
+        <div id="typing-indicator" style="display: none;" class="px-6 pb-2 items-end space-x-3 msg-enter">
+            <div
+                class="w-8 h-8 rounded-full bg-gradient-to-tr from-wowTeam to-yellow-400 flex items-center justify-center shrink-0 shadow-md opacity-70">
+                <span class="text-white text-xs font-bold">W</span>
+            </div>
+            <div
+                class="bg-white dark:bg-darkPanel p-3 rounded-2xl rounded-bl-sm border border-slate-100 dark:border-slate-800 flex items-center shadow-sm">
+                <div class="flex space-x-1.5">
+                    <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full typing-dot"></div>
+                </div>
             </div>
         </div>
-    </div>
+
+    </main>
 
     <!-- Input Area -->
     <footer class="glass border-t border-slate-200 dark:border-slate-800 p-4 shrink-0 pb-safe">
@@ -317,12 +317,12 @@
         });
 
         async function simulateWOWResponse(userMsg) {
-            typingIndicator.classList.remove('hidden');
+            typingIndicator.style.display = 'flex';
             scrollToBottom();
 
             // Simulate network delay
             await new Promise(r => setTimeout(r, 1500));
-            typingIndicator.classList.add('hidden');
+            typingIndicator.style.display = 'none';
 
             let responseText = "좋은 아이디어네요! 구체적으로 어떤 불편함을 해소하고 싶으신지 상황을 조금만 더 설명해 주시겠어요?";
 
