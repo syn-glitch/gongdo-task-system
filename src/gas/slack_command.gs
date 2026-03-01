@@ -273,7 +273,7 @@ function doPost(e) {
                    "type": "section",
                    "text": {
                      "type": "mrkdwn",
-                     "text": `✨ *${senderName}* 님을 위한 전용 주디 접속 링크입니다.\n(보안을 위해 10분 후 만료되며, 1회 클릭 시 즉시 영구 소멸됩니다)`
+                     "text": `✨ *${senderName}* 님을 위한 전용 주디 접속 링크입니다.\n(이 링크는 10분 내 1회 클릭으로 인증되며, 이후 자유롭게 이용 가능합니다)`
                    }
                  },
                  {

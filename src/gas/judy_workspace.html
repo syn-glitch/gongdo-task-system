@@ -1853,7 +1853,7 @@
                 .withSuccessHandler((result) => {
                     if (result.valid) {
                         setAuthenticatedUser(null, result.name);
-                        switchMainView('note');
+                        switchMainView(initialPage || 'note');
                     } else {
                         showAccessDenied(result.reason);
                     }
@@ -1962,7 +1962,7 @@
             memoInput.addEventListener('keydown', (e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                     e.preventDefault();
-                    if (currentMode === 'write') saveMemo('saveFromWeb');
+                    if (currentMode === 'write') saveMemo();
                 }
             });
         }
@@ -2479,7 +2479,7 @@
 
             showToast('⏳ 상태 변경 중...');
             retryWithExponentialBackoff(
-                () => google.script.run.changeTaskStatusFromWeb(row, newStatus, g_userName),
+                'changeTaskStatusFromWeb', [row, newStatus, g_userName],
                 (res) => {
                     // Success Handler
                     if (res.success) {
@@ -2519,30 +2519,24 @@
          * @param {Function} onFailure - 최종 실패 시 콜백
          * @param {number} retryCount - 현재 재시도 횟수 (0부터 시작)
          */
-        function retryWithExponentialBackoff(apiCall, onSuccess, onFailure, retryCount = 0) {
-            const MAX_RETRIES = 3; // 총 4번 시도 (초기 1회 + 재시도 3회)
-            const BASE_DELAY = 2000; // 2초
+        function retryWithExponentialBackoff(methodName, params, onSuccess, onFailure, retryCount = 0) {
+            const MAX_RETRIES = 3;
+            const BASE_DELAY = 2000;
 
-            apiCall()
+            google.script.run
                 .withSuccessHandler(onSuccess)
                 .withFailureHandler(err => {
                     const isTimeout = err.message.includes('timeout') || err.message.includes('TIMEOUT');
-
                     if (isTimeout && retryCount < MAX_RETRIES) {
-                        // 타임아웃이고 재시도 가능한 경우
                         const delay = retryCount === 0 ? 0 : BASE_DELAY * Math.pow(2, retryCount - 1);
-                        const retryNum = retryCount + 1;
-
-                        showToast(`⏱️ 재시도 중... (${retryNum}/${MAX_RETRIES})`, false);
-
+                        showToast(`⏱️ 재시도 중... (${retryCount + 1}/${MAX_RETRIES})`, false);
                         setTimeout(() => {
-                            retryWithExponentialBackoff(apiCall, onSuccess, onFailure, retryCount + 1);
+                            retryWithExponentialBackoff(methodName, params, onSuccess, onFailure, retryCount + 1);
                         }, delay);
                     } else {
-                        // 타임아웃이 아니거나 최대 재시도 횟수 초과
                         onFailure(err.message);
                     }
-                });
+                })[methodName].apply(google.script.run, params);
         }
 
         /**
@@ -2882,7 +2876,7 @@
 
             // 2. 서버 통신 (재시도 메커니즘 적용)
             retryWithExponentialBackoff(
-                () => google.script.run.changeTaskStatusFromWeb(rowNum, newStatus, g_userName),
+                'changeTaskStatusFromWeb', [rowNum, newStatus, g_userName],
                 (res) => {
                     // Success Handler
                     if (res.success) {
@@ -3003,7 +2997,7 @@
             showToast(`⏳ ${taskId} 마감일 변경 중...`);
 
             retryWithExponentialBackoff(
-                () => google.script.run.changeTaskDueDateFromWeb(rowNum, newDate, g_userName),
+                'changeTaskDueDateFromWeb', [rowNum, newDate, g_userName],
                 (res) => {
                     // Success Handler
                     if (res.success) {

@@ -52,12 +52,7 @@ function doPost(e) {
     }
     
     const payload = JSON.parse(e.postData.contents);
-    
-    // [Phase 5] WOW Gateway 신규 접수 인터셉트
-    if (payload.type === "WOW_TASK") {
-      return handleWowTask(payload);
-    }
-    
+
     const taskId = payload.task_id;
     
     if (!taskId) {
@@ -105,62 +100,6 @@ function doPost(e) {
            sendSlackMessage(`🚨 *[시스템 에러]* \`${p.task_id}\` Webhook 처리 중 에러 발생: ${error.message}`, "CRITICAL");
        }
     }
-    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.message })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-/**
- * [Phase 5] WOW Gateway 신규 태스크 생성 핸들러
- */
-function handleWowTask(payload) {
-  try {
-    const ss = SpreadsheetApp.openById(AGENT_SHEET_ID);
-    const sheet = ss.getSheetByName("Agent_Tasks");
-    if (!sheet) throw new Error("Agent_Tasks sheet not found");
-
-    // 1. Task_ID 자동 생성 (예: 20260228-W123456)
-    const now = new Date();
-    const dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd");
-    const timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "HHmmss");
-    const taskId = `${dateStr}-W${timeStr}`; 
-
-    // 2. 시트에 새 행 추가
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    let newRow = new Array(headers.length).fill("");
-    
-    newRow[0] = taskId; // A열: Task_ID
-    newRow[1] = payload.content || "WOW Gateway 자동 생성 태스크"; // B열: 태스크명
-    newRow[2] = "PLANNING"; // C열: 상태
-    
-    const teamColIndex = headers.indexOf("할당_팀(V4)");
-    if(teamColIndex > -1) newRow[teamColIndex] = "BUNKER_TEAM";
-
-    sheet.appendRow(newRow);
-
-    // 3. 상태(State) 초기화 및 저장
-    const initState = {
-      task_id: taskId,
-      current_stage: "PLANNING",
-      pingpong_count: 0,
-      assigned_team: "BUNKER_TEAM",
-      token_usage: { total_budget: 1000000, used: 0 },
-      context: { wow_wish: payload.content },
-      latest_qa_feedback: null
-    };
-
-    saveAgentState(taskId, initState);
-    
-    // 4. 슬랙 알림 전송
-    sendSlackMessage(`✨ *[WOW Gateway 신규 접수]*\n새로운 태스크 \`${taskId}\` 가 벙커팀(PLANNING)에 할당되었습니다.\n요구사항: ${payload.content}`, "INFO");
-
-    return ContentService.createTextOutput(JSON.stringify({
-      status: "success",
-      task_id: taskId,
-      message: "WOW Task successfully created and routed to BUNKER_TEAM"
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch(error) {
-    Logger.log("[FATAL] handleWowTask 에러: " + error.message);
     return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.message })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -409,7 +348,7 @@ function uploadToGitHub(filePath, content, commitMessage) {
  */
 function sendSlackMessage(text, priority = "LOW") {
   const webhookUrl = PropertiesService.getScriptProperties().getProperty("SLACK_WEBHOOK_URL");
-  if (!webhookUrl) return; 
+  if (!webhookUrl) return;
   const payload = { "text": text };
   const options = {
     method: "post",
@@ -419,3 +358,4 @@ function sendSlackMessage(text, priority = "LOW") {
   };
   UrlFetchApp.fetch(webhookUrl, options);
 }
+

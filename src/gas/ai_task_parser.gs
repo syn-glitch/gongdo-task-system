@@ -231,17 +231,27 @@ function parseTaskFromMemoWeb(userName, text) {
 /**
  * 프론트엔드에서 '✨ AI 내용 요약' 버튼 클릭 시 호출
  * 특정 메모 텍스트를 요약해 반환합니다.
+ * [Phase 24 Refactoring] 장문 텍스트 청크 분할 처리 추가
  */
 function summarizeMemoContent(text, userName) {
   try {
     if (!text || text.trim() === "") return { success: false, message: "요약할 내용이 없습니다." };
-    
+
     let apiKey = "";
     try { apiKey = CLAUDE_API_KEY; } catch(e) {}
     if (!apiKey) return { success: false, message: "CLAUDE API키 설정이 없습니다." };
-    
-    const systemPrompt = `당신은 핵심을 짚어내는 요약 비서입니다. 작성자(\${userName})의 업무일지 내용을 읽고, 1~3줄 이내의 간결하고 명확한 요약본을 작성하세요. 불필요한 인사말 없이 요약 결과만 마크다운 단락 형식으로 예쁘게 출력하세요.`;
-    
+
+    // [Phase 24 Refactoring] 장문 텍스트 처리
+    const CHUNK_SIZE = 4000; // 4000자 기준 청크 분할
+
+    if (text.length > CHUNK_SIZE) {
+      // 장문인 경우: 청크 분할 → 각각 요약 → 통합 요약
+      return summarizeLongText(text, userName, apiKey);
+    }
+
+    // 단문인 경우: 기존 로직
+    const systemPrompt = `당신은 핵심을 짚어내는 요약 비서입니다. 작성자(${userName})의 업무일지 내용을 읽고, 1~3줄 이내의 간결하고 명확한 요약본을 작성하세요. 불필요한 인사말 없이 요약 결과만 마크다운 단락 형식으로 예쁘게 출력하세요.`;
+
     const payload = {
       model: "claude-sonnet-4-20250514",
       max_tokens: 500,
@@ -249,7 +259,7 @@ function summarizeMemoContent(text, userName) {
       system: systemPrompt,
       messages: [{ role: "user", content: text }]
     };
-    
+
     const options = {
       method: "post",
       headers: {
@@ -260,10 +270,10 @@ function summarizeMemoContent(text, userName) {
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     };
-    
+
     const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
     const json = JSON.parse(res.getContentText());
-    
+
     if (json.content && json.content.length > 0) {
       return { success: true, summary: json.content[0].text.trim() };
     } else {
@@ -274,4 +284,112 @@ function summarizeMemoContent(text, userName) {
     console.error("AI 노트 요약 에러 (summarizeMemoContent):", err);
     return { success: false, message: err.message };
   }
+}
+
+/**
+ * [Phase 24 Refactoring] 장문 텍스트 청크 분할 요약
+ * 1. 4000자씩 청크 분할
+ * 2. 각 청크 개별 요약
+ * 3. 최종 통합 요약
+ */
+function summarizeLongText(text, userName, apiKey) {
+  const CHUNK_SIZE = 4000;
+  const chunks = [];
+
+  // 1. 문장 단위로 청크 분할 (문장 중간에 끊기지 않도록)
+  let currentChunk = "";
+  const sentences = text.split(/([.!?]\s+)/); // 문장 구분자 포함하여 분할
+
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i];
+    if ((currentChunk + sentence).length > CHUNK_SIZE && currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    } else {
+      currentChunk += sentence;
+    }
+  }
+  if (currentChunk.trim().length > 0) {
+    chunks.push(currentChunk.trim());
+  }
+
+  // 2. 각 청크 개별 요약
+  const chunkSummaries = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const systemPrompt = `당신은 핵심을 짚어내는 요약 비서입니다. 작성자(${userName})의 업무일지 일부를 읽고, 2~3줄로 간결하게 요약하세요. (Part ${i+1}/${chunks.length})`;
+
+    const payload = {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 300,
+      temperature: 0,
+      system: systemPrompt,
+      messages: [{ role: "user", content: chunks[i] }]
+    };
+
+    const options = {
+      method: "post",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    try {
+      const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
+      const json = JSON.parse(res.getContentText());
+      if (json.content && json.content.length > 0) {
+        chunkSummaries.push(json.content[0].text.trim());
+      }
+    } catch (e) {
+      Logger.log("청크 요약 실패 (Part " + (i+1) + "): " + e.message);
+    }
+
+    // API Rate Limit 방지를 위한 짧은 딜레이
+    if (i < chunks.length - 1) Utilities.sleep(500);
+  }
+
+  // 3. 최종 통합 요약
+  if (chunkSummaries.length === 0) {
+    return { success: false, message: "청크 요약 실패" };
+  }
+
+  const combinedSummary = chunkSummaries.join("\n\n");
+  const finalSystemPrompt = `다음은 긴 문서를 여러 부분으로 나누어 요약한 결과입니다. 이 요약들을 종합하여 전체 문서의 핵심을 3~4줄로 통합 요약하세요.`;
+
+  const finalPayload = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 500,
+    temperature: 0,
+    system: finalSystemPrompt,
+    messages: [{ role: "user", content: combinedSummary }]
+  };
+
+  const finalOptions = {
+    method: "post",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
+    },
+    payload: JSON.stringify(finalPayload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", finalOptions);
+    const json = JSON.parse(res.getContentText());
+    if (json.content && json.content.length > 0) {
+      return {
+        success: true,
+        summary: "📊 **장문 요약 (총 " + chunks.length + "개 청크 분석)**\n\n" + json.content[0].text.trim()
+      };
+    }
+  } catch (e) {
+    Logger.log("최종 통합 요약 실패: " + e.message);
+  }
+
+  return { success: false, message: "최종 요약 생성 실패" };
 }
