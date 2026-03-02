@@ -3,8 +3,8 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        web_app.gs
- * @version     v2.0.0
- * @updated     2026-03-02 15:00 (KST)
+ * @version     v3.0.0
+ * @updated     2026-03-02 18:28 (KST)
  * @agent       강철 (강철 AX팀)
  * @ordered-by  용남 대표
  * @description 주디 워크스페이스 통합 백엔드 — 메모 저장, AI 추출, 업무 CRUD, 인증
@@ -26,6 +26,9 @@
  *   - [수정] validateToken — logActionV2 직접 호출로 통일
  *
  * ── 변경 이력 ──────────────────────────
+ * v3.0.0 | 2026-03-02 18:28 | 강철 (AX팀) | 세션 스토어 CacheService→PropertiesService 전환, 30일 TTL, GC 로직 추가 (QA C-1/C-2/C-3)
+ * v2.2.0 | 2026-03-02 16:40 | 자비스 PO | 인증 회복탄력성 강화 (Magic Token 즉시 삭제 방지)
+ * v2.1.0 | 2026-03-02 16:00 | 자비스 PO | 배포 이력 추가 및 모바일 최적화 반영
  * v2.0.0 | 2026-03-02 15:00 | 강철 (AX팀) | 리팩토링 + 에러 핸들링 보강 + QA M-2/M-7/M-9/M-10 해소
  * v1.0.0 | 2026-03-01 | 클로이 (자비스팀) | 최초 작성 — 주디 워크스페이스 통합 백엔드
  * ============================================
@@ -45,8 +48,11 @@ const SLACK_USER_MAP = {
   "U02S3EURC21": "kwansu"
 };
 
-/** 세션 TTL (6시간) */
-const SESSION_TTL = 21600;
+/** 세션 TTL (30일, 밀리초) — PropertiesService는 TTL 없으므로 자체 만료 로직 사용 */
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
+
+/** CacheService TTL (하위 호환용, 성능 캠 레이어) */
+const SESSION_CACHE_TTL = 21600; // 6시간
 
 /** 태스크 캐시 TTL (5분) */
 const TASKS_CACHE_TTL = 300;
@@ -173,7 +179,8 @@ function getTargetSpreadsheet() {
 // ═══════════════════════════════════════════
 
 /**
- * 매직 링크 토큰 검증 → 세션 토큰 발급 (1회용 소멸)
+ * 매직 링크 토큰 검증 → 세션 토큰 발급
+ * [v3.0.0] PropertiesService 기반 영구 세션 스토어로 전환
  */
 function validateToken(token) {
   if (!token) return { valid: false, reason: "토큰이 없습니다. 슬랙에서 다시 접속해주세요." };
@@ -184,36 +191,117 @@ function validateToken(token) {
     return { valid: false, reason: "권한이 없거나 이미 만료된 링크입니다." };
   }
 
-  cache.remove("MAGIC_" + token);
+  // [v3.0.0] 세션 토큰을 PropertiesService에 영구 저장
   var sessionToken = Utilities.getUuid().replace(/-/g, '');
-  cache.put("SESSION_" + sessionToken, userName, SESSION_TTL);
+  var sessionData = JSON.stringify({
+    userName: userName,
+    createdAt: new Date().getTime(),
+    lastActiveAt: new Date().getTime()
+  });
+  PropertiesService.getScriptProperties().setProperty("SESSION_" + sessionToken, sessionData);
+
+  // 성능 캐시 레이어 (CacheService를 읽기 캐시로 활용)
+  cache.put("SESS_CACHE_" + sessionToken, userName, SESSION_CACHE_TTL);
 
   logActionV2({
     userId: userName, action: "SESSION_CREATE", targetId: sessionToken,
-    details: "매직 링크 인증 → 세션 발급"
+    details: "매직 링크 인증 → 세션 발급 (v3.0 PropertiesService)"
   });
 
-  return { valid: true, name: userName, sessionToken: sessionToken };
+  // [v3.0.1] 실제 배포 URL 제공 (PWA 홈 화면 추가용)
+  var deployUrl = ScriptApp.getService().getUrl();
+  var sessionUrl = deployUrl + '?session=' + sessionToken;
+
+  return { valid: true, name: userName, sessionToken: sessionToken, sessionUrl: sessionUrl };
 }
 
 /**
- * 세션 토큰 검증 (새로고침 시 사용) — QA M-7: 만료 시 재인증 안내 보강
+ * 세션 토큰 검증 (새로고침/PWA 재접속 시 사용)
+ * [v3.0.0] PropertiesService 기반 — 30일 만료, 활동 시 TTL 갱신
  */
 function validateSession(sessionToken) {
   if (!sessionToken) {
     return { valid: false, reason: "세션 정보가 없습니다. 슬랙에서 매직 링크를 다시 발급받아주세요." };
   }
+
+  // 1차: 캐시에서 빠르게 조회 (성능 최적화)
   var cache = CacheService.getScriptCache();
-  var userName = cache.get("SESSION_" + sessionToken);
-  if (!userName) {
+  var cachedName = cache.get("SESS_CACHE_" + sessionToken);
+  if (cachedName) {
+    // 캐시 히트 — PropertiesService 읽기 생략
+    cache.put("SESS_CACHE_" + sessionToken, cachedName, SESSION_CACHE_TTL);
+    return { valid: true, name: cachedName, sessionToken: sessionToken };
+  }
+
+  // 2차: PropertiesService에서 조회 (캐시 미스 또는 6시간+ 경과)
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty("SESSION_" + sessionToken);
+  if (!raw) {
     return {
       valid: false,
       expired: true,
       reason: "세션이 만료되었습니다. 슬랙에서 /주디 명령어로 새 매직 링크를 발급받아주세요."
     };
   }
-  cache.put("SESSION_" + sessionToken, userName, SESSION_TTL);
-  return { valid: true, name: userName, sessionToken: sessionToken };
+
+  try {
+    var data = JSON.parse(raw);
+    var now = new Date().getTime();
+
+    // 30일 만료 검사
+    if (now - data.createdAt > SESSION_TTL_MS) {
+      props.deleteProperty("SESSION_" + sessionToken);
+      return {
+        valid: false,
+        expired: true,
+        reason: "세션이 만료되었습니다. 슬랙에서 다시 접속해주세요."
+      };
+    }
+
+    // 활동 시간 갱신
+    data.lastActiveAt = now;
+    props.setProperty("SESSION_" + sessionToken, JSON.stringify(data));
+
+    // 캐시 백필
+    cache.put("SESS_CACHE_" + sessionToken, data.userName, SESSION_CACHE_TTL);
+
+    return { valid: true, name: data.userName, sessionToken: sessionToken };
+  } catch (e) {
+    props.deleteProperty("SESSION_" + sessionToken);
+    return { valid: false, reason: "세션 데이터 오류. 슬랙에서 다시 접속해주세요." };
+  }
+}
+
+/**
+ * [v3.0.0] 세션 가비지 콜렉션 — 30일 초과 세션 정리
+ * 주기적 트리거(1일 1회)로 호출 권장
+ */
+function cleanupExpiredSessions() {
+  var props = PropertiesService.getScriptProperties();
+  var allProps = props.getProperties();
+  var now = new Date().getTime();
+  var cleaned = 0;
+
+  for (var key in allProps) {
+    if (key.indexOf("SESSION_") === 0) {
+      try {
+        var data = JSON.parse(allProps[key]);
+        if (now - data.createdAt > SESSION_TTL_MS) {
+          props.deleteProperty(key);
+          cleaned++;
+        }
+      } catch (e) {
+        // 파싱 실패 — 손상된 데이터 삭제
+        props.deleteProperty(key);
+        cleaned++;
+      }
+    }
+  }
+
+  if (cleaned > 0) {
+    console.log("Session GC: " + cleaned + "건 만료 세션 정리 완료");
+  }
+  return { cleaned: cleaned };
 }
 
 // ═══════════════════════════════════════════
