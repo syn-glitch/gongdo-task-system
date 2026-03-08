@@ -3,16 +3,31 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        judy_workspace.html
- * @version     v2.2.0
- * @updated     2026-03-02 16:40 (KST)
- * @author      클로이 & 벨라 (자비스팀)
- * @description
- *   - [수정] 모바일 UX/UI 전면 개편 (iOS Claude 앱 스타일)
- *   - [수정] 인증 회복탄력성 강화 (v2.2.0) — 새로고침 및 PWA 설치 대응
- *   - [신규] 하단 탭 네비게이션(Bottom Tab Bar) 도입
- *   - [수정] 사이드바 -> 슬라이드 드로어(Drawer) 레이아웃 전환
- *   - [신규] 캘린더 도트 렌더링 + 바텀 시트(Bottom Sheet) 상세 뷰
- *   - [수정] 메모 편집기 모바일 집중 모드 및 포맷 툴바 구현
+ * @version     v2.8.2
+ * @updated     2026-03-08 (KST)
+ * @author      클로이 & 에이다 (자비스팀)
+ * @ordered-by  용남 대표
+ * @description 주디 워크스페이스 — 마크다운 노트 v2 + 주디 AI 비서 챗봇 패널.
+ *              기존 textarea 강화 + 마크다운 툴바 + 프리뷰 토글 + 글자수 카운터.
+ *              Notes_v2 시트 기반 CRUD + 챗봇 RAG 검색 연동.
+ *
+ * @change-summary
+ *   AS-IS: v2.8.1 — 패널 HTML이 script 뒤 배치되어 DOM null 참조 (QA F-1 CRITICAL)
+ *   TO-BE: v2.8.2 — QA 4건 해소 (F-1 DOM순서, U-1 모바일title, U-2 dot애니메이션)
+ *
+ * @features
+ *   - [수정] 패널 HTML을 script 앞으로 이동 — DOM 참조 보장 (QA F-1, F-2 해소)
+ *   - [수정] 토글 버튼 title="주디 AI 비서" 추가 — 모바일 접근성 (QA U-1 해소)
+ *   - [수정] 타이핑 인디케이터 span dot 방식 — CSS opacity 애니메이션 (QA U-2 해소)
+ *
+ * ── 변경 이력 ──────────────────────────
+ * v2.8.2 | 2026-03-08 | 클로이 FE | QA 4건 해소 — DOM순서 수정, 모바일 title, dot 애니메이션
+ * v2.8.0 | 2026-03-08 | 클로이 FE | 주디 AI 비서 챗봇 사이드 패널 복원 (JARVIS-2026-03-08-003)
+ * v2.7.1 | 2026-03-08 | 에이다 BE | QA MAJOR 해소 — sanitizeHtml 보강 + 프리뷰 저장 UX
+ * v2.7.0 | 2026-03-08 | 클로이 & 에이다 | 마크다운 노트 v2 (툴바, 프리뷰, 파서, 새니타이저)
+ * v2.6.0 | 2026-03-07 | 클로이 & 에이다 | 음성 녹음 기능 삭제
+ * v2.3.0 | 2026-03-07 | 클로이 & 에이다 | 음성 녹음 Phase 1 MVP
+ * v2.2.0 | 2026-03-02 16:40 | 클로이 & 벨라 | 인증 회복탄력성 강화, PWA 대응
  * ============================================
  -->
 <!DOCTYPE html>
@@ -24,7 +39,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Judy">
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/syn-glitch/gongdo-task-system/main/icon.png">
+    <link rel="apple-touch-icon" type="image/jpeg" sizes="180x180"
+        href="data:image/jpeg;base64,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">
 
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
     <!-- FullCalendar v6 CDN (Security Patch: v6.1.10 → v6.1.15) -->
@@ -71,8 +87,10 @@
             --primary-mobile: #9461fd;
             --surface-mobile: #1a1a1b;
             --tabbar-bg: rgba(26, 26, 27, 0.9);
-            --touch-target-min: 44px;
-            --bottom-nav-height: 60px;
+            --touch-target-min: 56px;
+            /* 44px -> 56px 확대 */
+            --bottom-nav-height: 72px;
+            /* 60px -> 72px 확대 */
         }
 
         * {
@@ -195,6 +213,271 @@
             font-size: 14px;
             font-weight: 600;
             user-select: none;
+        }
+
+        /* ═══ Judy Chat Side Panel ═══ */
+        .judy-chat-toggle {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.2s;
+        }
+        .judy-chat-toggle:hover { opacity: 0.85; }
+
+        .judy-chat-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 9000;
+        }
+        .judy-chat-overlay.show { display: block; }
+
+        .judy-chat-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 9001;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.25s ease;
+        }
+        .judy-chat-panel.open { right: 0; }
+
+        .judy-chat-resizer {
+            position: absolute;
+            left: -3px;
+            top: 0;
+            width: 6px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 100;
+            transition: background-color 0.2s;
+        }
+        .judy-chat-resizer:hover, .judy-chat-resizer.active {
+            background-color: var(--primary);
+            opacity: 0.6;
+        }
+        
+        .judy-typing-carrot {
+            display: none;
+            padding: 10px 16px;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--hint-color);
+        }
+        .judy-typing-carrot.show {
+            display: flex;
+        }
+        .carrot-spinner {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            animation: spinCarrot 1s linear infinite;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        @keyframes spinCarrot {
+            100% { transform: rotate(360deg); }
+        }
+
+
+        .judy-chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .judy-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .judy-chat-close {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 20px;
+            cursor: pointer;
+            width: 32px; height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .judy-chat-close:hover { background: var(--surface-elevated); }
+
+        .judy-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .judy-msg {
+            max-width: 90%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .judy-msg.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .judy-msg.ai {
+            align-self: flex-start;
+            background: var(--surface-elevated);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+        .judy-msg.ai h1, .judy-msg.ai h2, .judy-msg.ai h3 {
+            margin: 8px 0 4px;
+            font-size: 15px;
+            color: var(--primary);
+        }
+        .judy-msg.ai ul, .judy-msg.ai ol {
+            margin: 4px 0;
+            padding-left: 20px;
+        }
+        .judy-msg.ai strong { color: var(--secondary); }
+        .judy-msg.ai code {
+            background: var(--bg-color);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .judy-typing {
+            align-self: flex-start;
+            padding: 10px 14px;
+            background: var(--surface-elevated);
+            border-radius: 12px;
+            color: var(--hint-color);
+            font-size: 13px;
+            display: none;
+        }
+        .judy-typing.show { display: block; }
+        .judy-dot {
+            animation: judyDotFade 1.4s infinite;
+            opacity: 0;
+        }
+        .judy-dot:nth-child(1) { animation-delay: 0s; }
+        .judy-dot:nth-child(2) { animation-delay: 0.2s; }
+        .judy-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes judyDotFade {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+
+        .judy-chat-input-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+        .judy-chat-input {
+            flex: 1;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 10px 16px;
+            color: var(--text-color);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            resize: none;
+            max-height: 80px;
+            line-height: 1.4;
+        }
+        .judy-chat-input::placeholder { color: var(--hint-color); }
+        .judy-chat-send {
+            background: var(--primary);
+            border: none;
+            color: #fff;
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            transition: opacity 0.2s;
+        }
+        .judy-chat-send:disabled { opacity: 0.4; cursor: default; }
+
+        @media (max-width: 768px) {
+            .judy-chat-panel {
+                width: 100%;
+                right: -110%;
+            }
+            .judy-chat-panel.open { right: 0; }
+
+        .judy-chat-resizer {
+            position: absolute;
+            left: -3px;
+            top: 0;
+            width: 6px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 100;
+            transition: background-color 0.2s;
+        }
+        .judy-chat-resizer:hover, .judy-chat-resizer.active {
+            background-color: var(--primary);
+            opacity: 0.6;
+        }
+        
+        .judy-typing-carrot {
+            display: none;
+            padding: 10px 16px;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--hint-color);
+        }
+        .judy-typing-carrot.show {
+            display: flex;
+        }
+        .carrot-spinner {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            animation: spinCarrot 1s linear infinite;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        @keyframes spinCarrot {
+            100% { transform: rotate(360deg); }
+        }
+
+            .judy-chat-toggle span.judy-toggle-label { display: none; }
+            .judy-chat-toggle { padding: 6px 10px; }
         }
 
         /* Main Container (Views) */
@@ -629,28 +912,30 @@
             opacity: 0.6;
         }
 
-        /* [Phase 26] Memo Editor Focus Mode & Toolbar */
-        .editor-container.focus-mode {
-            padding-top: env(safe-area-inset-top, 20px) !important;
-            background: var(--bg-color);
-        }
-
         .mobile-format-bar {
             display: none;
             position: fixed;
-            bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+            top: env(safe-area-inset-top, 0px);
+            /* bottom에서 top으로 이동 */
+            margin-top: 10px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--surface-elevated);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 4px 12px;
-            gap: 8px;
-            z-index: 150;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border-radius: 20px;
+            padding: 4px 16px;
+            gap: 12px;
+            z-index: 2000;
+            /* GNB보다 위에 노출 */
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
         }
 
         @media (max-width: 768px) {
+            .editor-container.focus-mode {
+                padding-top: 72px !important;
+                /* 상단 툴바 공간 확보 */
+            }
+
             .mobile-format-bar.show {
                 display: flex;
             }
@@ -658,7 +943,7 @@
             #memoInput {
                 font-size: 16px;
                 /* iOS 자동 줌 방지 */
-                padding-bottom: 100px;
+                padding-bottom: 120px;
             }
 
             .editor-header h2 {
@@ -682,6 +967,147 @@
         .format-btn i {
             font-style: normal;
             font-weight: 700;
+        }
+
+
+        /* ── 마크다운 노트 v2 스타일 ── */
+        .md-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 40px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            flex-wrap: wrap;
+        }
+        .md-toolbar button {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            border-radius: 6px;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: background 0.15s;
+        }
+        .md-toolbar button:hover,
+        .md-toolbar button:active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .md-toolbar .tb-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+        .md-toolbar .tb-preview {
+            margin-left: auto;
+            width: auto;
+            padding: 0 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .md-toolbar .tb-preview.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        #mdPreview {
+            flex: 1;
+            width: 100%;
+            font-size: 15px;
+            line-height: 1.7;
+            overflow-y: auto;
+            padding: 0;
+            display: none;
+        }
+        #mdPreview h1, #mdPreview h2, #mdPreview h3 {
+            margin: 16px 0 8px;
+            color: var(--text-color);
+        }
+        #mdPreview h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        #mdPreview h2 { font-size: 19px; }
+        #mdPreview h3 { font-size: 16px; }
+        #mdPreview p { margin: 8px 0; }
+        #mdPreview code {
+            background: var(--surface-elevated);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        #mdPreview pre {
+            background: var(--surface-elevated);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        #mdPreview pre code { background: transparent; padding: 0; }
+        #mdPreview ul, #mdPreview ol { padding-left: 24px; margin: 8px 0; }
+        #mdPreview blockquote {
+            border-left: 3px solid var(--primary);
+            padding-left: 12px;
+            margin: 8px 0;
+            color: var(--hint-color);
+        }
+        #mdPreview a { color: var(--primary); }
+        #mdPreview strong { color: var(--text-color); }
+        .char-counter {
+            font-size: 12px;
+            color: var(--hint-color);
+            text-align: right;
+            padding: 2px 40px 0;
+        }
+        .char-counter.warn { color: #f59e0b; }
+        .char-counter.danger { color: var(--danger); font-weight: 700; }
+
+        /* 노트 v2 목록 아이템 */
+        .note-v2-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .note-v2-item:hover, .note-v2-item:active {
+            background: var(--surface-elevated);
+        }
+        .note-v2-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .note-v2-meta {
+            font-size: 11px;
+            color: var(--hint-color);
+        }
+        .note-v2-preview {
+            font-size: 12px;
+            color: var(--hint-color);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @media (max-width: 768px) {
+            .md-toolbar {
+                padding: 6px 16px;
+                gap: 2px;
+            }
+            .md-toolbar button {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+            .char-counter { padding: 2px 16px 0; }
         }
 
         /* [Phase 26] PWA Install Guide Modal */
@@ -897,14 +1323,19 @@
                 position: fixed;
                 top: 0;
                 bottom: 0;
-                left: 0;
+                right: 0;
+                /* left -> right */
+                left: auto;
                 width: 280px;
                 z-index: 200;
-                transform: translateX(-100%);
+                transform: translateX(100%);
+                /* -100% -> 100% */
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
+                box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+                /* 섀도우 방향 변경 */
                 background: var(--surface-mobile);
-                border-right: 1px solid var(--border);
+                border-left: 1px solid var(--border);
+                /* border-right -> border-left */
             }
 
             .sidebar.open {
@@ -950,11 +1381,11 @@
             }
 
             .bottom-nav-item i {
-                font-size: 20px;
+                font-size: 24px;
             }
 
             .bottom-nav-item span {
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 600;
             }
 
@@ -980,7 +1411,8 @@
             }
 
             .footer {
-                padding: 0 20px 20px 20px;
+                padding: 0 20px calc(24px + var(--bottom-nav-height, 60px)) 20px;
+                /* 상황판 탭바 위로 배치되도록 여백 확대 */
                 flex-direction: column;
                 gap: 10px;
                 align-items: stretch;
@@ -1430,35 +1862,55 @@
         /* Dashboard Mobile Responsive */
         @media (max-width: 768px) {
             .dash-header {
-                padding: 16px 20px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
+                padding: 12px 20px;
+                /* 16px -> 12px */
+                flex-direction: row;
+                /* 컬럼 대신 가로 배치로 공간 절약 */
+                align-items: center;
+                gap: 8px;
+            }
+
+            .dash-header h1 {
+                font-size: 18px;
             }
 
             .summary-bar {
-                padding: 16px 20px;
-                gap: 10px;
+                padding: 10px 16px;
+                /* 16px 20px -> 10px 16px */
+                gap: 8px;
             }
 
             .summary-card {
-                flex: 1 1 calc(50% - 10px);
+                flex: 1 1 calc(25% - 8px);
+                /* 4개 가로 배치 시도 */
                 min-width: auto;
-                padding: 12px;
+                padding: 8px 4px;
+            }
+
+            .summary-card .count {
+                font-size: 20px;
+            }
+
+            .summary-card .label {
+                font-size: 10px;
             }
 
             .dash-tabs {
-                margin: 0 20px;
+                margin: 0 16px;
             }
 
             .task-list-wrapper {
-                padding: 16px 20px 40px;
+                padding: 12px 16px 40px;
             }
 
             .task-table {
                 display: block;
                 overflow-x: auto;
                 white-space: nowrap;
+            }
+
+            .task-table td {
+                padding: 10px 12px;
             }
         }
 
@@ -1871,6 +2323,8 @@
         </button>
     </div>
 
+    <!-- 🎤 Floating Voice Record Button (노트 탭 활성 시 표시) -->
+
     <!-- Global Navigation Bar -->
     <div class="gnb">
         <div class="gnb-left">
@@ -1887,8 +2341,10 @@
         <div class="gnb-right">
             <span id="userBadge" class="user-badge">인증 중...</span>
             <button id="themeToggleBtn" class="theme-btn" title="테마 변경" onclick="toggleTheme()">☀️</button>
+            <button class="judy-chat-toggle" id="judyChatToggle" onclick="toggleJudyChat()" title="주디 AI 비서">✨ <span class="judy-toggle-label">주디</span></button>
         </div>
     </div>
+
 
     <!-- Bottom Sheet for Details -->
     <div class="bottom-sheet-overlay" id="bottomSheetOverlay"></div>
@@ -1927,11 +2383,32 @@
                 <!-- Editor Header (Visible when viewing past memo) -->
                 <div class="editor-header" id="editorHeader" style="display: none;">
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <button id="menuBtnMobile" class="menu-btn-mobile" title="메뉴 열기">☰</button>
                         <h2 id="viewTitle">읽기 모드</h2>
                     </div>
-                    <button id="summarizeBtn" class="action-btn-primary">✨ AI 내용 요약</button>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button id="summarizeBtn" class="action-btn-primary">✨ AI 내용 요약</button>
+                        <button id="menuBtnMobile" class="menu-btn-mobile" title="메뉴 열기">☰</button>
+                    </div>
                 </div>
+
+                <!-- 마크다운 툴바 (데스크톱 + 모바일 공용) -->
+                <div class="md-toolbar" id="mdToolbar">
+                    <button title="볼드" onclick="insertFormat('**')"><b>B</b></button>
+                    <button title="이탈릭" onclick="insertFormat('*')"><i>I</i></button>
+                    <button title="취소선" onclick="insertFormat('~~')"><s>S</s></button>
+                    <div class="tb-sep"></div>
+                    <button title="제목1" onclick="insertFormat('# ')">H1</button>
+                    <button title="제목2" onclick="insertFormat('## ')">H2</button>
+                    <button title="제목3" onclick="insertFormat('### ')">H3</button>
+                    <div class="tb-sep"></div>
+                    <button title="리스트" onclick="insertFormat('- ')">•</button>
+                    <button title="체크박스" onclick="insertFormat('- [ ] ')">☐</button>
+                    <button title="인용" onclick="insertFormat('> ')">❝</button>
+                    <button title="코드" onclick="insertFormat('`')">{ }</button>
+                    <button title="링크" onclick="insertLinkFormat()">🔗</button>
+                    <button class="tb-preview" id="btnMdPreview" title="프리뷰 토글" onclick="toggleMdPreview()">👁 프리뷰</button>
+                </div>
+                <div class="char-counter" id="charCounter"></div>
 
                 <div class="editor-container" id="editorContainer">
                     <!-- AI Summary Overlay -->
@@ -1944,26 +2421,28 @@
                     </div>
 
                     <textarea id="memoInput"
-                        placeholder="당신의 아이디어를 여기에 쏟아내세요...&#10;(텍스트를 드래그하면 🐰 업무 등록 버튼이 나타납니다)"></textarea>
+                        placeholder="마크다운으로 작성하세요...&#10;&#10;# 제목&#10;**볼드** *이탈릭*&#10;- 리스트&#10;> 인용&#10;&#10;(텍스트를 드래그하면 🐰 업무 등록 버튼이 나타납니다)"></textarea>
+                    <div id="mdPreview"></div>
                     <div id="memoViewer" style="display:none;"></div>
                 </div>
 
-                <!-- Mobile Format Toolbar (Visible on mobile focus) -->
+                <!-- Mobile Format Toolbar (Visible on mobile focus) — 기존 호환 유지 -->
                 <div class="mobile-format-bar" id="mobileFormatBar">
                     <button class="format-btn" onclick="insertFormat('**')"><i>B</i></button>
                     <button class="format-btn" onclick="insertFormat('*')"><i>I</i></button>
                     <button class="format-btn" onclick="insertFormat('- ')"><i>•</i></button>
-                    <button class="format-btn" onclick="insertFormat('[ ] ')"><i>☐</i></button>
+                    <button class="format-btn" onclick="insertFormat('- [ ] ')"><i>☐</i></button>
+                    <button class="format-btn" onclick="toggleMdPreview()"><i>👁</i></button>
                 </div>
 
                 <!-- Footer (Visible when writing new memo) -->
                 <div class="footer" id="editorFooter">
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <button id="menuBtnMobile2" class="menu-btn-mobile" title="메뉴 열기">☰</button>
                         <span class="hint">저장: Cmd + Enter (또는 Ctrl + Enter)</span>
                     </div>
-                    <div class="footer-buttons">
+                    <div class="footer-buttons" style="display:flex; align-items:center; gap:12px;">
                         <button id="saveBtn" class="save-btn">일반 저장</button>
+                        <button id="menuBtnMobile2" class="menu-btn-mobile" title="메뉴 열기">☰</button>
                     </div>
                 </div>
             </div>
@@ -2183,6 +2662,27 @@
                 <button class="btn-submit" style="background: var(--danger); width: 100%;"
                     onclick="location.reload()">새로고침하여 복구하기</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Judy Chat Side Panel (script 앞 배치 — DOM 참조 보장) -->
+    <div class="judy-chat-overlay" id="judyChatOverlay" onclick="toggleJudyChat()"></div>
+    <div class="judy-chat-panel" id="judyChatPanel" style="width: 380px;">
+        <div class="judy-chat-resizer" id="judyChatResizer"></div>
+        <div class="judy-chat-header">
+            <h3>🐰 주디</h3>
+            <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
+        </div>
+        <div class="judy-chat-messages" id="judyChatMessages">
+            <div class="judy-msg ai">안녕하세요! 주디입니다 🐰<br>업무, 일정, 메모를 물어보세요.</div>
+        </div>
+        <div class="judy-typing-carrot" id="judyTyping">
+            <img class="carrot-spinner" src="data:image/jpeg;base64,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" alt="로딩중" />
+            주디가 답변을 작성하고 있어요...
+        </div>
+        <div class="judy-chat-input-area">
+            <textarea class="judy-chat-input" id="judyChatInput" rows="1" placeholder="주디에게 업무, 일정, 메모를 물어보세요..." onkeydown="handleJudyChatKey(event)"></textarea>
+            <button class="judy-chat-send" id="judyChatSend" onclick="sendJudyChat()" title="전송">➤</button>
         </div>
     </div>
 
@@ -2504,8 +3004,11 @@
             if (window.innerWidth < 768) {
                 editorContainer.classList.add('focus-mode');
                 mobileFormatBar.classList.add('show');
-                // GNB 숨기기 처리 (선택)
-                document.querySelector('.gnb').style.display = 'none';
+                // GNB 및 하단 네비게이션 숨기기
+                const gnb = document.querySelector('.gnb');
+                const bnav = document.querySelector('.bottom-nav');
+                if (gnb) gnb.style.display = 'none';
+                if (bnav) bnav.style.display = 'none';
             }
         });
 
@@ -2514,7 +3017,10 @@
             setTimeout(() => {
                 editorContainer.classList.remove('focus-mode');
                 mobileFormatBar.classList.remove('show');
-                document.querySelector('.gnb').style.display = 'flex';
+                const gnb = document.querySelector('.gnb');
+                const bnav = document.querySelector('.bottom-nav');
+                if (gnb) gnb.style.display = 'flex';
+                if (bnav) bnav.style.display = 'flex';
             }, 200);
         });
 
@@ -2525,7 +3031,9 @@
             const selectedText = text.substring(start, end);
 
             let replacement = "";
-            if (syntax === '- ' || syntax === '[ ] ') {
+            // 줄 시작 구문 (헤딩, 리스트, 인용, 체크박스)
+            if (syntax === '- ' || syntax === '- [ ] ' || syntax === '> ' ||
+                syntax === '# ' || syntax === '## ' || syntax === '### ') {
                 replacement = syntax + selectedText;
             } else {
                 replacement = syntax + selectedText + syntax;
@@ -2534,9 +3042,125 @@
             memoInput.value = text.substring(0, start) + replacement + text.substring(end);
             memoInput.focus();
 
-            // 커서 위치 재조정
-            const newCursorPos = start + syntax.length + selectedText.length + (syntax.includes(' ') ? 0 : syntax.length);
+            const newCursorPos = start + syntax.length + selectedText.length +
+                ((syntax.includes(' ') || syntax === '# ' || syntax === '## ' || syntax === '### ') ? 0 : syntax.length);
             memoInput.setSelectionRange(newCursorPos, newCursorPos);
+            updateCharCounter();
+        }
+
+        function insertLinkFormat() {
+            const start = memoInput.selectionStart;
+            const end = memoInput.selectionEnd;
+            const text = memoInput.value;
+            const sel = text.substring(start, end) || '링크 텍스트';
+            const replacement = '[' + sel + '](url)';
+            memoInput.value = text.substring(0, start) + replacement + text.substring(end);
+            memoInput.focus();
+            // url 부분을 선택
+            const urlStart = start + sel.length + 3;
+            memoInput.setSelectionRange(urlStart, urlStart + 3);
+            updateCharCounter();
+        }
+
+        // ── 경량 마크다운 → HTML 변환기 (인라인, 외부 의존성 0) ──
+        function parseMd(md) {
+            if (!md) return '';
+            var html = md
+                // 코드 블록 (``` ... ```)
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+                // 인라인 코드
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                // 헤딩
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                // 볼드 + 이탈릭
+                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+                // 볼드
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 이탈릭
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                // 취소선
+                .replace(/~~(.+?)~~/g, '<s>$1</s>')
+                // 인용
+                .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+                // 체크박스
+                .replace(/^- \[x\] (.+)$/gm, '<li style="list-style:none;">✅ $1</li>')
+                .replace(/^- \[ \] (.+)$/gm, '<li style="list-style:none;">⬜ $1</li>')
+                // 비순서 리스트
+                .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+                // 링크
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+                // 수평선
+                .replace(/^---$/gm, '<hr>')
+                // 줄바꿈 → <br> (빈 줄은 <p> 분리)
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            // 연속 <li>를 <ul>로 감싸기
+            html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, '<ul>$1</ul>');
+            // 연속 <blockquote> 합치기
+            html = html.replace(/<\/blockquote>\s*<blockquote>/g, '<br>');
+            return '<p>' + html + '</p>';
+        }
+
+        // ── DOMPurify 대체: 경량 새니타이저 (인라인) ──
+        // QA S-1: <svg>, <math>, <form>, <input>, <textarea>, <select>, <details> 추가 차단
+        // QA S-2: on\w+ 패턴 개행 우회 대응 ([\s\S] 사용)
+        function sanitizeHtml(html) {
+            return html
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                .replace(/<object[\s\S]*?<\/object>/gi, '')
+                .replace(/<embed[\s\S]*?>/gi, '')
+                .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+                .replace(/<svg[\s\S]*?>/gi, '')
+                .replace(/<math[\s\S]*?<\/math>/gi, '')
+                .replace(/<form[\s\S]*?<\/form>/gi, '')
+                .replace(/<input[\s\S]*?>/gi, '')
+                .replace(/<textarea[\s\S]*?<\/textarea>/gi, '')
+                .replace(/<select[\s\S]*?<\/select>/gi, '')
+                .replace(/<button[\s\S]*?<\/button>/gi, '')
+                .replace(/\s+on[\s\S]*?=\s*["'][^"']*["']/gi, '')
+                .replace(/\s+on[\s\S]*?=\s*[^\s>]+/gi, '')
+                .replace(/javascript[\s]*:/gi, 'blocked:')
+                .replace(/vbscript[\s]*:/gi, 'blocked:')
+                .replace(/data[\s]*:[\s]*text\/html/gi, 'blocked:');
+        }
+
+        // ── 마크다운 프리뷰 토글 ──
+        let mdPreviewMode = false;
+        const mdPreview = document.getElementById('mdPreview');
+        const btnMdPreview = document.getElementById('btnMdPreview');
+        const charCounter = document.getElementById('charCounter');
+
+        function toggleMdPreview() {
+            mdPreviewMode = !mdPreviewMode;
+            if (mdPreviewMode) {
+                const raw = memoInput.value || '';
+                mdPreview.innerHTML = sanitizeHtml(parseMd(raw));
+                memoInput.style.display = 'none';
+                mdPreview.style.display = 'block';
+                btnMdPreview.classList.add('active');
+                btnMdPreview.textContent = '✏️ 편집';
+            } else {
+                memoInput.style.display = 'block';
+                mdPreview.style.display = 'none';
+                btnMdPreview.classList.remove('active');
+                btnMdPreview.textContent = '👁 프리뷰';
+                memoInput.focus();
+            }
+        }
+
+        // ── 글자수 카운터 ──
+        function updateCharCounter() {
+            if (!charCounter || !memoInput) return;
+            const len = memoInput.value.length;
+            charCounter.textContent = len.toLocaleString() + ' / 50,000자';
+            charCounter.className = 'char-counter' + (len >= 50000 ? ' danger' : len >= 40000 ? ' warn' : '');
+        }
+        if (memoInput) {
+            memoInput.addEventListener('input', updateCharCounter);
+            updateCharCounter();
         }
 
         // iOS 패시브 리스너 최적화 (스크롤 감도)
@@ -2572,16 +3196,21 @@
         });
 
         document.addEventListener('touchstart', function () { }, { passive: true });
-        function setToWriteMode() {
+        function setToWriteMode(prefill) {
             currentMode = 'write';
             editorHeader.style.display = 'none';
             editorFooter.style.display = 'flex';
             memoInput.style.display = 'block';
             memoViewer.style.display = 'none';
-            memoInput.value = '';
+            mdPreview.style.display = 'none';
+            mdPreviewMode = false;
+            if (btnMdPreview) { btnMdPreview.classList.remove('active'); btnMdPreview.textContent = '👁 프리뷰'; }
+            memoInput.value = prefill || '';
             memoInput.focus();
+            updateCharCounter();
             summaryOverlay.classList.remove('show');
             closeMobileMenu();
+            window._currentEditNoteId = null;
         }
 
         function setToReadMode(title, contentOrMemos, dateStr) {
@@ -2590,6 +3219,9 @@
             editorFooter.style.display = 'none';
             viewTitle.textContent = title;
             memoInput.style.display = 'none';
+            mdPreview.style.display = 'none';
+            mdPreviewMode = false;
+            if (btnMdPreview) { btnMdPreview.classList.remove('active'); btnMdPreview.textContent = '👁 프리뷰'; }
             memoViewer.style.display = 'flex';
             memoViewer.style.flexDirection = 'column';
             memoViewer.innerHTML = '';
@@ -2600,8 +3232,6 @@
                     memoViewer.appendChild(block);
                 });
             } else {
-                // 단일 텍스트 모드 (검색 등)
-                // dateStr과 timeStr이 없는 경우를 대비한 처리
                 memoViewer.textContent = contentOrMemos.trim();
             }
 
@@ -2861,6 +3491,8 @@
         });
 
         function saveMemo() {
+            // QA U-1: 프리뷰 모드면 편집 모드로 복귀
+            if (mdPreviewMode) toggleMdPreview();
             const text = memoInput ? memoInput.value.trim() : '';
             if (!g_userName) return showToast('⛔ 인증된 사용자가 없습니다.', true);
             if (!text) { if (memoInput) memoInput.focus(); return; }
@@ -3866,6 +4498,129 @@
         if (memoInput) memoInput.focus();
 
     </script>
+
+    <!-- 🐰 Judy Chat Panel Script (독립 블록 — 기존 스크립트 에러에 영향받지 않음) -->
+    <script>
+        (function() {
+            var judyChatPanel = document.getElementById('judyChatPanel');
+            var judyChatOverlay = document.getElementById('judyChatOverlay');
+            var judyChatMessages = document.getElementById('judyChatMessages');
+            var judyChatInput = document.getElementById('judyChatInput');
+            var judyChatSend = document.getElementById('judyChatSend');
+            var judyTyping = document.getElementById('judyTyping');
+            var judyChatOpen = false;
+            var judyChatResizer = document.getElementById('judyChatResizer');
+
+            if (!judyChatPanel || !judyChatInput) {
+                console.warn('[JudyChat] 패널 DOM 요소를 찾을 수 없습니다.');
+                return;
+            }
+
+
+            // Resizer logic
+            if (judyChatResizer) {
+                var isResizing = false;
+                judyChatResizer.addEventListener('mousedown', function(e) {
+                    isResizing = true;
+                    judyChatResizer.classList.add('active');
+                    document.body.style.cursor = 'ew-resize';
+                    document.body.style.userSelect = 'none'; // text selection 방지
+                });
+                document.addEventListener('mousemove', function(e) {
+                    if (!isResizing) return;
+                    var newWidth = document.body.clientWidth - e.clientX;
+                    if (newWidth < 300) newWidth = 300;
+                    if (newWidth > 800) newWidth = 800;
+                    judyChatPanel.style.width = newWidth + 'px';
+                });
+                document.addEventListener('mouseup', function(e) {
+                    if (isResizing) {
+                        isResizing = false;
+                        judyChatResizer.classList.remove('active');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            }
+
+            window.toggleJudyChat = function() {
+                judyChatOpen = !judyChatOpen;
+                judyChatPanel.classList.toggle('open', judyChatOpen);
+                judyChatOverlay.classList.toggle('show', judyChatOpen);
+                if (judyChatOpen) {
+                    setTimeout(function() { judyChatInput.focus(); }, 300);
+                }
+            };
+
+            window.handleJudyChatKey = function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    window.sendJudyChat();
+                }
+            };
+
+            function appendJudyMsg(content, role) {
+                var div = document.createElement('div');
+                div.className = 'judy-msg ' + role;
+                if (role === 'ai' && typeof parseMd === 'function' && typeof sanitizeHtml === 'function') {
+                    div.innerHTML = sanitizeHtml(parseMd(content));
+                } else {
+                    div.textContent = content;
+                }
+                judyChatMessages.appendChild(div);
+                judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
+            }
+
+            window.sendJudyChat = function() {
+                var query = (judyChatInput.value || '').trim();
+                if (!query) return;
+                var userName = localStorage.getItem('judy_userName') || '';
+                if (!userName) {
+                    appendJudyMsg('로그인 정보가 없습니다. 페이지를 새로고침해주세요.', 'ai');
+                    return;
+                }
+
+                appendJudyMsg(query, 'user');
+                judyChatInput.value = '';
+                judyChatInput.style.height = 'auto';
+                judyChatSend.disabled = true;
+                judyTyping.classList.add('show');
+                judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
+
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        judyTyping.classList.remove('show');
+                        judyChatSend.disabled = false;
+                        
+                        var msgText = response;
+                        if (response && typeof response === 'object') {
+                            msgText = response.response || JSON.stringify(response);
+                        }
+                        
+                        if (msgText) {
+                            appendJudyMsg(msgText, 'ai');
+                        } else {
+                            appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
+                        }
+                    })
+                    .withFailureHandler(function(err) {
+                        judyTyping.classList.remove('show');
+                        judyChatSend.disabled = false;
+                        appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
+                    })
+                    .processJudyWebChat(query, userName);
+            };
+
+            // textarea 자동 높이 조절
+            judyChatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+            });
+
+            console.log('[JudyChat] 패널 초기화 완료');
+        })();
+    </script>
+
 </body>
 
 </html>

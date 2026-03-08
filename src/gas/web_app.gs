@@ -150,7 +150,7 @@ function doGet(e) {
   template.session = e.parameter.session || '';
 
   return template.evaluate()
-    .setTitle('Judy Workspace (통합 업무관리)')
+    .setTitle('Judy Workspace')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 

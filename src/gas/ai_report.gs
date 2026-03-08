@@ -1,12 +1,33 @@
 /**
- * [파일명]: ai_report.gs
- * [생성 시간]: 2026년 02월 21일 22:28 (KST)
- * [기능 설명]: Claude API를 활용해 그날의 '진행중' 및 '완료' 업무 데이터를 수집하여 
- *             AI가 친절한 요약 리포트를 작성하고 커스텀 슬랙 채널로 전송합니다.
+ * ============================================
+ * 📋 배포 이력 (Deploy Header)
+ * ============================================
+ * @file        ai_report.gs
+ * @version     v1.1.0
+ * @updated     2026-03-08 09:56 (KST)
+ * @agent       에이다 (자비스 개발팀)
+ * @ordered-by  용남 대표
+ * @description 슬랙 채널에 일간/주간 요약 리포트 전송 (Claude 연동)
+ *
+ * @change-summary
+ *   AS-IS: API 키 평문 하드코딩. 데이터 수집 로직 각 함수별 중복.
+ *   TO-BE: PropertiesService 기반 보안 처리 (QA 권고). 
+ *          generateMorningBriefing의 데이터 수집 로직을 ai_briefing.gs의 DataCenter로 이관 통합.
+ *
+ * @features
+ *   - [수정] CLAUDE_API_KEY 전역 변수를 과도기 지원용 빈 문자열로 변경
+ *   - [수정] generateMorningBriefing() -> getTodayTasksContext() 재사용으로 통일
+ *   - [보안] askClaude() 내부에서 PropertiesService 키 호출 적용
+ *
+ * ── 변경 이력 ──────────────────────────
+ * v1.1.0 | 2026-03-08 09:56 | 에이다 | [QA-2026-03-08] API키 하드코딩 제거 및 로직 통합
+ * v1.0.0 | 2026-02-21 22:28 | 자비스팀 | 최초 작성
+ * ============================================
  */
 
-// 🛑 [필수 세팅] Claude API 키를 발급받아 아래에 입력하세요.
-var CLAUDE_API_KEY = "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";
+// 🛑 [보안 조치 완료] API 키는 Properties 서비스에서 관리합니다.
+// 기존 타 파일(ai_chat.gs 등) 하위 호환을 위해 변수명만 유지합니다. (향후 완전 제거 예정)
+var CLAUDE_API_KEY = ""; 
 
 // 🛑 [필수 세팅] AI 리포트를 보낼 슬랙 채널 ID를 입력하세요. (예: C0123456789)
 const REPORT_CHANNEL_ID = "여기에_채널_ID_입력";
@@ -63,10 +84,17 @@ function generateDailyReport() {
  * Claude 3.5 Sonnet (또는 Haiku) 모델을 호출하여 리포팅 텍스트를 반환합니다.
  */
 function askClaude(promptText) {
-  if (CLAUDE_API_KEY.includes("여기에")) {
-    const errorMsg = "⚠️ Claude API 키가 올바르게 설정되지 않았습니다. 코드 상단의 CLAUDE_API_KEY를 확인하세요.";
+  let apiKey;
+  try {
+    apiKey = typeof getClaudeApiKey === 'function' ? getClaudeApiKey() : PropertiesService.getScriptProperties().getProperty("CLAUDE_API_KEY");
+  } catch (e) {
+    const errorMsg = "⚠️ " + e.message;
     Logger.log(errorMsg);
     return errorMsg;
+  }
+
+  if (!apiKey) {
+     return "⚠️ Claude API 키가 설정되지 않았습니다. PropertiesService에 CLAUDE_API_KEY를 추가하세요.";
   }
 
   const url = "https://api.anthropic.com/v1/messages";
@@ -85,7 +113,7 @@ function askClaude(promptText) {
   const options = {
     method: "post",
     headers: {
-      "x-api-key": CLAUDE_API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json"
     },
@@ -113,37 +141,13 @@ function askClaude(promptText) {
  * [Phase 6] ☀️ 모닝 브리핑: 매일 아침 지정된 시간에 트리거(Trigger)로 작동합니다.
  */
 function generateMorningBriefing() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const taskSheet = ss.getSheetByName("Tasks");
-  const data = taskSheet.getDataRange().getValues();
   
-  const rows = data.slice(1);
-  
-  let tasksContext = "📋 [현재 켜져있는 업무 (완료 제외)]\n";
-  let hasTasks = false;
-  
-  rows.forEach(row => {
-    const status = row[2];
-    const project = row[3];
-    const title = row[4];
-    const assignee = row[6];
-    const dueDate = row[8];
-    
-    // 모닝 브리핑은 보통 '해야 할 일' 위주로 요약하므로 대기+진행중만 수집
-    if (status === "진행중" || status === "대기") {
-      let dateStr = "미지정";
-      if (dueDate instanceof Date) {
-        dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
-      } else if (dueDate) {
-        dateStr = dueDate;
-      }
-      tasksContext += `- [${status}] ${project}: ${title} (담당: ${assignee}, 마감: ${dateStr})\n`;
-      hasTasks = true;
-    }
-  });
-
-  if (!hasTasks) {
-    tasksContext += "현재 대기 중이거나 진행 중인 업무가 없습니다! 🎉";
+  // [v1.1.0] 데이터 수집 로직(Data Center) 공통화 — ai_briefing.gs 사용
+  let tasksContext = "";
+  if (typeof getTodayTasksContext === 'function') {
+     tasksContext = getTodayTasksContext();
+  } else {
+     tasksContext = "데이터 수집 함수(getTodayTasksContext)를 찾을 수 없습니다.";
   }
 
   const systemPrompt = "당신은 활기차고 긍정적인 팀의 프로젝트 비서 '주디'입니다. 아침 업무 시각에 맞춰 팀원들이 오늘 하루 집중해야 할 '진행중' 및 '대기' 상태의 업무들을 브리핑해주세요. 마감일이 가까운 항목은 특별히 강조해주시고, 하루를 힘차게 시작할 수 있는 따뜻하고 동기부여되는 인사말을 덧붙여주세요. 마크다운과 이모지를 활용하세요.";
