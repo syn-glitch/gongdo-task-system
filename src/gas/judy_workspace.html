@@ -230,16 +230,22 @@
             gap: 4px;
             transition: opacity 0.2s;
         }
-        .judy-chat-toggle:hover { opacity: 0.85; }
+
+        .judy-chat-toggle:hover {
+            opacity: 0.85;
+        }
 
         .judy-chat-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 9000;
         }
-        .judy-chat-overlay.show { display: block; }
+
+        .judy-chat-overlay.show {
+            display: block;
+        }
 
         .judy-chat-panel {
             position: fixed;
@@ -254,7 +260,10 @@
             flex-direction: column;
             transition: right 0.25s ease;
         }
-        .judy-chat-panel.open { right: 0; }
+
+        .judy-chat-panel.open {
+            right: 0;
+        }
 
         .judy-chat-resizer {
             position: absolute;
@@ -266,31 +275,43 @@
             z-index: 100;
             transition: background-color 0.2s;
         }
-        .judy-chat-resizer:hover, .judy-chat-resizer.active {
+
+        .judy-chat-resizer:hover,
+        .judy-chat-resizer.active {
             background-color: var(--primary);
             opacity: 0.6;
         }
-        
+
         .judy-typing-carrot {
             display: none;
-            padding: 10px 16px;
+            padding: 10px 14px;
             align-items: center;
             gap: 10px;
             font-size: 14px;
-            color: var(--hint-color);
+            color: var(--text-color);
+            background: var(--surface-elevated);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+            max-width: 90%;
         }
+
         .judy-typing-carrot.show {
             display: flex;
         }
+
         .carrot-spinner {
             width: 32px;
             height: 32px;
             border-radius: 50%;
             animation: spinCarrot 1s linear infinite;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+
         @keyframes spinCarrot {
-            100% { transform: rotate(360deg); }
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
 
@@ -302,6 +323,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .judy-chat-header h3 {
             margin: 0;
             font-size: 16px;
@@ -310,19 +332,24 @@
             align-items: center;
             gap: 6px;
         }
+
         .judy-chat-close {
             background: transparent;
             border: none;
             color: var(--text-color);
             font-size: 20px;
             cursor: pointer;
-            width: 32px; height: 32px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 6px;
         }
-        .judy-chat-close:hover { background: var(--surface-elevated); }
+
+        .judy-chat-close:hover {
+            background: var(--surface-elevated);
+        }
 
         .judy-chat-messages {
             flex: 1;
@@ -341,33 +368,51 @@
             line-height: 1.6;
             word-break: break-word;
         }
+
         .judy-msg.user {
             align-self: flex-end;
             background: var(--primary);
             color: #fff;
             border-bottom-right-radius: 4px;
         }
+
         .judy-msg.ai {
             align-self: flex-start;
             background: var(--surface-elevated);
             color: var(--text-color);
             border-bottom-left-radius: 4px;
         }
-        .judy-msg.ai h1, .judy-msg.ai h2, .judy-msg.ai h3 {
+
+        .judy-msg.ai h1,
+        .judy-msg.ai h2,
+        .judy-msg.ai h3 {
             margin: 8px 0 4px;
             font-size: 15px;
-            color: var(--primary);
+            color: inherit;
         }
-        .judy-msg.ai ul, .judy-msg.ai ol {
+
+        .judy-msg.ai ul,
+        .judy-msg.ai ol {
             margin: 4px 0;
             padding-left: 20px;
         }
-        .judy-msg.ai strong { color: var(--secondary); }
+
+        .judy-msg.ai strong {
+            font-weight: 700;
+        }
+
+        .judy-msg.ai a {
+            color: inherit;
+            text-decoration: underline;
+        }
+
         .judy-msg.ai code {
             background: var(--bg-color);
             padding: 1px 5px;
             border-radius: 3px;
             font-size: 13px;
+            font-family: monospace;
+            color: var(--danger);
         }
 
         .judy-typing {
@@ -379,17 +424,39 @@
             font-size: 13px;
             display: none;
         }
-        .judy-typing.show { display: block; }
+
+        .judy-typing.show {
+            display: block;
+        }
+
         .judy-dot {
             animation: judyDotFade 1.4s infinite;
             opacity: 0;
         }
-        .judy-dot:nth-child(1) { animation-delay: 0s; }
-        .judy-dot:nth-child(2) { animation-delay: 0.2s; }
-        .judy-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        .judy-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .judy-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .judy-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
         @keyframes judyDotFade {
-            0%, 80%, 100% { opacity: 0; }
-            40% { opacity: 1; }
+
+            0%,
+            80%,
+            100% {
+                opacity: 0;
+            }
+
+            40% {
+                opacity: 1;
+            }
         }
 
         .judy-chat-input-area {
@@ -401,6 +468,7 @@
             flex-shrink: 0;
             background: var(--surface);
         }
+
         .judy-chat-input {
             flex: 1;
             background: var(--surface-elevated);
@@ -415,12 +483,17 @@
             max-height: 80px;
             line-height: 1.4;
         }
-        .judy-chat-input::placeholder { color: var(--hint-color); }
+
+        .judy-chat-input::placeholder {
+            color: var(--hint-color);
+        }
+
         .judy-chat-send {
             background: var(--primary);
             border: none;
             color: #fff;
-            width: 38px; height: 38px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
@@ -430,54 +503,73 @@
             flex-shrink: 0;
             transition: opacity 0.2s;
         }
-        .judy-chat-send:disabled { opacity: 0.4; cursor: default; }
+
+        .judy-chat-send:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
 
         @media (max-width: 768px) {
             .judy-chat-panel {
                 width: 100%;
                 right: -110%;
             }
-            .judy-chat-panel.open { right: 0; }
 
-        .judy-chat-resizer {
-            position: absolute;
-            left: -3px;
-            top: 0;
-            width: 6px;
-            height: 100%;
-            cursor: ew-resize;
-            z-index: 100;
-            transition: background-color 0.2s;
-        }
-        .judy-chat-resizer:hover, .judy-chat-resizer.active {
-            background-color: var(--primary);
-            opacity: 0.6;
-        }
-        
-        .judy-typing-carrot {
-            display: none;
-            padding: 10px 16px;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--hint-color);
-        }
-        .judy-typing-carrot.show {
-            display: flex;
-        }
-        .carrot-spinner {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            animation: spinCarrot 1s linear infinite;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        @keyframes spinCarrot {
-            100% { transform: rotate(360deg); }
-        }
+            .judy-chat-panel.open {
+                right: 0;
+            }
 
-            .judy-chat-toggle span.judy-toggle-label { display: none; }
-            .judy-chat-toggle { padding: 6px 10px; }
+            .judy-chat-resizer {
+                position: absolute;
+                left: -3px;
+                top: 0;
+                width: 6px;
+                height: 100%;
+                cursor: ew-resize;
+                z-index: 100;
+                transition: background-color 0.2s;
+            }
+
+            .judy-chat-resizer:hover,
+            .judy-chat-resizer.active {
+                background-color: var(--primary);
+                opacity: 0.6;
+            }
+
+            .judy-typing-carrot {
+                display: none;
+                padding: 10px 16px;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+                color: var(--hint-color);
+            }
+
+            .judy-typing-carrot.show {
+                display: flex;
+            }
+
+            .carrot-spinner {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                animation: spinCarrot 1s linear infinite;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            @keyframes spinCarrot {
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .judy-chat-toggle span.judy-toggle-label {
+                display: none;
+            }
+
+            .judy-chat-toggle {
+                padding: 6px 10px;
+            }
         }
 
         /* Main Container (Views) */
@@ -980,6 +1072,7 @@
             background: var(--surface);
             flex-wrap: wrap;
         }
+
         .md-toolbar button {
             background: transparent;
             border: 1px solid var(--border);
@@ -995,18 +1088,21 @@
             font-weight: 700;
             transition: background 0.15s;
         }
+
         .md-toolbar button:hover,
         .md-toolbar button:active {
             background: var(--primary);
             color: #fff;
             border-color: var(--primary);
         }
+
         .md-toolbar .tb-sep {
             width: 1px;
             height: 20px;
             background: var(--border);
             margin: 0 4px;
         }
+
         .md-toolbar .tb-preview {
             margin-left: auto;
             width: auto;
@@ -1014,11 +1110,13 @@
             font-size: 13px;
             font-weight: 600;
         }
+
         .md-toolbar .tb-preview.active {
             background: var(--primary);
             color: #fff;
             border-color: var(--primary);
         }
+
         #mdPreview {
             flex: 1;
             width: 100%;
@@ -1028,44 +1126,87 @@
             padding: 0;
             display: none;
         }
-        #mdPreview h1, #mdPreview h2, #mdPreview h3 {
+
+        #mdPreview h1,
+        #mdPreview h2,
+        #mdPreview h3 {
             margin: 16px 0 8px;
             color: var(--text-color);
         }
-        #mdPreview h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-        #mdPreview h2 { font-size: 19px; }
-        #mdPreview h3 { font-size: 16px; }
-        #mdPreview p { margin: 8px 0; }
+
+        #mdPreview h1 {
+            font-size: 22px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+        }
+
+        #mdPreview h2 {
+            font-size: 19px;
+        }
+
+        #mdPreview h3 {
+            font-size: 16px;
+        }
+
+        #mdPreview p {
+            margin: 8px 0;
+        }
+
         #mdPreview code {
             background: var(--surface-elevated);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 13px;
         }
+
         #mdPreview pre {
             background: var(--surface-elevated);
             padding: 12px;
             border-radius: 8px;
             overflow-x: auto;
         }
-        #mdPreview pre code { background: transparent; padding: 0; }
-        #mdPreview ul, #mdPreview ol { padding-left: 24px; margin: 8px 0; }
+
+        #mdPreview pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        #mdPreview ul,
+        #mdPreview ol {
+            padding-left: 24px;
+            margin: 8px 0;
+        }
+
         #mdPreview blockquote {
             border-left: 3px solid var(--primary);
             padding-left: 12px;
             margin: 8px 0;
             color: var(--hint-color);
         }
-        #mdPreview a { color: var(--primary); }
-        #mdPreview strong { color: var(--text-color); }
+
+        #mdPreview a {
+            color: var(--primary);
+        }
+
+        #mdPreview strong {
+            color: var(--text-color);
+        }
+
         .char-counter {
             font-size: 12px;
             color: var(--hint-color);
             text-align: right;
             padding: 2px 40px 0;
         }
-        .char-counter.warn { color: #f59e0b; }
-        .char-counter.danger { color: var(--danger); font-weight: 700; }
+
+        .char-counter.warn {
+            color: #f59e0b;
+        }
+
+        .char-counter.danger {
+            color: var(--danger);
+            font-weight: 700;
+        }
 
         /* 노트 v2 목록 아이템 */
         .note-v2-item {
@@ -1074,9 +1215,12 @@
             cursor: pointer;
             transition: background 0.15s;
         }
-        .note-v2-item:hover, .note-v2-item:active {
+
+        .note-v2-item:hover,
+        .note-v2-item:active {
             background: var(--surface-elevated);
         }
+
         .note-v2-title {
             font-weight: 600;
             font-size: 14px;
@@ -1085,10 +1229,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .note-v2-meta {
             font-size: 11px;
             color: var(--hint-color);
         }
+
         .note-v2-preview {
             font-size: 12px;
             color: var(--hint-color);
@@ -1097,17 +1243,22 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         @media (max-width: 768px) {
             .md-toolbar {
                 padding: 6px 16px;
                 gap: 2px;
             }
+
             .md-toolbar button {
                 width: 32px;
                 height: 32px;
                 font-size: 13px;
             }
-            .char-counter { padding: 2px 16px 0; }
+
+            .char-counter {
+                padding: 2px 16px 0;
+            }
         }
 
         /* [Phase 26] PWA Install Guide Modal */
@@ -2341,7 +2492,8 @@
         <div class="gnb-right">
             <span id="userBadge" class="user-badge">인증 중...</span>
             <button id="themeToggleBtn" class="theme-btn" title="테마 변경" onclick="toggleTheme()">☀️</button>
-            <button class="judy-chat-toggle" id="judyChatToggle" onclick="toggleJudyChat()" title="주디 AI 비서">✨ <span class="judy-toggle-label">주디</span></button>
+            <button class="judy-chat-toggle" id="judyChatToggle" onclick="toggleJudyChat()" title="주디 AI 비서">✨ <span
+                    class="judy-toggle-label">주디</span></button>
         </div>
     </div>
 
@@ -2406,7 +2558,8 @@
                     <button title="인용" onclick="insertFormat('> ')">❝</button>
                     <button title="코드" onclick="insertFormat('`')">{ }</button>
                     <button title="링크" onclick="insertLinkFormat()">🔗</button>
-                    <button class="tb-preview" id="btnMdPreview" title="프리뷰 토글" onclick="toggleMdPreview()">👁 프리뷰</button>
+                    <button class="tb-preview" id="btnMdPreview" title="프리뷰 토글" onclick="toggleMdPreview()">👁
+                        프리뷰</button>
                 </div>
                 <div class="char-counter" id="charCounter"></div>
 
@@ -2670,18 +2823,21 @@
     <div class="judy-chat-panel" id="judyChatPanel" style="width: 380px;">
         <div class="judy-chat-resizer" id="judyChatResizer"></div>
         <div class="judy-chat-header">
-            <h3>🐰 주디</h3>
+            <h3>🐰 주디 (v2.8.7)</h3>
             <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
         </div>
         <div class="judy-chat-messages" id="judyChatMessages">
             <div class="judy-msg ai">안녕하세요! 주디입니다 🐰<br>업무, 일정, 메모를 물어보세요.</div>
         </div>
         <div class="judy-typing-carrot" id="judyTyping">
-            <img class="carrot-spinner" src="data:image/jpeg;base64,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" alt="로딩중" />
+            <img class="carrot-spinner"
+                src="data:image/jpeg;base64,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"
+                alt="로딩중" />
             주디가 답변을 작성하고 있어요...
         </div>
         <div class="judy-chat-input-area">
-            <textarea class="judy-chat-input" id="judyChatInput" rows="1" placeholder="주디에게 업무, 일정, 메모를 물어보세요..." onkeydown="handleJudyChatKey(event)"></textarea>
+            <textarea class="judy-chat-input" id="judyChatInput" rows="1" placeholder="주디에게 업무, 일정, 메모를 물어보세요..."
+                onkeydown="handleJudyChatKey(event)"></textarea>
             <button class="judy-chat-send" id="judyChatSend" onclick="sendJudyChat()" title="전송">➤</button>
         </div>
     </div>
@@ -4501,7 +4657,7 @@
 
     <!-- 🐰 Judy Chat Panel Script (독립 블록 — 기존 스크립트 에러에 영향받지 않음) -->
     <script>
-        (function() {
+        (function () {
             var judyChatPanel = document.getElementById('judyChatPanel');
             var judyChatOverlay = document.getElementById('judyChatOverlay');
             var judyChatMessages = document.getElementById('judyChatMessages');
@@ -4520,20 +4676,20 @@
             // Resizer logic
             if (judyChatResizer) {
                 var isResizing = false;
-                judyChatResizer.addEventListener('mousedown', function(e) {
+                judyChatResizer.addEventListener('mousedown', function (e) {
                     isResizing = true;
                     judyChatResizer.classList.add('active');
                     document.body.style.cursor = 'ew-resize';
                     document.body.style.userSelect = 'none'; // text selection 방지
                 });
-                document.addEventListener('mousemove', function(e) {
+                document.addEventListener('mousemove', function (e) {
                     if (!isResizing) return;
                     var newWidth = document.body.clientWidth - e.clientX;
                     if (newWidth < 300) newWidth = 300;
                     if (newWidth > 800) newWidth = 800;
                     judyChatPanel.style.width = newWidth + 'px';
                 });
-                document.addEventListener('mouseup', function(e) {
+                document.addEventListener('mouseup', function (e) {
                     if (isResizing) {
                         isResizing = false;
                         judyChatResizer.classList.remove('active');
@@ -4543,16 +4699,17 @@
                 });
             }
 
-            window.toggleJudyChat = function() {
+            window.toggleJudyChat = function () {
                 judyChatOpen = !judyChatOpen;
                 judyChatPanel.classList.toggle('open', judyChatOpen);
                 judyChatOverlay.classList.toggle('show', judyChatOpen);
                 if (judyChatOpen) {
-                    setTimeout(function() { judyChatInput.focus(); }, 300);
+                    setTimeout(function () { judyChatInput.focus(); }, 300);
                 }
             };
 
-            window.handleJudyChatKey = function(e) {
+            window.handleJudyChatKey = function (e) {
+                if (e.isComposing) return; // 한글 IME 입력 중복 트리거 방지
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     window.sendJudyChat();
@@ -4571,7 +4728,7 @@
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
             }
 
-            window.sendJudyChat = function() {
+            window.sendJudyChat = function () {
                 var query = (judyChatInput.value || '').trim();
                 if (!query) return;
                 var userName = localStorage.getItem('judy_userName') || '';
@@ -4584,26 +4741,29 @@
                 judyChatInput.value = '';
                 judyChatInput.style.height = 'auto';
                 judyChatSend.disabled = true;
+
+                // 질문 아래 왼쪽(AI 방향)에 당근펜 로딩 표시를 동적 배치
+                judyChatMessages.appendChild(judyTyping);
                 judyTyping.classList.add('show');
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
 
                 google.script.run
-                    .withSuccessHandler(function(response) {
+                    .withSuccessHandler(function (response) {
                         judyTyping.classList.remove('show');
                         judyChatSend.disabled = false;
-                        
+
                         var msgText = response;
                         if (response && typeof response === 'object') {
                             msgText = response.response || JSON.stringify(response);
                         }
-                        
+
                         if (msgText) {
                             appendJudyMsg(msgText, 'ai');
                         } else {
                             appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
                         }
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         judyTyping.classList.remove('show');
                         judyChatSend.disabled = false;
                         appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
@@ -4612,7 +4772,7 @@
             };
 
             // textarea 자동 높이 조절
-            judyChatInput.addEventListener('input', function() {
+            judyChatInput.addEventListener('input', function () {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 80) + 'px';
             });
