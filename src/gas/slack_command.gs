@@ -258,8 +258,8 @@ function doPost(e) {
                                     
           if (isMagicLinkIntent) {
              const magicToken = Utilities.getUuid().replace(/-/g, '').substring(0, 16);
-             const cache = CacheService.getScriptCache();
-             cache.put("MAGIC_" + magicToken, senderName, 600); // 10분만 유효한 토큰 캐싱
+             const magicData = JSON.stringify({ userName: senderName, createdAt: new Date().getTime() });
+             PropertiesService.getScriptProperties().setProperty("MAGIC_" + magicToken, magicData); // 24시간 유효, 다회 사용 가능
              
              const webAppUrl = ScriptApp.getService().getUrl();
              const magicLink = webAppUrl + "?token=" + magicToken;
@@ -273,7 +273,7 @@ function doPost(e) {
                    "type": "section",
                    "text": {
                      "type": "mrkdwn",
-                     "text": `✨ *${senderName}* 님을 위한 전용 주디 접속 링크입니다.\n(이 링크는 10분 내 1회 클릭으로 인증되며, 이후 자유롭게 이용 가능합니다)`
+                     "text": `✨ *${senderName}* 님을 위한 전용 주디 접속 링크입니다.\n(이 링크는 24시간 동안 유효하며, 여러 번 사용할 수 있습니다)`
                    }
                  },
                  {

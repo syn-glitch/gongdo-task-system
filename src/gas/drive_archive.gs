@@ -409,12 +409,12 @@ function findExactMemo(fullText, dateStr, timeStr, originalContent) {
   const dateMatch = dateBlockRegex.exec(fullText);
 
   if (!dateMatch) {
-    return { success: false, errorCode: "ERR_DATE_NOT_FOUND", matches: 0 };
+    return { success: false, errorCode: "ERR_DATE_NOT_FOUND", matches: 0, message: "해당 날짜의 메모를 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해 주세요." };
   }
 
   const dateBlockContent = dateMatch[1];
   const timeBlockRegex = new RegExp(
-    `- \\*\\*\\[${escapeRegex(timeStr)}\\]\\*\\*\\n((?:  .*\\n?)*?)(?=\\n- \\*\\*\\[|$)`,
+    `- \\*\\*\\[${escapeRegex(timeStr)}\\]\\*\\*\\n((?:  .*\\n?)*?)(?=\\n- \\*\\*\\[|\\s*$)`,
     'g'
   );
 
@@ -433,11 +433,11 @@ function findExactMemo(fullText, dateStr, timeStr, originalContent) {
   const exactMatches = matches.filter(m => m.content === normalizedOriginal);
 
   if (exactMatches.length === 0) {
-    return { success: false, errorCode: "ERR_CONTENT_NOT_FOUND", matches: 0 };
+    return { success: false, errorCode: "ERR_CONTENT_NOT_FOUND", matches: 0, message: "수정할 메모를 찾을 수 없습니다. 내용이 변경되었을 수 있으니 새로고침 후 다시 시도해 주세요." };
   }
 
   if (exactMatches.length > 1) {
-    return { success: false, errorCode: "ERR_DUPLICATE_CONTENT", matches: exactMatches.length };
+    return { success: false, errorCode: "ERR_DUPLICATE_CONTENT", matches: exactMatches.length, message: "동일한 내용의 메모가 여러 개 있어 수정할 대상을 특정할 수 없습니다." };
   }
 
   const dateBlockStartInFull = dateMatch.index + dateMatch[0].indexOf(dateBlockContent);

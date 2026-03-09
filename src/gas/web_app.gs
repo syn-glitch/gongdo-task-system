@@ -51,8 +51,11 @@ const SLACK_USER_MAP = {
 /** 세션 TTL (30일, 밀리초) — PropertiesService는 TTL 없으므로 자체 만료 로직 사용 */
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
 
-/** CacheService TTL (하위 호환용, 성능 캠 레이어) */
+/** CacheService TTL (하위 호환용, 성능 캐시 레이어) */
 const SESSION_CACHE_TTL = 21600; // 6시간
+
+/** 매직 토큰 TTL (24시간, 밀리초) */
+const MAGIC_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** 태스크 캐시 TTL (5분) */
 const TASKS_CACHE_TTL = 300;
@@ -185,11 +188,28 @@ function getTargetSpreadsheet() {
 function validateToken(token) {
   if (!token) return { valid: false, reason: "토큰이 없습니다. 슬랙에서 다시 접속해주세요." };
 
-  var cache = CacheService.getScriptCache();
-  var userName = cache.get("MAGIC_" + token);
-  if (!userName) {
+  // [v3.1.0] PropertiesService 기반 매직 토큰 (24시간 유효, 다회 사용)
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty("MAGIC_" + token);
+  if (!raw) {
     return { valid: false, reason: "권한이 없거나 이미 만료된 링크입니다." };
   }
+
+  var magicData;
+  try {
+    magicData = JSON.parse(raw);
+  } catch (e) {
+    props.deleteProperty("MAGIC_" + token);
+    return { valid: false, reason: "링크 데이터 오류. 슬랙에서 새 링크를 받아주세요." };
+  }
+
+  // 24시간 만료 검사
+  if (new Date().getTime() - magicData.createdAt > MAGIC_TOKEN_TTL_MS) {
+    props.deleteProperty("MAGIC_" + token);
+    return { valid: false, reason: "링크가 만료되었습니다 (24시간 초과). 슬랙에서 새 링크를 받아주세요." };
+  }
+
+  var userName = magicData.userName;
 
   // [v3.0.0] 세션 토큰을 PropertiesService에 영구 저장
   var sessionToken = Utilities.getUuid().replace(/-/g, '');
@@ -201,6 +221,7 @@ function validateToken(token) {
   PropertiesService.getScriptProperties().setProperty("SESSION_" + sessionToken, sessionData);
 
   // 성능 캐시 레이어 (CacheService를 읽기 캐시로 활용)
+  var cache = CacheService.getScriptCache();
   cache.put("SESS_CACHE_" + sessionToken, userName, SESSION_CACHE_TTL);
 
   logActionV2({
@@ -291,7 +312,19 @@ function cleanupExpiredSessions() {
           cleaned++;
         }
       } catch (e) {
-        // 파싱 실패 — 손상된 데이터 삭제
+        props.deleteProperty(key);
+        cleaned++;
+      }
+    }
+    // [v3.1.0] 만료된 매직 토큰도 정리
+    if (key.indexOf("MAGIC_") === 0) {
+      try {
+        var mData = JSON.parse(allProps[key]);
+        if (now - mData.createdAt > MAGIC_TOKEN_TTL_MS) {
+          props.deleteProperty(key);
+          cleaned++;
+        }
+      } catch (e) {
         props.deleteProperty(key);
         cleaned++;
       }
@@ -646,5 +679,175 @@ function extractFromWeb(userName, text) {
   } catch (err) {
     console.error("extractFromWeb Error:", err);
     return { success: false, message: "AI 분석 중 오류가 발생했습니다. 다시 시도해주세요." };
+  }
+}
+
+// ═══════════════════════════════════════════
+// 출근 브리핑
+// ═══════════════════════════════════════════
+
+/** 출근 브리핑 전체 업무를 볼 수 있는 관리자 목록 */
+var CHECKIN_ADMIN_USERS = ["송용남", "정혜림", "김관수"];
+
+/**
+ * 출근 브리핑 — "출근" 키워드 입력 시 당일 업무 + 일정 요약 반환
+ * AI API 미사용, 시트 직접 조회로 1~2초 내 응답
+ * @param {string} userName 사용자 이름
+ * @returns {{ success: boolean, response: string }}
+ */
+function handleCheckIn(userName) {
+  try {
+    var ss = getTargetSpreadsheet();
+    var today = new Date();
+    var todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    var dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    var dayName = dayNames[today.getDay()];
+    var isAdmin = CHECKIN_ADMIN_USERS.indexOf(userName) !== -1;
+
+    // ── 1. 업무 수집 ──
+    var todayDue = [];    // 오늘 마감
+    var inProgress = [];  // 진행중
+    var waiting = [];     // 대기
+
+    var taskSheet = ss.getSheetByName("Tasks");
+    if (taskSheet) {
+      var tData = taskSheet.getDataRange().getValues();
+      for (var i = 1; i < tData.length; i++) {
+        var row = tData[i];
+        var status = String(row[2] || "").trim();
+        var title = String(row[4] || "").trim();
+        var assignee = String(row[6] || "").trim();
+        var project = String(row[3] || "").trim();
+        var rawDue = row[8];
+        var taskId = String(row[0] || "");
+
+        if (!title || status === "삭제됨" || status === "완료") continue;
+
+        // 권한 필터: 일반 사용자는 본인 업무만
+        if (!isAdmin && assignee !== userName) continue;
+
+        var dueStr = "";
+        var isToday = false;
+        if (rawDue instanceof Date && !isNaN(rawDue.getTime())) {
+          dueStr = Utilities.formatDate(rawDue, Session.getScriptTimeZone(), "M/d");
+          var dueYmd = Utilities.formatDate(rawDue, Session.getScriptTimeZone(), "yyyy-MM-dd");
+          isToday = (dueYmd === todayStr);
+        }
+
+        var taskInfo = { id: taskId, title: title, project: project, assignee: assignee, dueStr: dueStr };
+
+        if (isToday) {
+          todayDue.push(taskInfo);
+        } else if (status === "진행중") {
+          inProgress.push(taskInfo);
+        } else if (status === "대기") {
+          waiting.push(taskInfo);
+        }
+      }
+    }
+
+    // ── 2. 오늘 일정 수집 ──
+    var todayEvents = [];
+    var calSheet = ss.getSheetByName("Calendar_Events");
+    if (calSheet) {
+      var cData = calSheet.getDataRange().getValues();
+      for (var j = 1; j < cData.length; j++) {
+        var startD = cData[j][4];
+        if (startD instanceof Date) {
+          var startYmd = Utilities.formatDate(startD, Session.getScriptTimeZone(), "yyyy-MM-dd");
+          if (startYmd === todayStr) {
+            var evTitle = String(cData[j][3] || "").trim();
+            var startTime = Utilities.formatDate(startD, Session.getScriptTimeZone(), "HH:mm");
+            var endD = cData[j][5];
+            var endTime = endD instanceof Date
+              ? Utilities.formatDate(endD, Session.getScriptTimeZone(), "HH:mm")
+              : "";
+            todayEvents.push({ title: evTitle, start: startTime, end: endTime });
+          }
+        }
+      }
+      todayEvents.sort(function(a, b) { return a.start < b.start ? -1 : 1; });
+    }
+
+    // ── 3. 브리핑 메시지 조립 ──
+    var greetings = [
+      "좋은 아침이에요! 오늘도 화이팅!",
+      "오늘도 좋은 하루 보내세요!",
+      "활기찬 하루 시작해볼까요?",
+      "오늘 하루도 응원합니다!"
+    ];
+    var greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+    var msg = "🌅 **" + userName + "**님, " + greeting + " 🐰\n\n";
+    msg += "📋 **오늘의 업무 브리핑** (" + todayStr + " " + dayName + "요일)\n";
+    msg += "━━━━━━━━━━━━━━━━━━\n\n";
+
+    // 오늘 마감
+    if (todayDue.length > 0) {
+      msg += "🔴 **오늘 마감** (" + todayDue.length + "건)\n";
+      for (var a = 0; a < todayDue.length; a++) {
+        var t = todayDue[a];
+        msg += "- " + t.title;
+        if (isAdmin && t.assignee !== userName) msg += " _(담당: " + t.assignee + ")_";
+        if (t.project) msg += " `" + t.project + "`";
+        msg += "\n";
+      }
+      msg += "\n";
+    }
+
+    // 진행중
+    if (inProgress.length > 0) {
+      msg += "🟡 **진행중** (" + inProgress.length + "건)\n";
+      for (var b = 0; b < inProgress.length; b++) {
+        var p = inProgress[b];
+        msg += "- " + p.title;
+        if (p.dueStr) msg += " (마감: " + p.dueStr + ")";
+        if (isAdmin && p.assignee !== userName) msg += " _(담당: " + p.assignee + ")_";
+        msg += "\n";
+      }
+      msg += "\n";
+    }
+
+    // 대기
+    if (waiting.length > 0) {
+      msg += "⚪ **대기** (" + waiting.length + "건)\n";
+      for (var c = 0; c < waiting.length; c++) {
+        var w = waiting[c];
+        msg += "- " + w.title;
+        if (w.dueStr) msg += " (마감: " + w.dueStr + ")";
+        if (isAdmin && w.assignee !== userName) msg += " _(담당: " + w.assignee + ")_";
+        msg += "\n";
+      }
+      msg += "\n";
+    }
+
+    // 업무 없는 경우
+    if (todayDue.length === 0 && inProgress.length === 0 && waiting.length === 0) {
+      msg += "✨ 등록된 업무가 없어요. 여유로운 하루 되세요!\n\n";
+    }
+
+    // 오늘 일정
+    if (todayEvents.length > 0) {
+      msg += "📅 **오늘 일정** (" + todayEvents.length + "건)\n";
+      for (var d = 0; d < todayEvents.length; d++) {
+        var ev = todayEvents[d];
+        msg += "- " + ev.start;
+        if (ev.end) msg += "~" + ev.end;
+        msg += " " + ev.title + "\n";
+      }
+      msg += "\n";
+    }
+
+    // 마무리
+    var totalCount = todayDue.length + inProgress.length + waiting.length;
+    if (totalCount > 0) {
+      msg += "💪 오늘 할 일이 **" + totalCount + "건**이에요. 하나씩 해결해봐요!";
+    }
+
+    return { success: true, response: msg };
+
+  } catch (err) {
+    console.error("handleCheckIn Error:", err);
+    return { success: true, response: "🌅 **" + userName + "**님, 좋은 아침이에요! 🐰\n\n⚠️ 업무 데이터를 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요." };
   }
 }

@@ -4728,6 +4728,9 @@
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
             }
 
+            // 출근 키워드 목록 (추후 확장 가능)
+            var CHECKIN_KEYWORDS = ['출근'];
+
             window.sendJudyChat = function () {
                 var query = (judyChatInput.value || '').trim();
                 if (!query) return;
@@ -4747,28 +4750,42 @@
                 judyTyping.classList.add('show');
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
 
-                google.script.run
-                    .withSuccessHandler(function (response) {
-                        judyTyping.classList.remove('show');
-                        judyChatSend.disabled = false;
+                // 출근 키워드 감지 → 전용 핸들러 (AI 미사용, 빠른 응답)
+                var isCheckIn = CHECKIN_KEYWORDS.indexOf(query) !== -1;
 
-                        var msgText = response;
-                        if (response && typeof response === 'object') {
-                            msgText = response.response || JSON.stringify(response);
-                        }
+                var successHandler = function (response) {
+                    judyTyping.classList.remove('show');
+                    judyChatSend.disabled = false;
 
-                        if (msgText) {
-                            appendJudyMsg(msgText, 'ai');
-                        } else {
-                            appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
-                        }
-                    })
-                    .withFailureHandler(function (err) {
-                        judyTyping.classList.remove('show');
-                        judyChatSend.disabled = false;
-                        appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
-                    })
-                    .processJudyWebChat(query, userName);
+                    var msgText = response;
+                    if (response && typeof response === 'object') {
+                        msgText = response.response || JSON.stringify(response);
+                    }
+
+                    if (msgText) {
+                        appendJudyMsg(msgText, 'ai');
+                    } else {
+                        appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
+                    }
+                };
+
+                var failureHandler = function (err) {
+                    judyTyping.classList.remove('show');
+                    judyChatSend.disabled = false;
+                    appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
+                };
+
+                if (isCheckIn) {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .handleCheckIn(userName);
+                } else {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .processJudyWebChat(query, userName);
+                }
             };
 
             // textarea 자동 높이 조절
