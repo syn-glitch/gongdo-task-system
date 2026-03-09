@@ -3,34 +3,34 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        web_app.gs
- * @version     v3.0.0
- * @updated     2026-03-02 18:28 (KST)
- * @agent       강철 (강철 AX팀)
+ * @version     v3.1.0
+ * @updated     2026-03-09 (KST)
+ * @agent       에이다 BE (자비스 개발팀)
  * @ordered-by  용남 대표
- * @description 주디 워크스페이스 통합 백엔드 — 메모 저장, AI 추출, 업무 CRUD, 인증
+ * @description 주디 워크스페이스 통합 백엔드 — 메모 저장, AI 추출, 업무 CRUD, 인증, 참고사항, DM 알림
  *
  * @change-summary
- *   AS-IS: 중복 코드 4건(syncCalendar·타임스탬프·입력검증·사용자맵), 에러 메시지 내부 정보 노출, 입력값 검증 미흡
- *   TO-BE: 공통 헬퍼 추출(finalizeTaskRow), 에러 sanitize, 입력값 검증 함수 추가, QA M-2/M-7/M-9/M-10 해소
+ *   AS-IS: v3.0.0 — 기본 업무 CRUD + 인증 + 캘린더 연동
+ *   TO-BE: v3.1.0 — 업무 관리 고도화 (프로젝트 생성, 수락 프로세스, 참고사항 CRUD, DM 알림)
  *
  * @features
- *   - [추가] sanitizeErrorMessage() — 에러 메시지에서 내부 정보 제거 (QA M-2)
- *   - [추가] validateTaskInput() — 입력값 길이·형식·상태 검증 (QA M-9, M-10)
- *   - [추가] validateMemoInput() — 메모 입력 공통 검증
- *   - [추가] finalizeTaskRow() — 타임스탬프 갱신 + 캘린더 동기화 통합 헬퍼
- *   - [수정] withTaskLock — options 객체 지원, rowNum 전달 시 자동 후처리
- *   - [수정] validateSession — 만료 시 재인증 안내 보강 (QA M-7)
- *   - [수정] updateTaskFromWeb — 필드 화이트리스트 + 길이 제한 적용 (QA M-10)
- *   - [수정] SLACK_USER_MAP 상수 분리, SESSION_TTL·TASKS_CACHE_TTL 상수화
- *   - [수정] saveFromWeb/extractFromWeb — 내부 에러 메시지 비노출
- *   - [수정] validateToken — logActionV2 직접 호출로 통일
+ *   - [추가] createProjectFromWeb() — 프로젝트 직접 생성 (자동 코드, LockService, 중복 방지)
+ *   - [추가] acceptTaskFromWeb() — 수락대기 → 대기 + 신청자 DM 발송
+ *   - [추가] triggerStartDateReminders() — D-3, D-1, 당일 슬랙 DM 트리거
+ *   - [추가] addTaskReference/updateTaskReference/deleteTaskReference — 참고사항 CRUD + 로그
+ *   - [추가] getTaskReferences() — 업무별 참고사항 조회
+ *   - [추가] sendTaskDM() — Slack DM 발송 (conversations.open 패턴)
+ *   - [수정] registerTaskFromWeb() — 담당자 지정(수락대기) + 시작예정일(S열) 지원
+ *   - [수정] getAllTasksForWeb() — requester, startDate 필드 추가
+ *   - [수정] VALID_STATUSES — "수락대기" 추가
  *
  * ── 변경 이력 ──────────────────────────
- * v3.0.0 | 2026-03-02 18:28 | 강철 (AX팀) | 세션 스토어 CacheService→PropertiesService 전환, 30일 TTL, GC 로직 추가 (QA C-1/C-2/C-3)
- * v2.2.0 | 2026-03-02 16:40 | 자비스 PO | 인증 회복탄력성 강화 (Magic Token 즉시 삭제 방지)
- * v2.1.0 | 2026-03-02 16:00 | 자비스 PO | 배포 이력 추가 및 모바일 최적화 반영
- * v2.0.0 | 2026-03-02 15:00 | 강철 (AX팀) | 리팩토링 + 에러 핸들링 보강 + QA M-2/M-7/M-9/M-10 해소
- * v1.0.0 | 2026-03-01 | 클로이 (자비스팀) | 최초 작성 — 주디 워크스페이스 통합 백엔드
+ * v3.1.0 | 2026-03-09 | 에이다 BE | 업무 관리 v3.1 고도화 (JARVIS-2026-03-09-001)
+ * v3.0.1 | 2026-03-09 | 에이다 BE | 매직링크 validateToken cache 변수 수정 + 출근 브리핑
+ * v3.0.0 | 2026-03-02 18:28 | 강철 (AX팀) | 세션 스토어 PropertiesService 전환, 30일 TTL
+ * v2.2.0 | 2026-03-02 16:40 | 자비스 PO | 인증 회복탄력성 강화
+ * v2.0.0 | 2026-03-02 15:00 | 강철 (AX팀) | 리팩토링 + 에러 핸들링 보강
+ * v1.0.0 | 2026-03-01 | 클로이 (자비스팀) | 최초 작성
  * ============================================
  */
 
@@ -45,7 +45,8 @@ const SLACK_USER_MAP = {
   "U02SK29URP": "hyerim",
   "U0749G2SNBE": "yuna",
   "U04JL09C6DV": "sangho",
-  "U02S3EURC21": "kwansu"
+  "U02S3EURC21": "kwansu",
+  "U0AJ57GFXM0": "minseok"
 };
 
 /** 세션 TTL (30일, 밀리초) — PropertiesService는 TTL 없으므로 자체 만료 로직 사용 */
@@ -65,8 +66,22 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_DESC_LENGTH = 5000;
 const MAX_MEMO_LENGTH = 10000;
 
-/** 유효 상태값 화이트리스트 */
-const VALID_STATUSES = ["대기", "진행중", "완료", "보류", "삭제됨"];
+/** 유효 상태값 화이트리스트 (v3.1: 수락대기 추가) */
+const VALID_STATUSES = ["대기", "진행중", "완료", "보류", "삭제됨", "수락대기"];
+
+/** 참고사항 입력 최대 길이 */
+const MAX_REF_LENGTH = 3000;
+
+/** 사용자명 → Slack User ID 역매핑 (fetchUserName 기준 통일) */
+const USER_NAME_TO_SLACK_ID = {
+  "송용남": "U02S3CN9E6R",
+  "이지은": "U08SJ3SJQ9W",
+  "정혜림": "U02SK29UVRP",
+  "문유나": "U0749G2SNBE",
+  "이상호": "U04JL09C6DV",
+  "김관수": "U02S3EURC21",
+  "김민석": "U0AJ57GFXM0"
+};
 
 // ═══════════════════════════════════════════
 // 유틸리티 — 검증 · 보안
@@ -425,14 +440,22 @@ function getAllTasksForWeb(userId) {
       rawDueStr = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
     }
 
+    var plannedStart = row[18]; // S열 = 시작예정일
+    var plannedStartStr = "";
+    if (plannedStart instanceof Date && !isNaN(plannedStart.getTime())) {
+      plannedStartStr = Utilities.formatDate(plannedStart, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    }
+
     allTasks.push({
       row: i + 1, id: row[0],
       title: String(row[4]).trim(), project: String(row[3] || "").trim(),
       status: status, dueDate: dueDate, rawDueStr: rawDueStr,
       desc: String(row[5] || "").trim(), dDays: dDays,
       assignee: String(row[6] || "").trim(),
+      requester: String(row[7] || "").trim(),
       startTime: startTime instanceof Date ? startTime.getTime() : null,
-      durationMin: !isNaN(parseFloat(durationMin)) ? parseFloat(durationMin) : null
+      durationMin: !isNaN(parseFloat(durationMin)) ? parseFloat(durationMin) : null,
+      startDate: plannedStartStr
     });
   }
 
@@ -448,7 +471,15 @@ function getMyTasksForWeb(userId) {
   var userName = typeof fetchUserName === "function" ? fetchUserName(userId) : userId;
   var allTasks = getAllTasksForWeb(userId);
   var slackUsername = SLACK_USER_MAP[userId] || "";
-  return allTasks.filter(function(t) { return t.assignee === userName || t.assignee === slackUsername; });
+  return allTasks.filter(function(t) {
+    var isAssignee = t.assignee === userName || t.assignee === slackUsername;
+    var isRequester = (t.requester === userName || t.requester === slackUsername) && t.assignee !== userName && t.assignee !== slackUsername;
+    return isAssignee || isRequester;
+  }).map(function(t) {
+    var isMyAssignment = t.assignee === userName || t.assignee === slackUsername;
+    t.isRequester = !isMyAssignment;
+    return t;
+  });
 }
 
 /**
@@ -463,7 +494,10 @@ function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
     var oldStatus = sheet.getRange(rowNum, 3).getValue();
     var now = new Date();
 
-    sheet.getRange(rowNum, 3).setValue(newStatus);
+    // 수락대기/삭제됨 등 비표준 상태 → 데이터 유효성 검사 제거 후 설정
+    var statusCell = sheet.getRange(rowNum, 3);
+    statusCell.setDataValidation(null);
+    statusCell.setValue(newStatus);
 
     if (newStatus === "진행중") {
       sheet.getRange(rowNum, 15).setValue(now);
@@ -553,21 +587,42 @@ function deleteTaskFromWeb(rowNum, userName) {
 /**
  * 새 업무 등록
  */
-function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueDate, status) {
+/**
+ * 새 업무 등록 (v3.1: 시작일, 담당자 지정, 수락대기 지원)
+ * @param {string} userId - 등록자 슬랙 ID
+ * @param {string} projectCode - 프로젝트 코드
+ * @param {string} projectName - 프로젝트 이름
+ * @param {string} title - 업무 제목
+ * @param {string} desc - 업무 설명
+ * @param {string} dueDate - 마감일
+ * @param {string} status - 상태 (기본: "대기")
+ * @param {Object} [opts] - v3.1 옵션 { startDate, assigneeName }
+ */
+function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueDate, status, opts) {
+  opts = opts || {};
   var validation = validateTaskInput({ title: title, desc: desc, dueDate: dueDate, status: status || "대기" });
   if (!validation.valid) return { success: false, message: validation.reason };
 
   return withTaskLock(function(sheet) {
     var userName = typeof fetchUserName === "function" ? fetchUserName(userId) : userId;
+    var assigneeName = opts.assigneeName || userName;
+    var startDate = opts.startDate ? new Date(opts.startDate) : "";
     var newId = generateNewId(sheet, projectCode || "DEFAULT");
     var today = new Date();
 
+    // 담당자가 본인이 아니면 "수락대기" 상태로 시작
+    var initialStatus = status || "대기";
+    if (assigneeName !== userName && assigneeName) {
+      initialStatus = "수락대기";
+    }
+
     var rowData = [
-      newId, "일반", status || "대기", projectName || "DEFAULT",
+      newId, "일반", initialStatus, projectName || "DEFAULT",
       String(title).substring(0, MAX_TITLE_LENGTH),
       String(desc || "").substring(0, MAX_DESC_LENGTH),
-      userName, userName, dueDate ? new Date(dueDate) : "",
-      "", "", "", "", today, today
+      assigneeName, userName, dueDate ? new Date(dueDate) : "",
+      "", "", "", "", today, today,
+      "", "", "", startDate  // P(15)=시작시간, Q(16)=종료, R(17)=소요시간, S(18)=시작예정일
     ];
 
     sheet.appendRow(rowData);
@@ -577,15 +632,359 @@ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueD
 
     logActionV2({
       userId: userName, action: "REGISTER", targetId: newId,
-      newValue: title, details: "웹 대시보드에서 신규 등록"
+      newValue: title, details: "웹 대시보드 신규 등록 (담당: " + assigneeName + ")"
     });
 
+    // 슬랙 알림: 담당자가 본인이 아니면 담당자에게 DM
+    if (assigneeName !== userName) {
+      try {
+        sendTaskDM(assigneeName, "📋 *새 업무가 배정되었습니다*\n" +
+          "📂 " + (projectName || "DEFAULT") + " | " + newId + "\n" +
+          "📝 " + title + "\n" +
+          "👤 요청자: " + userName + "\n" +
+          "📅 마감일: " + (dueDate || "미지정") + "\n" +
+          "⏳ 상태: *수락대기* — 대시보드에서 수락해주세요!");
+      } catch (e) { console.error("DM 발송 실패:", e); }
+    }
+
     try {
-      if (typeof sendTaskNotification === "function") sendTaskNotification(rowData);
+      if (typeof sendTaskNotification === "function") sendTaskNotification(newRow);
     } catch (e) { /* 알림 실패 무시 */ }
 
-    return { message: "업무가 등록되었습니다!" };
+    return { message: "업무가 등록되었습니다!", taskId: newId };
   }, true);
+}
+
+// ═══════════════════════════════════════════
+// v3.1: 업무 수락 · 프로젝트 생성 · 참고사항 · DM
+// ═══════════════════════════════════════════
+
+/**
+ * 업무 수락 — 수락대기 → 대기로 변경 + 신청자에게 DM
+ */
+function acceptTaskFromWeb(rowNum, userName) {
+  return withTaskLock(function(sheet) {
+    var currentStatus = String(sheet.getRange(rowNum, 3).getValue()).trim();
+    if (currentStatus !== "수락대기") {
+      return { success: false, message: "수락대기 상태가 아닙니다. 현재: " + currentStatus };
+    }
+
+    var assignee = String(sheet.getRange(rowNum, 7).getValue()).trim();
+    if (assignee !== userName) {
+      throw new Error("본인에게 배정된 업무만 수락할 수 있습니다.");
+    }
+
+    var now = new Date();
+
+    // v3.1.1: 수락 시 "진행중"으로 전환 + 시작시간 기록
+    var statusCell = sheet.getRange(rowNum, 3);
+    statusCell.setDataValidation(null);
+    statusCell.setValue("진행중");
+    sheet.getRange(rowNum, 15).setValue(now); // 시작시간 기록 (김감사 M-3 반영)
+
+    var taskId = sheet.getRange(rowNum, 1).getValue();
+    var title = sheet.getRange(rowNum, 5).getValue();
+    var requester = String(sheet.getRange(rowNum, 8).getValue()).trim();
+
+    logActionV2({
+      userId: userName, action: "ACCEPT", targetId: taskId,
+      oldValue: "수락대기", newValue: "진행중", details: userName + "님이 업무 수락 → 시작"
+    });
+
+    // 신청자에게 수락+시작 알림 DM
+    if (requester && requester !== userName) {
+      try {
+        sendTaskDM(requester, "✅ *업무가 수락되었습니다*\n" +
+          "🆔 " + taskId + " | 📝 " + title + "\n" +
+          "👤 담당자: " + userName + "님이 수락하여 업무를 시작합니다.");
+      } catch (e) { console.error("수락 DM 발송 실패:", e); }
+    }
+
+    return { success: true, message: userName + "님이 업무를 수락하고 시작했습니다." };
+  }, { rowNum: rowNum, syncCalendar: true });
+}
+
+/**
+ * 프로젝트 직접 등록 (자동 코드 생성)
+ */
+function createProjectFromWeb(projectName, userName) {
+  if (!projectName || String(projectName).trim().length < 2) {
+    return { success: false, message: "프로젝트 이름은 2자 이상 입력해주세요." };
+  }
+  projectName = String(projectName).trim();
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    var ss = getTargetSpreadsheet();
+    var sheet = ss.getSheetByName("Projects");
+    if (!sheet) throw new Error("Projects 시트를 찾을 수 없습니다.");
+
+    // 중복 체크
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === projectName) {
+        return { success: false, message: "이미 존재하는 프로젝트입니다: " + projectName };
+      }
+    }
+
+    // 코드 자동 생성: 프로젝트명 앞 3글자 + 랜덤 2자리
+    var code = projectName.replace(/[^a-zA-Z가-힣0-9]/g, "").substring(0, 3).toUpperCase();
+    if (code.length < 2) code = "PRJ";
+    code = code + String(Math.floor(Math.random() * 90) + 10);
+
+    // 중복 코드 재생성
+    var codeExists = data.some(function(r) { return String(r[1]).trim() === code; });
+    if (codeExists) code = code + String(Math.floor(Math.random() * 9));
+
+    sheet.appendRow([projectName, code, "활성", "", new Date(), userName]);
+
+    logActionV2({
+      userId: userName, action: "CREATE_PROJECT", targetId: code,
+      newValue: projectName, details: "웹 대시보드에서 프로젝트 생성"
+    });
+
+    return { success: true, message: "프로젝트가 생성되었습니다!", projectName: projectName, projectCode: code };
+  } catch (err) {
+    console.error("createProject Error:", err);
+    return { success: false, message: sanitizeErrorMessage(err) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 참고사항(Task_References) 추가
+ */
+function addTaskReference(taskId, content, userName) {
+  if (!content || String(content).trim().length === 0) {
+    return { success: false, message: "내용을 입력해주세요." };
+  }
+  if (String(content).length > MAX_REF_LENGTH) {
+    return { success: false, message: "참고사항은 " + MAX_REF_LENGTH + "자 이내로 입력해주세요." };
+  }
+  // 수식 인젝션 방지
+  content = String(content).trim();
+  if (content.charAt(0) === "=" || content.indexOf("<script") !== -1) {
+    return { success: false, message: "허용되지 않는 입력입니다." };
+  }
+
+  try {
+    var ss = getTargetSpreadsheet();
+    var sheet = getOrCreateRefSheet(ss);
+    var refId = "REF-" + Date.now();
+    var now = new Date();
+
+    sheet.appendRow([refId, taskId, content, userName, now, now, "INSERT"]);
+
+    logActionV2({
+      userId: userName, action: "ADD_REFERENCE", targetId: taskId,
+      newValue: content.substring(0, 50), details: "참고사항 추가"
+    });
+
+    return { success: true, message: "참고사항이 추가되었습니다.", refId: refId };
+  } catch (err) {
+    return { success: false, message: sanitizeErrorMessage(err) };
+  }
+}
+
+/**
+ * 참고사항 수정
+ */
+function updateTaskReference(refId, newContent, userName) {
+  if (!newContent || String(newContent).trim().length === 0) {
+    return { success: false, message: "내용을 입력해주세요." };
+  }
+  if (String(newContent).length > MAX_REF_LENGTH) {
+    return { success: false, message: "참고사항은 " + MAX_REF_LENGTH + "자 이내로 입력해주세요." };
+  }
+  newContent = String(newContent).trim();
+  if (newContent.charAt(0) === "=" || newContent.indexOf("<script") !== -1) {
+    return { success: false, message: "허용되지 않는 입력입니다." };
+  }
+
+  try {
+    var ss = getTargetSpreadsheet();
+    var sheet = getOrCreateRefSheet(ss);
+    var data = sheet.getDataRange().getValues();
+    var now = new Date();
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === refId && String(data[i][6]) !== "DELETE") {
+        var oldContent = data[i][2];
+        // 수정 로그 행 추가 (원본 보존)
+        sheet.appendRow([refId + "-EDIT-" + Date.now(), data[i][1], oldContent, userName, data[i][4], now, "UPDATE"]);
+        // 원본 행 업데이트
+        sheet.getRange(i + 1, 3).setValue(newContent);
+        sheet.getRange(i + 1, 6).setValue(now);
+
+        logActionV2({
+          userId: userName, action: "UPDATE_REFERENCE", targetId: refId,
+          oldValue: oldContent.substring(0, 50), newValue: newContent.substring(0, 50)
+        });
+        return { success: true, message: "참고사항이 수정되었습니다." };
+      }
+    }
+    return { success: false, message: "참고사항을 찾을 수 없습니다." };
+  } catch (err) {
+    return { success: false, message: sanitizeErrorMessage(err) };
+  }
+}
+
+/**
+ * 참고사항 삭제 (소프트 삭제 — 로그 보존)
+ */
+function deleteTaskReference(refId, userName) {
+  try {
+    var ss = getTargetSpreadsheet();
+    var sheet = getOrCreateRefSheet(ss);
+    var data = sheet.getDataRange().getValues();
+    var now = new Date();
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === refId && String(data[i][6]) !== "DELETE") {
+        var oldContent = data[i][2];
+        // 삭제 로그 행
+        sheet.appendRow([refId + "-DEL-" + Date.now(), data[i][1], oldContent, userName, data[i][4], now, "DELETE"]);
+        // 원본 행에 DELETE 마킹
+        sheet.getRange(i + 1, 7).setValue("DELETE");
+        sheet.getRange(i + 1, 6).setValue(now);
+
+        logActionV2({
+          userId: userName, action: "DELETE_REFERENCE", targetId: refId,
+          oldValue: oldContent.substring(0, 50), details: "참고사항 삭제"
+        });
+        return { success: true, message: "참고사항이 삭제되었습니다." };
+      }
+    }
+    return { success: false, message: "참고사항을 찾을 수 없습니다." };
+  } catch (err) {
+    return { success: false, message: sanitizeErrorMessage(err) };
+  }
+}
+
+/**
+ * 업무별 참고사항 목록 조회
+ */
+function getTaskReferences(taskId) {
+  try {
+    var ss = getTargetSpreadsheet();
+    var sheet = ss.getSheetByName("Task_References");
+    if (!sheet) return [];
+
+    var data = sheet.getDataRange().getValues();
+    var refs = [];
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) === taskId && String(data[i][6]) !== "DELETE" && String(data[i][6]) !== "UPDATE") {
+        refs.push({
+          refId: String(data[i][0]),
+          content: String(data[i][2]),
+          author: String(data[i][3]),
+          createdAt: data[i][4] instanceof Date ? data[i][4].getTime() : null,
+          updatedAt: data[i][5] instanceof Date ? data[i][5].getTime() : null
+        });
+      }
+    }
+    // 최신순 정렬
+    refs.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+    return refs;
+  } catch (err) {
+    return [];
+  }
+}
+
+/** Task_References 시트 가져오기 (없으면 생성) */
+function getOrCreateRefSheet(ss) {
+  var sheet = ss.getSheetByName("Task_References");
+  if (!sheet) {
+    sheet = ss.insertSheet("Task_References");
+    sheet.appendRow(["RefID", "TaskID", "Content", "Author", "CreatedAt", "UpdatedAt", "Action_Type"]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * 슬랙 DM 발송 (사용자명 기반)
+ */
+function sendTaskDM(targetUserName, message) {
+  var slackUserId = USER_NAME_TO_SLACK_ID[targetUserName];
+  if (!slackUserId) {
+    console.log("[sendTaskDM] 미매핑 — 대상: '" + targetUserName + "', 등록된 키: " + Object.keys(USER_NAME_TO_SLACK_ID).join(", "));
+    return;
+  }
+  try {
+    console.log("[sendTaskDM] 발송 시도 — 대상: " + targetUserName + " (" + slackUserId + ")");
+    var token = typeof SLACK_TOKEN !== "undefined" ? SLACK_TOKEN : "";
+    if (!token) {
+      console.error("[sendTaskDM] SLACK_TOKEN 미정의");
+      return;
+    }
+    // Slack DM: conversations.open → chat.postMessage
+    var openRes = UrlFetchApp.fetch("https://slack.com/api/conversations.open", {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ users: slackUserId })
+    });
+    var openData = JSON.parse(openRes.getContentText());
+    console.log("[sendTaskDM] conversations.open 응답: ok=" + openData.ok + (openData.error ? ", error=" + openData.error : ""));
+    if (openData.ok && openData.channel && openData.channel.id) {
+      var postRes = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": "Bearer " + token },
+        payload: JSON.stringify({ channel: openData.channel.id, text: message })
+      });
+      var postData = JSON.parse(postRes.getContentText());
+      console.log("[sendTaskDM] chat.postMessage 응답: ok=" + postData.ok + (postData.error ? ", error=" + postData.error : ""));
+    }
+  } catch (e) {
+    console.error("[sendTaskDM] Error:", e);
+  }
+}
+
+/**
+ * 시작예정일 기반 D-3, D-1, 당일 슬랙 DM 알림 트리거
+ * (매일 오전 9시에 실행되도록 트리거 설정 필요)
+ */
+function triggerStartDateReminders() {
+  try {
+    var ss = getTargetSpreadsheet();
+    var sheet = ss.getSheetByName("Tasks");
+    if (!sheet) return;
+
+    var data = sheet.getDataRange().getValues();
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var todayMs = today.getTime();
+
+    for (var i = 1; i < data.length; i++) {
+      var status = String(data[i][2] || "").trim();
+      if (status === "완료" || status === "삭제됨") continue;
+
+      var startDate = data[i][18]; // S열(index 18) = 시작예정일
+      if (!(startDate instanceof Date)) continue;
+
+      var sd = new Date(startDate);
+      sd.setHours(0, 0, 0, 0);
+      var diffDays = Math.round((sd.getTime() - todayMs) / 86400000);
+
+      var assignee = String(data[i][6] || "").trim();
+      var title = String(data[i][4] || "").trim();
+      var taskId = String(data[i][0] || "");
+
+      if (diffDays === 3) {
+        sendTaskDM(assignee, "⏰ *D-3 알림*\n📝 " + title + " (" + taskId + ")\n📅 시작예정일: 3일 후");
+      } else if (diffDays === 1) {
+        sendTaskDM(assignee, "⏰ *D-1 알림*\n📝 " + title + " (" + taskId + ")\n📅 시작예정일: 내일!");
+      } else if (diffDays === 0) {
+        sendTaskDM(assignee, "🔔 *오늘 시작!*\n📝 " + title + " (" + taskId + ")\n📅 시작예정일이 오늘입니다. 화이팅! 💪");
+      }
+    }
+  } catch (err) {
+    console.error("triggerStartDateReminders Error:", err);
+  }
 }
 
 // ═══════════════════════════════════════════

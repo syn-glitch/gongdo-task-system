@@ -3,30 +3,36 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        judy_workspace.html
- * @version     v2.8.2
- * @updated     2026-03-08 (KST)
+ * @version     v3.1.0
+ * @updated     2026-03-09 (KST)
  * @author      클로이 & 에이다 (자비스팀)
  * @ordered-by  용남 대표
- * @description 주디 워크스페이스 — 마크다운 노트 v2 + 주디 AI 비서 챗봇 패널.
- *              기존 textarea 강화 + 마크다운 툴바 + 프리뷰 토글 + 글자수 카운터.
- *              Notes_v2 시트 기반 CRUD + 챗봇 RAG 검색 연동.
+ * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 패널.
+ *              프로젝트 직접 등록, 담당자 수락 프로세스, 참고사항 히스토리, 시작예정일.
  *
  * @change-summary
- *   AS-IS: v2.8.1 — 패널 HTML이 script 뒤 배치되어 DOM null 참조 (QA F-1 CRITICAL)
- *   TO-BE: v2.8.2 — QA 4건 해소 (F-1 DOM순서, U-1 모바일title, U-2 dot애니메이션)
+ *   AS-IS: v2.9.2 — 기본 업무 등록 (프로젝트 선택만, 담당자 본인 고정)
+ *   TO-BE: v3.1.0 — 업무 관리 고도화 (프로젝트 생성, 수락 프로세스, 참고사항 CRUD, 시작예정일)
  *
  * @features
- *   - [수정] 패널 HTML을 script 앞으로 이동 — DOM 참조 보장 (QA F-1, F-2 해소)
- *   - [수정] 토글 버튼 title="주디 AI 비서" 추가 — 모바일 접근성 (QA U-1 해소)
- *   - [수정] 타이핑 인디케이터 span dot 방식 — CSS opacity 애니메이션 (QA U-2 해소)
+ *   - [추가] 프로젝트 직접 등록 인라인 UI (+ 새 프로젝트 버튼)
+ *   - [추가] 담당자 셀렉트 + 수락대기 상태 + [✅ 수락] 버튼
+ *   - [추가] 시작예정일 필드 (업무 등록 모달)
+ *   - [추가] 참고사항 타임라인 UI (추가/수정/삭제 + 링크 자동 감지)
+ *   - [추가] 요약바 수락대기 카운트 표시
  *
  * ── 변경 이력 ──────────────────────────
- * v2.8.2 | 2026-03-08 | 클로이 FE | QA 4건 해소 — DOM순서 수정, 모바일 title, dot 애니메이션
- * v2.8.0 | 2026-03-08 | 클로이 FE | 주디 AI 비서 챗봇 사이드 패널 복원 (JARVIS-2026-03-08-003)
+ * v3.1.0 | 2026-03-09 | 클로이 FE | 업무 관리 v3.1 고도화 (JARVIS-2026-03-09-001)
+ * v2.9.2 | 2026-03-09 | 클로이 FE | 풀스크린 모달 에디터 (PRD-2026-03-09-001)
+ * v2.9.1 | 2026-03-09 | 클로이 FE | 채팅 패널 리사이즈 잔상 수정 — CSS transform 전환
+ * v2.9.0 | 2026-03-09 | 클로이 FE | 출근 브리핑 키워드 분기 추가
+ * v2.8.8 | 2026-03-09 | 에이다 BE | 메모 수정 버그 픽스 — regex + 에러 메시지
+ * v2.8.7 | 2026-03-08 | 클로이 FE | AI 텍스트 컬러 중립화 (Black)
+ * v2.8.2 | 2026-03-08 | 클로이 FE | QA 4건 해소 — DOM순서, 모바일 title, dot 애니메이션
+ * v2.8.0 | 2026-03-08 | 클로이 FE | 주디 AI 비서 챗봇 사이드 패널 복원
  * v2.7.1 | 2026-03-08 | 에이다 BE | QA MAJOR 해소 — sanitizeHtml 보강 + 프리뷰 저장 UX
  * v2.7.0 | 2026-03-08 | 클로이 & 에이다 | 마크다운 노트 v2 (툴바, 프리뷰, 파서, 새니타이저)
  * v2.6.0 | 2026-03-07 | 클로이 & 에이다 | 음성 녹음 기능 삭제
- * v2.3.0 | 2026-03-07 | 클로이 & 에이다 | 음성 녹음 Phase 1 MVP
  * v2.2.0 | 2026-03-02 16:40 | 클로이 & 벨라 | 인증 회복탄력성 강화, PWA 대응
  * ============================================
  -->
@@ -250,7 +256,7 @@
         .judy-chat-panel {
             position: fixed;
             top: 0;
-            right: -400px;
+            right: 0;
             width: 380px;
             height: 100vh;
             background: var(--surface);
@@ -258,11 +264,12 @@
             z-index: 9001;
             display: flex;
             flex-direction: column;
-            transition: right 0.25s ease;
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
         }
 
         .judy-chat-panel.open {
-            right: 0;
+            transform: translateX(0);
         }
 
         .judy-chat-resizer {
@@ -512,11 +519,6 @@
         @media (max-width: 768px) {
             .judy-chat-panel {
                 width: 100%;
-                right: -110%;
-            }
-
-            .judy-chat-panel.open {
-                right: 0;
             }
 
             .judy-chat-resizer {
@@ -1837,6 +1839,11 @@
             color: #e57373;
         }
 
+        .badge-전달 {
+            background: rgba(33, 150, 243, 0.15);
+            color: #2196F3;
+        }
+
         .due-tag {
             font-size: 12px;
             white-space: nowrap;
@@ -2198,6 +2205,152 @@
             background: transparent;
             color: var(--hint-color);
             border: 1px solid var(--border);
+        }
+
+        /* ========== Memo Edit Fullscreen Modal ========== */
+        .memo-edit-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10002;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: memoModalFadeIn 0.2s ease;
+        }
+        @keyframes memoModalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .memo-edit-modal {
+            background: var(--surface-elevated);
+            width: min(90vw, 800px);
+            height: min(90vh, 900px);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        .memo-edit-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .memo-edit-modal-close {
+            background: none;
+            border: none;
+            color: var(--hint-color);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .memo-edit-modal-close:hover { color: var(--text-color); }
+        .memo-edit-modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .memo-edit-modal-meta {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--hint-color);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .memo-edit-modal-toolbar {
+            display: flex;
+            gap: 4px;
+            padding: 8px 20px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .memo-edit-modal-toolbar button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            min-width: 32px;
+            transition: background 0.15s;
+        }
+        .memo-edit-modal-toolbar button:hover {
+            background: var(--primary);
+            color: white;
+        }
+        .memo-edit-modal-body {
+            flex: 1;
+            padding: 16px 20px;
+            overflow: hidden;
+            display: flex;
+        }
+        .memo-edit-modal-textarea {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.7;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .memo-edit-modal-textarea:focus {
+            border-color: var(--primary);
+        }
+        .memo-edit-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .memo-edit-modal-footer .btn-save-sm {
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+        .memo-edit-modal-footer .btn-cancel-sm {
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .memo-edit-modal-overlay {
+                align-items: stretch;
+                justify-content: stretch;
+                background: none;
+            }
+            .memo-edit-modal {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                max-width: none;
+                max-height: none;
+            }
+            .memo-edit-modal-toolbar {
+                padding: 8px 12px;
+            }
+            .memo-edit-modal-toolbar button {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+            .memo-edit-modal-body {
+                padding: 12px;
+            }
         }
 
         /* FullCalendar Theme Tweaks */
@@ -2669,15 +2822,24 @@
 
     </div>
 
-    <!-- 업무 등록 모달 -->
+    <!-- 업무 등록 모달 (v3.1: 담당자, 시작일, 프로젝트 직접 등록) -->
     <div class="dash-modal-overlay" id="regModalOverlay" onclick="if(event.target===this)closeRegModal()">
         <div class="dash-modal">
             <h2>➕ 새 업무 등록</h2>
             <div class="form-group">
                 <label>프로젝트 *</label>
-                <select id="formProject">
-                    <option value="">로딩 중...</option>
-                </select>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <select id="formProject" style="flex:1;">
+                        <option value="">로딩 중...</option>
+                    </select>
+                    <button type="button" class="btn-cancel" style="padding:8px 12px; font-size:12px; white-space:nowrap;" onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
+                </div>
+                <div id="newProjectInputWrap" style="display:none; margin-top:8px;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="newProjectName" placeholder="새 프로젝트 이름" style="flex:1;">
+                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;" onclick="createNewProject()">생성</button>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label>업무 제목 *</label>
@@ -2688,8 +2850,28 @@
                 <textarea id="formDesc" placeholder="상세 내용 (선택)"></textarea>
             </div>
             <div class="form-group">
-                <label>마감일</label>
-                <input type="date" id="formDue">
+                <label>담당자</label>
+                <select id="formAssignee">
+                    <option value="">본인 (기본)</option>
+                    <option value="송용남">송용남</option>
+                    <option value="이지은">이지은</option>
+                    <option value="정혜림">정혜림</option>
+                    <option value="문유나">문유나</option>
+                    <option value="이상호">이상호</option>
+                    <option value="김관수">김관수</option>
+                    <option value="김민석">김민석</option>
+                </select>
+                <small style="color:var(--hint-color); font-size:11px;">다른 사람 지정 시 '수락대기' 상태로 등록됩니다</small>
+            </div>
+            <div class="form-group" style="display:flex; gap:16px;">
+                <div style="flex:1;">
+                    <label>시작예정일</label>
+                    <input type="date" id="formStartDate">
+                </div>
+                <div style="flex:1;">
+                    <label>마감일</label>
+                    <input type="date" id="formDue">
+                </div>
             </div>
             <div class="form-group">
                 <label>상태</label>
@@ -2734,6 +2916,22 @@
                     </select>
                 </div>
             </div>
+            <!-- v3.1.1: 참고사항 타임라인 (가시성 개선) -->
+            <div class="form-group" style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:600; font-size:14px;">📎 참고사항</span>
+                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;" onclick="toggleRefInput()">+ 추가</button>
+                </label>
+                <div id="refInputWrap" style="display:none; margin-top:8px;">
+                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)" style="min-height:60px;"></textarea>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;" onclick="toggleRefInput()">취소</button>
+                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;" onclick="submitNewRef()">등록</button>
+                    </div>
+                </div>
+                <div id="refTimeline" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+            </div>
+
             <div class="modal-actions" style="justify-content: space-between;">
                 <button class="btn-delete" onclick="confirmDeleteTask()">🗑️ 삭제</button>
                 <div style="display:flex; gap:12px;">
@@ -2786,6 +2984,37 @@
             <button class="action-btn-primary" style="width:100%; padding:14px; margin-bottom:12px;"
                 onclick="copyPwaLink()">📋 앱 전용 링크 복사</button>
             <button class="btn-cancel" style="width:100%;" onclick="closePwaGuide()">나중에 하기</button>
+        </div>
+    </div>
+
+    <!-- Memo Edit Fullscreen Modal -->
+    <div id="memoEditModalOverlay" class="memo-edit-modal-overlay" style="display:none;">
+        <div class="memo-edit-modal">
+            <div class="memo-edit-modal-header">
+                <button class="memo-edit-modal-close" onclick="closeMemoEditModal(false)">&times;</button>
+                <span class="memo-edit-modal-title">📝 메모 수정</span>
+            </div>
+            <div class="memo-edit-modal-meta" id="memoEditMeta"></div>
+            <div class="memo-edit-modal-toolbar">
+                <button type="button" onclick="insertMemoMarkdown('**','**')" title="굵게"><b>B</b></button>
+                <button type="button" onclick="insertMemoMarkdown('*','*')" title="기울임"><i>I</i></button>
+                <button type="button" onclick="insertMemoMarkdown('~~','~~')" title="취소선"><s>S</s></button>
+                <button type="button" onclick="insertMemoMarkdown('# ','')" title="제목1">H1</button>
+                <button type="button" onclick="insertMemoMarkdown('## ','')" title="제목2">H2</button>
+                <button type="button" onclick="insertMemoMarkdown('### ','')" title="제목3">H3</button>
+                <button type="button" onclick="insertMemoMarkdown('- ','')" title="목록">•</button>
+                <button type="button" onclick="insertMemoMarkdown('- [ ] ','')" title="체크박스">☐</button>
+                <button type="button" onclick="insertMemoMarkdown('> ','')" title="인용">«</button>
+                <button type="button" onclick="insertMemoMarkdown('`','`')" title="코드">{}</button>
+                <button type="button" onclick="insertMemoMarkdown('[','](url)')" title="링크">🔗</button>
+            </div>
+            <div class="memo-edit-modal-body">
+                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea" placeholder="메모 내용을 입력하세요..."></textarea>
+            </div>
+            <div class="memo-edit-modal-footer">
+                <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
+                <button class="btn-save-sm" id="memoEditSaveBtn" onclick="saveMemoEditModal()">💾 저장</button>
+            </div>
         </div>
     </div>
 
@@ -3741,9 +3970,12 @@
 
             document.getElementById('tabsBar').style.display = 'flex';
 
-            const counts = { '진행중': 0, '대기': 0, '보류': 0, '완료': 0 };
-            tasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
-            const activeCount = counts['진행중'] + counts['대기'] + counts['보류'];
+            const counts = { '진행중': 0, '대기': 0, '보류': 0, '완료': 0, '수락대기': 0, '전달': 0 };
+            tasks.forEach(t => {
+                if (t.isRequester) { counts['전달']++; }
+                else if (counts[t.status] !== undefined) { counts[t.status]++; }
+            });
+            const activeCount = counts['진행중'] + counts['대기'] + counts['보류'] + counts['수락대기'] + counts['전달'];
 
             // [Phase 21] 오늘 총 몰입 시간 계산 (관리자 전용)
             let totalFocusMin = 0;
@@ -3760,6 +3992,8 @@
                 <div class="summary-card"><div class="count count-progress">${counts['진행중']}</div><div class="label">▶ 진행중</div></div>
                 <div class="summary-card"><div class="count count-waiting">${counts['대기']}</div><div class="label">⏸ 대기</div></div>
                 <div class="summary-card"><div class="count count-hold">${counts['보류']}</div><div class="label">🔴 보류</div></div>
+                ${counts['수락대기'] > 0 ? '<div class="summary-card"><div class="count" style="color:#ff9800;">' + counts['수락대기'] + '</div><div class="label">🤝 수락대기</div></div>' : ''}
+                ${counts['전달'] > 0 ? '<div class="summary-card"><div class="count" style="color:#2196F3;">' + counts['전달'] + '</div><div class="label">📤 전달</div></div>' : ''}
                 <div class="summary-card" style="border-left:1px solid var(--border); border-radius:0;"><div class="count" style="color:var(--primary);">${counts['완료']}</div><div class="label">✅ 완료</div></div>
             `;
 
@@ -3822,14 +4056,18 @@
                     </td>
                     <td style="color:var(--hint-color); font-size:13px;">${t.project}</td>
                     <td>${dueHtml}</td>
-                    <td><span class="status-badge badge-${t.status}">${getStatusEmoji(t.status)} ${t.status}</span></td>
+                    <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
-                        <select class="status-select" onchange="changeTaskStatus(${t.row}, this.value, '${t.id}')">
-                            <option value="진행중" ${t.status === '진행중' ? 'selected' : ''}>▶ 진행중</option>
-                            <option value="대기" ${t.status === '대기' ? 'selected' : ''}>⏸ 대기</option>
-                            <option value="보류" ${t.status === '보류' ? 'selected' : ''}>🔴 보류</option>
-                            <option value="완료" ${t.status === '완료' ? 'selected' : ''}>✅ 완료</option>
-                        </select>
+                        ${t.isRequester ?
+                            '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
+                        t.status === '수락대기' && t.assignee === g_userName ?
+                            '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
+                            '<select class="status-select" onchange="changeTaskStatus(' + t.row + ', this.value, \'' + t.id + '\')">' +
+                            '<option value="진행중"' + (t.status === '진행중' ? ' selected' : '') + '>▶ 진행중</option>' +
+                            '<option value="대기"' + (t.status === '대기' || t.status === '수락대기' ? ' selected' : '') + '>⏸ 대기</option>' +
+                            '<option value="보류"' + (t.status === '보류' ? ' selected' : '') + '>🔴 보류</option>' +
+                            '<option value="완료"' + (t.status === '완료' ? ' selected' : '') + '>✅ 완료</option>' +
+                            '</select>'}
                     </td>
                 </tr>`;
             });
@@ -3848,7 +4086,7 @@
         }
 
         function getStatusEmoji(s) {
-            return s === '진행중' ? '▶' : s === '대기' ? '⏸' : s === '보류' ? '🔴' : '✅';
+            return s === '진행중' ? '▶' : s === '대기' ? '⏸' : s === '보류' ? '🔴' : s === '수락대기' ? '🤝' : '✅';
         }
 
         function changeTaskStatus(row, newStatus, taskId) {
@@ -3972,6 +4210,33 @@
                 .getProjectOptionsForWeb();
         }
 
+        // v3.1: 새 프로젝트 입력 토글
+        function toggleNewProjectInput() {
+            var wrap = document.getElementById('newProjectInputWrap');
+            wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+            if (wrap.style.display === 'block') document.getElementById('newProjectName').focus();
+        }
+
+        // v3.1: 프로젝트 직접 생성
+        function createNewProject() {
+            var name = document.getElementById('newProjectName').value.trim();
+            if (!name) return showToast('❌ 프로젝트 이름을 입력하세요', true);
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        document.getElementById('newProjectName').value = '';
+                        document.getElementById('newProjectInputWrap').style.display = 'none';
+                        // 프로젝트 목록 새로고침 후 새 프로젝트 선택
+                        projectsLoaded = false;
+                        loadProjectsList();
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .createProjectFromWeb(name, g_userName);
+        }
+
         function submitNewTask() {
             const projectSel = document.getElementById('formProject');
             const projectCode = projectSel.value;
@@ -3980,11 +4245,18 @@
             const desc = document.getElementById('formDesc').value.trim();
             const due = document.getElementById('formDue').value;
             const status = document.getElementById('formStatus').value;
+            const assignee = document.getElementById('formAssignee').value;
+            const startDate = document.getElementById('formStartDate').value;
 
             if (!title) return showToast('❌ 제목을 입력하세요', true);
 
             const btn = document.getElementById('submitRegBtn');
             btn.disabled = true; btn.textContent = '등록 중...';
+
+            // v3.1: opts 파라미터 추가
+            var opts = {};
+            if (assignee) opts.assigneeName = assignee;
+            if (startDate) opts.startDate = startDate;
 
             google.script.run
                 .withSuccessHandler(res => {
@@ -3993,27 +4265,124 @@
                         showToast('✅ ' + res.message);
                         closeRegModal(); loadTasks();
 
-                        // [v3 핫픽스] 업무 등록 직후 칸반·달력 탭 자동 갱신
                         if (window._kanbanInitialized) loadKanban();
                         if (window._calendarInitialized) loadCalendar();
-
-                        // [Phase 24 Refactoring] ActionLog 기록
-                        google.script.run.logActionV2({
-                            userId: g_userName,
-                            action: 'TASK_CREATE',
-                            targetId: title,
-                            oldValue: '',
-                            newValue: status,
-                            source: 'REG_MODAL',
-                            details: `새 업무 등록: ${title} (${status})`
-                        });
                     } else { showToast('❌ ' + res.message, true); }
                 })
                 .withFailureHandler(err => {
                     btn.disabled = false; btn.textContent = '등록하기';
                     showToast('❌ ' + err.message, true);
                 })
-                .registerTaskFromWeb(g_userId || g_userName, projectCode, projectName, title, desc, due, status);
+                .registerTaskFromWeb(g_userId || g_userName, projectCode, projectName, title, desc, due, status, opts);
+        }
+
+        // v3.1: 업무 수락
+        function acceptTask(rowNum) {
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        loadTasks();
+                        if (window._kanbanInitialized) loadKanban();
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .acceptTaskFromWeb(rowNum, g_userName);
+        }
+
+        // v3.1: 참고사항 UI
+        function toggleRefInput() {
+            var wrap = document.getElementById('refInputWrap');
+            wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+            if (wrap.style.display === 'block') document.getElementById('refNewContent').focus();
+        }
+
+        function submitNewRef() {
+            var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
+            var task = currentTasks.find(function(t) { return t.row === rowNum; });
+            if (!task) return;
+            var content = document.getElementById('refNewContent').value.trim();
+            if (!content) return showToast('❌ 내용을 입력하세요', true);
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        document.getElementById('refNewContent').value = '';
+                        document.getElementById('refInputWrap').style.display = 'none';
+                        loadReferences(task.id);
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .addTaskReference(task.id, content, g_userName);
+        }
+
+        function loadReferences(taskId) {
+            var timeline = document.getElementById('refTimeline');
+            timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px;">로딩 중...</div>';
+
+            google.script.run
+                .withSuccessHandler(function(refs) {
+                    if (!refs || refs.length === 0) {
+                        timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px; font-size:13px;">참고사항이 없습니다</div>';
+                        return;
+                    }
+                    var html = '';
+                    refs.forEach(function(ref) {
+                        var date = ref.createdAt ? new Date(ref.createdAt) : null;
+                        var dateStr = date ? (date.getMonth()+1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2,'0') : '';
+                        // 링크 자동 감지 (sanitize)
+                        var safeContent = ref.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        safeContent = safeContent.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--primary);">$1</a>');
+
+                        html += '<div style="padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;">';
+                        html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+                        html += '<span style="color:var(--hint-color);">👤 ' + ref.author + ' · ' + dateStr + '</span>';
+                        html += '<div style="display:flex; gap:4px;">';
+                        html += '<button onclick="editRef(\'' + ref.refId + '\',this)" style="background:none;border:none;color:var(--hint-color);cursor:pointer;font-size:11px;">✏️</button>';
+                        html += '<button onclick="deleteRef(\'' + ref.refId + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;">🗑️</button>';
+                        html += '</div></div>';
+                        html += '<div style="line-height:1.5; word-break:break-all;">' + safeContent + '</div>';
+                        html += '</div>';
+                    });
+                    timeline.innerHTML = html;
+                })
+                .withFailureHandler(function() {
+                    timeline.innerHTML = '<div style="color:var(--danger); padding:8px; font-size:13px;">로드 실패</div>';
+                })
+                .getTaskReferences(taskId);
+        }
+
+        function editRef(refId, btn) {
+            var contentDiv = btn.closest('div[style*="padding:8px 0"]').querySelector('div:last-child');
+            var oldText = contentDiv.textContent;
+            var newText = prompt('참고사항 수정:', oldText);
+            if (newText === null || newText.trim() === '' || newText === oldText) return;
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
+                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        if (task) loadReferences(task.id);
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .updateTaskReference(refId, newText.trim(), g_userName);
+        }
+
+        function deleteRef(refId) {
+            if (!confirm('참고사항을 삭제하시겠습니까?')) return;
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast('✅ ' + res.message);
+                        var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
+                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        if (task) loadReferences(task.id);
+                    } else { showToast('❌ ' + res.message, true); }
+                })
+                .deleteTaskReference(refId, g_userName);
         }
 
         // === 업무 상세/수정 모달 ===
@@ -4026,6 +4395,12 @@
             document.getElementById('editDue').value = task.rawDueStr || '';
             document.getElementById('editStatus').value = task.status || '대기';
             document.getElementById('editModalOverlay').classList.add('show');
+
+            // v3.1: 참고사항 로드
+            document.getElementById('refInputWrap').style.display = 'none';
+            document.getElementById('refNewContent').value = '';
+            if (task.id) loadReferences(task.id);
+            else document.getElementById('refTimeline').innerHTML = '';
         }
         function closeEditModal() { document.getElementById('editModalOverlay').classList.remove('show'); }
 
@@ -4433,6 +4808,109 @@
         }
 
         // ==========================================
+        // Memo Edit Fullscreen Modal
+        // ==========================================
+        var _memoEditCtx = null; // { dateStr, timeStr, originalContent, contentDiv, currentContentRef }
+
+        function openMemoEditModal(dateStr, timeStr, content, contentDiv, getCurrentContent) {
+            var textarea = document.getElementById('memoEditTextarea');
+            var meta = document.getElementById('memoEditMeta');
+            var overlay = document.getElementById('memoEditModalOverlay');
+
+            _memoEditCtx = {
+                dateStr: dateStr,
+                timeStr: timeStr,
+                originalContent: content,
+                contentDiv: contentDiv,
+                getCurrentContent: getCurrentContent
+            };
+
+            meta.textContent = '📅 ' + dateStr + '  ⏰ ' + timeStr;
+            textarea.value = content;
+            overlay.style.display = 'flex';
+            textarea.focus();
+        }
+
+        function closeMemoEditModal(force) {
+            var overlay = document.getElementById('memoEditModalOverlay');
+            var textarea = document.getElementById('memoEditTextarea');
+            if (!force && _memoEditCtx) {
+                var changed = textarea.value !== _memoEditCtx.originalContent;
+                if (changed && !confirm('수정 내용을 버리시겠습니까?')) return;
+            }
+            overlay.style.display = 'none';
+            _memoEditCtx = null;
+        }
+
+        function saveMemoEditModal() {
+            if (!_memoEditCtx) return;
+            var textarea = document.getElementById('memoEditTextarea');
+            var saveBtn = document.getElementById('memoEditSaveBtn');
+            var newText = textarea.value.trim();
+            var ctx = _memoEditCtx;
+
+            if (!newText || newText === ctx.getCurrentContent()) {
+                closeMemoEditModal(true);
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = '저장 중...';
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 저장';
+                    if (res.success) {
+                        // 외부에서 currentContent 업데이트를 위해 커스텀 이벤트 발행
+                        var evt = new CustomEvent('memoEdited', {
+                            detail: { dateStr: ctx.dateStr, timeStr: ctx.timeStr, newContent: res.newContent }
+                        });
+                        document.dispatchEvent(evt);
+                        closeMemoEditModal(true);
+                        showToast('메모가 수정되었습니다.');
+                        cachedSidebarData = null;
+                    } else {
+                        showToast('❌ 수정 실패: ' + (res.message || '알 수 없는 오류'), true);
+                    }
+                })
+                .withFailureHandler(function() {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 저장';
+                    showToast('❌ 서버 통신 에러', true);
+                })
+                .editArchivedMemo({
+                    userName: g_userName,
+                    dateStr: ctx.dateStr,
+                    timeStr: ctx.timeStr,
+                    originalContent: ctx.getCurrentContent(),
+                    newContent: newText
+                });
+        }
+
+        function insertMemoMarkdown(before, after) {
+            var textarea = document.getElementById('memoEditTextarea');
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+            var text = textarea.value;
+            var selected = text.substring(start, end) || '텍스트';
+            textarea.value = text.substring(0, start) + before + selected + after + text.substring(end);
+            var cursorPos = start + before.length + selected.length + after.length;
+            textarea.focus();
+            textarea.setSelectionRange(cursorPos, cursorPos);
+        }
+
+        // ESC 키 핸들러
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                var overlay = document.getElementById('memoEditModalOverlay');
+                if (overlay && overlay.style.display !== 'none') {
+                    closeMemoEditModal(false);
+                }
+            }
+        });
+
+        // ==========================================
         // Note V2 Actions: Create, Edit, Toggle, Delete
         // ==========================================
         function createMemoBlock(dateStr, timeStr, originalContent) {
@@ -4474,70 +4952,30 @@
                 contentDiv.style.color = 'var(--hint-color)';
             }
 
-            const editForm = document.createElement('div');
-            editForm.className = 'memo-edit-form';
-            editForm.style.display = 'none';
-            const textarea = document.createElement('textarea');
-            textarea.className = 'edit-input';
-            const editActions = document.createElement('div');
-            editActions.className = 'edit-actions';
-            const btnSaveEdit = document.createElement('button'); btnSaveEdit.className = 'btn-save-sm'; btnSaveEdit.textContent = '저장';
-            const btnCancelEdit = document.createElement('button'); btnCancelEdit.className = 'btn-cancel-sm'; btnCancelEdit.textContent = '취소';
-
-            editActions.appendChild(btnCancelEdit);
-            editActions.appendChild(btnSaveEdit);
-            editForm.appendChild(textarea);
-            editForm.appendChild(editActions);
-
             wrapper.appendChild(headerDiv);
             wrapper.appendChild(contentDiv);
-            wrapper.appendChild(editForm);
+
+            // 모달에서 수정 완료 시 contentDiv 업데이트 리스너
+            document.addEventListener('memoEdited', function(e) {
+                if (e.detail.dateStr === dateStr && e.detail.timeStr === timeStr) {
+                    currentContent = e.detail.newContent;
+                    contentDiv.textContent = currentContent;
+                    if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
+                        contentDiv.style.textDecoration = 'line-through';
+                        contentDiv.style.color = 'var(--hint-color)';
+                    } else {
+                        contentDiv.style.textDecoration = 'none';
+                        contentDiv.style.color = '';
+                    }
+                }
+            });
 
             btnEdit.addEventListener('click', () => {
-                contentDiv.style.display = 'none';
-                editForm.style.display = 'flex';
                 let editableText = currentContent;
                 if (editableText.startsWith('~~') && editableText.endsWith('~~')) {
                     editableText = editableText.substring(2, editableText.length - 2);
                 }
-                textarea.value = editableText;
-                textarea.focus();
-            });
-
-            btnCancelEdit.addEventListener('click', () => {
-                contentDiv.style.display = 'block';
-                editForm.style.display = 'none';
-            });
-
-            btnSaveEdit.addEventListener('click', () => {
-                const newText = textarea.value.trim();
-                if (!newText || newText === currentContent) { btnCancelEdit.click(); return; }
-                btnSaveEdit.disabled = true; btnSaveEdit.textContent = '저장 중...';
-                google.script.run
-                    .withSuccessHandler(res => {
-                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
-                        if (res.success) {
-                            currentContent = res.newContent;
-                            contentDiv.textContent = currentContent;
-                            if (currentContent.startsWith('~~') && currentContent.endsWith('~~')) {
-                                contentDiv.style.textDecoration = 'line-through';
-                                contentDiv.style.color = 'var(--hint-color)';
-                            } else {
-                                contentDiv.style.textDecoration = 'none';
-                                contentDiv.style.color = '';
-                            }
-                            btnCancelEdit.click();
-                            showToast('메모가 수정되었습니다.');
-                            cachedSidebarData = null;
-                        } else {
-                            showToast('❌ 수정 실패: ' + res.message, true);
-                        }
-                    })
-                    .withFailureHandler(() => {
-                        btnSaveEdit.disabled = false; btnSaveEdit.textContent = '저장';
-                        showToast('❌ 서버 통신 에러', true);
-                    })
-                    .editArchivedMemo({ userName: g_userName, dateStr, timeStr, originalContent: currentContent, newContent: newText });
+                openMemoEditModal(dateStr, timeStr, editableText, contentDiv, () => currentContent);
             });
 
             btnDone.addEventListener('click', () => {

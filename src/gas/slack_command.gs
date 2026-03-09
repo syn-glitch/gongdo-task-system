@@ -781,7 +781,8 @@ function fetchUserName(userId) {
     "U02SK29UVRP": "정혜림",
     "U0749G2SNBE": "문유나",
     "U04JL09C6DV": "이상호",
-    "U02S3EURC21": "김관수"
+    "U02S3EURC21": "김관수",
+    "U0AJ57GFXM0": "김민석"
   };
   if (dict[userId]) return dict[userId];
 
