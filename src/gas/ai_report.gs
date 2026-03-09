@@ -3,23 +3,22 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_report.gs
- * @version     v1.1.0
- * @updated     2026-03-08 09:56 (KST)
+ * @version     v1.2.0
+ * @updated     2026-03-10 (KST)
  * @agent       에이다 (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 슬랙 채널에 일간/주간 요약 리포트 전송 (Claude 연동)
  *
  * @change-summary
- *   AS-IS: API 키 평문 하드코딩. 데이터 수집 로직 각 함수별 중복.
- *   TO-BE: PropertiesService 기반 보안 처리 (QA 권고). 
- *          generateMorningBriefing의 데이터 수집 로직을 ai_briefing.gs의 DataCenter로 이관 통합.
+ *   AS-IS: v1.1.0 — API 호출 시 토큰 사용량 추적 없음
+ *   TO-BE: v1.2.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록
  *
  * @features
- *   - [수정] CLAUDE_API_KEY 전역 변수를 과도기 지원용 빈 문자열로 변경
- *   - [수정] generateMorningBriefing() -> getTodayTasksContext() 재사용으로 통일
- *   - [보안] askClaude() 내부에서 PropertiesService 키 호출 적용
+ *   - [수정] askClaude() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] generateMorningBriefing() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.2.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 (BNK-2026-03-10-001)
  * v1.1.0 | 2026-03-08 09:56 | 에이다 | [QA-2026-03-08] API키 하드코딩 제거 및 로직 통합
  * v1.0.0 | 2026-02-21 22:28 | 자비스팀 | 최초 작성
  * ============================================
@@ -122,14 +121,13 @@ function askClaude(promptText) {
   };
   
   try {
-    const response = UrlFetchApp.fetch(url, options);
-    const result = JSON.parse(response.getContentText());
-    
+    const result = callClaudeAPI(url, options, "askClaude", "system");
+
     if (result.error) {
       console.error("Claude API 에러:", result.error);
       return `❌ AI 리포트 생성 실패 (API 에러): ${result.error.message}`;
     }
-    
+
     return result.content[0].text;
   } catch (e) {
     console.error("API 호출 중 예외 발생:", e);
@@ -173,9 +171,8 @@ function generateMorningBriefing() {
   };
   
   try {
-    const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-    const result = JSON.parse(response.getContentText());
-    
+    const result = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "generateMorningBriefing", "system");
+
     if (result.content && result.content[0].text) {
       if (typeof sendSlackMessage === 'function') {
         const finalMessage = `🌅 *주디의 아침 업무 브리핑*\n\n${result.content[0].text}`;

@@ -8,7 +8,8 @@ const SPREADSHEET_ID = '1gluWChHpmWWVRxgPpteOwcebE54mH1XK7a15NRc1-kU';
 const TASKS_SHEET_NAME = 'Agent_Tasks'; // 업무 메인 대시보드
 const LOGS_SHEET_NAME = 'Agent_Logs';   // 로그 기록용 새 시트
 
-function doPost(e) {
+/** @deprecated doPost → 통합 라우터가 github_issue.gs로 이동. 이 함수는 handleAgentTaskWebhook으로 리네임됨 */
+function handleAgentTaskWebhook(e) {
   try {
     const postData = JSON.parse(e.postData.contents);
     const now = Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd HH:mm:ss");

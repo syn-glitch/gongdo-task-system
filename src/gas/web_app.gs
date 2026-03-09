@@ -3,17 +3,18 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        web_app.gs
- * @version     v3.1.0
- * @updated     2026-03-09 (KST)
+ * @version     v3.1.2
+ * @updated     2026-03-10 (KST)
  * @agent       에이다 BE (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 주디 워크스페이스 통합 백엔드 — 메모 저장, AI 추출, 업무 CRUD, 인증, 참고사항, DM 알림
  *
  * @change-summary
- *   AS-IS: v3.0.0 — 기본 업무 CRUD + 인증 + 캘린더 연동
- *   TO-BE: v3.1.0 — 업무 관리 고도화 (프로젝트 생성, 수락 프로세스, 참고사항 CRUD, DM 알림)
+ *   AS-IS: v3.1.1 — 진단용 팝업 및 임시 코드 포함
+ *   TO-BE: v3.1.2 — 슬랙 알림 내 워크스페이스 바로가기 링크 추가 및 클린업 완료
  *
  * @features
+ *   - [추가] 슬랙 알림 메시지 내 '워크스페이스 바로가기' 링크 삽입 (UX 개선)
  *   - [추가] createProjectFromWeb() — 프로젝트 직접 생성 (자동 코드, LockService, 중복 방지)
  *   - [추가] acceptTaskFromWeb() — 수락대기 → 대기 + 신청자 DM 발송
  *   - [추가] triggerStartDateReminders() — D-3, D-1, 당일 슬랙 DM 트리거
@@ -171,6 +172,7 @@ function doGet(e) {
     .setTitle('Judy Workspace')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
+
 
 // ═══════════════════════════════════════════
 // 스프레드시트 접근
@@ -370,11 +372,12 @@ function withTaskLock(callback, options) {
   var rowNum = options.rowNum;
   var syncCalendar = options.syncCalendar;
 
-  var lock = LockService.getUserLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
     var ss = getTargetSpreadsheet();
-    var sheet = ss.getSheetByName("Tasks");
+    var sheet = ss.getSheetByName(
+     "Tasks");
     if (!sheet) throw new Error("Tasks 시트를 찾을 수 없습니다.");
 
     var result = callback(sheet, ss);
@@ -638,12 +641,14 @@ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueD
     // 슬랙 알림: 담당자가 본인이 아니면 담당자에게 DM
     if (assigneeName !== userName) {
       try {
+        var webAppUrl = ScriptApp.getService().getUrl();
         sendTaskDM(assigneeName, "📋 *새 업무가 배정되었습니다*\n" +
           "📂 " + (projectName || "DEFAULT") + " | " + newId + "\n" +
           "📝 " + title + "\n" +
           "👤 요청자: " + userName + "\n" +
           "📅 마감일: " + (dueDate || "미지정") + "\n" +
-          "⏳ 상태: *수락대기* — 대시보드에서 수락해주세요!");
+          "⏳ 상태: *수락대기* — 대시보드에서 수락해주세요!\n\n" +
+          "🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
       } catch (e) { console.error("DM 발송 실패:", e); }
     }
 
@@ -694,9 +699,11 @@ function acceptTaskFromWeb(rowNum, userName) {
     // 신청자에게 수락+시작 알림 DM
     if (requester && requester !== userName) {
       try {
+        var webAppUrl = ScriptApp.getService().getUrl();
         sendTaskDM(requester, "✅ *업무가 수락되었습니다*\n" +
           "🆔 " + taskId + " | 📝 " + title + "\n" +
-          "👤 담당자: " + userName + "님이 수락하여 업무를 시작합니다.");
+          "👤 담당자: " + userName + "님이 수락하여 업무를 시작합니다.\n\n" +
+          "🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
       } catch (e) { console.error("수락 DM 발송 실패:", e); }
     }
 
@@ -772,7 +779,7 @@ function addTaskReference(taskId, content, userName) {
   try {
     var ss = getTargetSpreadsheet();
     var sheet = getOrCreateRefSheet(ss);
-    var refId = "REF-" + Date.now();
+    var refId = "REF-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
     var now = new Date();
 
     sheet.appendRow([refId, taskId, content, userName, now, now, "INSERT"]);
@@ -906,43 +913,39 @@ function getOrCreateRefSheet(ss) {
 
 /**
  * 슬랙 DM 발송 (사용자명 기반)
+ * @returns {Object} { ok, error, detail }
  */
 function sendTaskDM(targetUserName, message) {
   var slackUserId = USER_NAME_TO_SLACK_ID[targetUserName];
   if (!slackUserId) {
-    console.log("[sendTaskDM] 미매핑 — 대상: '" + targetUserName + "', 등록된 키: " + Object.keys(USER_NAME_TO_SLACK_ID).join(", "));
-    return;
+    return { ok: false, error: "USER_NOT_MAPPED", detail: "사용자 '" + targetUserName + "'가 Slack ID 매핑 테이블에 없습니다." };
   }
+  
   try {
-    console.log("[sendTaskDM] 발송 시도 — 대상: " + targetUserName + " (" + slackUserId + ")");
-    var token = typeof SLACK_TOKEN !== "undefined" ? SLACK_TOKEN : "";
-    if (!token) {
-      console.error("[sendTaskDM] SLACK_TOKEN 미정의");
-      return;
-    }
-    // Slack DM: conversations.open → chat.postMessage
-    var openRes = UrlFetchApp.fetch("https://slack.com/api/conversations.open", {
+    var token = getSlackToken();
+    if (!token) return { ok: false, error: "TOKEN_EMPTY", detail: "SLACK_TOKEN이 설정되지 않았습니다." };
+
+    // direct chat.postMessage (User ID를 channel로 사용)
+    // conversations.open 스코프가 부족할 수 있으므로, 이미 유효성이 검증된 직접 발송 방식을 사용합니다.
+    var postRes = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
       method: "post",
       contentType: "application/json",
       headers: { "Authorization": "Bearer " + token },
-      payload: JSON.stringify({ users: slackUserId })
+      payload: JSON.stringify({ channel: slackUserId, text: message }),
+      muteHttpExceptions: true
     });
-    var openData = JSON.parse(openRes.getContentText());
-    console.log("[sendTaskDM] conversations.open 응답: ok=" + openData.ok + (openData.error ? ", error=" + openData.error : ""));
-    if (openData.ok && openData.channel && openData.channel.id) {
-      var postRes = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
-        method: "post",
-        contentType: "application/json",
-        headers: { "Authorization": "Bearer " + token },
-        payload: JSON.stringify({ channel: openData.channel.id, text: message })
-      });
-      var postData = JSON.parse(postRes.getContentText());
-      console.log("[sendTaskDM] chat.postMessage 응답: ok=" + postData.ok + (postData.error ? ", error=" + postData.error : ""));
-    }
+    var postData = JSON.parse(postRes.getContentText());
+    if (!postData.ok) return { ok: false, error: "POST_FAIL", detail: "chat.postMessage 실패: " + (postData.error || "unknown") };
+
+    return { ok: true, detail: "발송 성공 (기기: " + (postData.channel || "DM") + ")" };
+
+
   } catch (e) {
-    console.error("[sendTaskDM] Error:", e);
+    return { ok: false, error: "EXCEPTION", detail: e.toString() };
   }
 }
+
+
 
 /**
  * 시작예정일 기반 D-3, D-1, 당일 슬랙 DM 알림 트리거

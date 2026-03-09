@@ -3,23 +3,22 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_chat.gs
- * @version     v1.1.0
- * @updated     2026-03-08 (KST)
+ * @version     v1.2.0
+ * @updated     2026-03-10 (KST)
  * @agent       에이다 BE (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 슬랙 및 웹 대시보드(주디 사이드바) 채팅 요청 처리.
  *              사용자의 시트 데이터를 바탕으로 Claude AI와 질의응답을 수행한다.
  *
  * @change-summary
- *   AS-IS: 배포 헤더 누락, Notes_v2 마크다운 노트 검색 미연동
- *   TO-BE: 배포 헤더 추가, buildUserContextForChat()에 Notes_v2 RAG 연동, 시스템 프롬프트 보강
+ *   AS-IS: v1.1.0 — API 호출 시 토큰 사용량 추적 없음
+ *   TO-BE: v1.2.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록
  *
  * @features
- *   - [추가] buildUserContextForChat() 섹션 2.5 — Notes_v2 마크다운 노트 검색 연동
- *   - [수정] processJudyWebChat() 시스템 프롬프트 — 마크다운 노트 검색 대상 안내 추가
- *   - [수정] 배포 헤더 추가 (QA F-2 해소)
+ *   - [수정] processJudyWebChat() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.2.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 (BNK-2026-03-10-001)
  * v1.1.0 | 2026-03-08 | 에이다 BE | Notes_v2 RAG 연동 + 배포 헤더 추가 (QA F-2)
  * v1.0.0 | 2026-03-01 | 클로이 FE | 최초 작성 — 웹 챗봇 + 슬랙 챗봇
  * ============================================
@@ -84,9 +83,8 @@ ${dbContext}`;
       muteHttpExceptions: true
     };
     
-    // 5. 호출 및 응답 반환
-    const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-    const result = JSON.parse(response.getContentText());
+    // 5. 호출 및 응답 반환 (토큰 사용량 자동 기록)
+    const result = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "processJudyWebChat", userName);
     
     if (result.error) {
       console.error("AI Chat Error:", result.error);

@@ -3,23 +3,21 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_briefing.gs
- * @version     v1.0.0
- * @updated     2026-03-08 09:55 (KST)
+ * @version     v1.1.0
+ * @updated     2026-03-10 (KST)
  * @agent       에이다 (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 주디 대변인 (웹 대시보드 브리핑) 및 공통 업무 데이터 수집 API
  *
  * @change-summary
- *   AS-IS: 데이터 수집 로직이 ai_report.gs에 분산되어 있고 API 키가 하드코딩됨.
- *   TO-BE: 데이터 수집 로직(Data Center) 공통화 및 웹 대시보드용 getDailyBriefing() API 구현. 
- *          API 키는 PropertiesService로 통합 관리.
+ *   AS-IS: v1.0.0 — API 호출 시 토큰 사용량 추적 없음
+ *   TO-BE: v1.1.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록
  *
  * @features
- *   - [추가] getTodayTasksContext() — 오늘 진행/대기 중인 업무 데이터 추출 (속도 최적화 적용)
- *   - [추가] getDailyBriefing() — 웹 대시보드용 '주디 대변인' 브리핑 API (Claude 호출 및 캐싱)
- *   - [추가] getClaudeApiKey() — PropertiesService 기반 안전한 API 키 획득 헬퍼
+ *   - [수정] getDailyBriefingForWeb() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.1.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 (BNK-2026-03-10-001)
  * v1.0.0 | 2026-03-08 09:55 | 에이다 | 최초 작성 (Data Center 공통화 및 브리핑 API)
  * ============================================
  */
@@ -153,9 +151,8 @@ function getDailyBriefingForWeb(userName) {
       muteHttpExceptions: true
     };
     
-    // 4. API 호출
-    const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-    const result = JSON.parse(response.getContentText());
+    // 4. API 호출 (토큰 사용량 자동 기록)
+    const result = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "getDailyBriefingForWeb", userName);
     
     if (result.error) {
       console.error("Briefing API Error:", result.error);

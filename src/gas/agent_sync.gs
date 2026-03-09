@@ -45,12 +45,13 @@ function doGet(e) {
  * [Phase 2 & 3] 하네스 Webhook 수신 엔드포인트
  * - 기존 1분 트리거 폴링 방식 완전 대체
  */
-function doPost(e) {
+/** @deprecated doPost → 통합 라우터가 github_issue.gs로 이동. handleAgentSyncWebhook으로 리네임 */
+function handleAgentSyncWebhook(e) {
   try {
     if (!e.postData || !e.postData.contents) {
       return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "No payload" })).setMimeType(ContentService.MimeType.JSON);
     }
-    
+
     const payload = JSON.parse(e.postData.contents);
 
     const taskId = payload.task_id;

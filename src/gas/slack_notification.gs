@@ -4,7 +4,12 @@
  *             Tasks 시트에서 '상태'가 '대기'나 '진행중'으로 바뀔 때 슬랙 알림을 보냅니다.
  */
 
-const SLACK_TOKEN = "xoxb-2902925238769-10544673152421-FrhseNzvd9tHLxAz9pITmYyx"; 
+/**
+ * 슬랙 토큰을 가져오는 통합 유틸리티
+ */
+function getSlackToken() {
+  return PropertiesService.getScriptProperties().getProperty('SLACK_TOKEN') || "";
+}
 
 // -----------------------------------------------------------
 // 1. 테스트 및 디버깅 함수 (메뉴에서 호출)

@@ -1550,6 +1550,63 @@
                 filter: drop-shadow(0 0 5px rgba(148, 97, 253, 0.5));
             }
 
+            /* Issue Board Styles */
+            .issue-tab-btn {
+                padding: 6px 16px;
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                background: var(--card-bg);
+                color: var(--hint-color);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            .issue-tab-btn.active {
+                background: var(--primary-mobile);
+                color: #fff;
+                border-color: var(--primary-mobile);
+            }
+
+            .issue-card {
+                background: var(--card-bg);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 14px 16px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                transition: border-color 0.2s;
+            }
+
+            .issue-card:hover {
+                border-color: var(--primary-mobile);
+            }
+
+            .issue-card-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-color);
+                margin-bottom: 6px;
+            }
+
+            .issue-card-meta {
+                font-size: 12px;
+                color: var(--hint-color);
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            .issue-label {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #fff;
+            }
+
             .view-panel {
                 padding-bottom: var(--bottom-nav-height);
                 /* 탭바 높이만큼 여백 */
@@ -2210,18 +2267,28 @@
         /* ========== Memo Edit Fullscreen Modal ========== */
         .memo-edit-modal-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 10002;
             display: flex;
             align-items: center;
             justify-content: center;
             animation: memoModalFadeIn 0.2s ease;
         }
+
         @keyframes memoModalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         .memo-edit-modal {
             background: var(--surface-elevated);
             width: min(90vw, 800px);
@@ -2229,9 +2296,10 @@
             border-radius: 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
+
         .memo-edit-modal-header {
             display: flex;
             align-items: center;
@@ -2240,6 +2308,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-close {
             background: none;
             border: none;
@@ -2249,12 +2318,17 @@
             padding: 0 4px;
             line-height: 1;
         }
-        .memo-edit-modal-close:hover { color: var(--text-color); }
+
+        .memo-edit-modal-close:hover {
+            color: var(--text-color);
+        }
+
         .memo-edit-modal-title {
             font-size: 16px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .memo-edit-modal-meta {
             padding: 10px 20px;
             font-size: 13px;
@@ -2262,6 +2336,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-toolbar {
             display: flex;
             gap: 4px;
@@ -2271,6 +2346,7 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         .memo-edit-modal-toolbar button {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -2283,16 +2359,19 @@
             min-width: 32px;
             transition: background 0.15s;
         }
+
         .memo-edit-modal-toolbar button:hover {
             background: var(--primary);
             color: white;
         }
+
         .memo-edit-modal-body {
             flex: 1;
             padding: 16px 20px;
             overflow: hidden;
             display: flex;
         }
+
         .memo-edit-modal-textarea {
             width: 100%;
             height: 100%;
@@ -2308,9 +2387,11 @@
             outline: none;
             box-sizing: border-box;
         }
+
         .memo-edit-modal-textarea:focus {
             border-color: var(--primary);
         }
+
         .memo-edit-modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -2319,10 +2400,12 @@
             border-top: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-footer .btn-save-sm {
             padding: 10px 24px;
             font-size: 14px;
         }
+
         .memo-edit-modal-footer .btn-cancel-sm {
             padding: 10px 24px;
             font-size: 14px;
@@ -2334,6 +2417,7 @@
                 justify-content: stretch;
                 background: none;
             }
+
             .memo-edit-modal {
                 width: 100vw;
                 height: 100vh;
@@ -2341,13 +2425,16 @@
                 max-width: none;
                 max-height: none;
             }
+
             .memo-edit-modal-toolbar {
                 padding: 8px 12px;
             }
+
             .memo-edit-modal-toolbar button {
                 padding: 8px 10px;
                 font-size: 12px;
             }
+
             .memo-edit-modal-body {
                 padding: 12px;
             }
@@ -2625,6 +2712,10 @@
             <i>📅</i>
             <span>달력</span>
         </button>
+        <button class="bottom-nav-item" id="btnNavIssues" onclick="switchMainView('issues')">
+            <i>🐛</i>
+            <span>이슈</span>
+        </button>
     </div>
 
     <!-- 🎤 Floating Voice Record Button (노트 탭 활성 시 표시) -->
@@ -2640,6 +2731,7 @@
                 <button class="gnb-tab" id="navTasks" onclick="switchMainView('tasks')">📊 내 업무</button>
                 <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
                 <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
+                <button class="gnb-tab" id="navIssues" onclick="switchMainView('issues')">🐛 이슈</button>
             </div>
         </div>
         <div class="gnb-right">
@@ -2820,6 +2912,135 @@
             </div>
         </div>
 
+        <!-- View 5: Issues Board -->
+        <div id="viewIssues" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>🐛 <span>이슈 제보</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
+                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;"
+                            onclick="openIssueForm()">+ 이슈 제보</button>
+                    </div>
+                </div>
+
+                <!-- 이슈 탭 (open/closed) -->
+                <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
+                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢
+                        Open</button>
+                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴
+                        Closed</button>
+                </div>
+
+                <!-- 이슈 목록 -->
+                <div id="issueList" style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;"></div>
+
+                <!-- 더보기 -->
+                <div id="issueLoadMore" style="display:none; text-align:center; padding:12px;">
+                    <button class="refresh-btn" onclick="loadMoreIssues()">더 보기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이슈 제보 모달 -->
+        <div id="issueFormModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; font-size:18px;">🐛 이슈 제보</h2>
+                    <button onclick="closeIssueForm()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <!-- 제목 -->
+                    <div>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목
+                            *</label>
+                        <input id="issueTitle" type="text" maxlength="200" placeholder="어떤 문제가 발생했나요?"
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                    </div>
+
+                    <!-- 카테고리 + 심각도 -->
+                    <div style="display:flex; gap:12px;">
+                        <div style="flex:1;">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
+                            <select id="issueCategory"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                                <option value="bug">🔴 버그</option>
+                                <option value="feature-error">🟡 기능 오류</option>
+                                <option value="ui-broken">🟠 UI 깨짐</option>
+                                <option value="etc">⚪ 기타</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
+                            <select id="issueSeverity"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                                <option value="medium">보통</option>
+                                <option value="high">높음</option>
+                                <option value="low">낮음</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 발생 위치 (자동 감지 + 수정 가능) -->
+                    <div>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생
+                            위치</label>
+                        <input id="issueLocation" type="text" placeholder="자동 감지됨 (수정 가능)"
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                    </div>
+
+                    <!-- 설명 -->
+                    <div>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
+                        <textarea id="issueDescription" rows="4" maxlength="5000" placeholder="어떤 상황에서 발생했는지 자세히 알려주세요"
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <!-- 스크린샷 -->
+                    <div>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷
+                            (선택, 최대 5MB)</label>
+                        <input id="issueImage" type="file" accept="image/*" onchange="previewIssueImage(this)"
+                            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                        <div id="issueImagePreview" style="margin-top:8px; display:none;">
+                            <img id="issueImagePreviewImg"
+                                style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+                        </div>
+                    </div>
+
+                    <!-- 제출 버튼 -->
+                    <button id="issueSubmitBtn" onclick="submitIssue()"
+                        style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
+                        제보하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이슈 상세 모달 -->
+        <div id="issueDetailModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 id="issueDetailTitle" style="margin:0; font-size:18px;"></h2>
+                    <button onclick="closeIssueDetail()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                </div>
+                <div id="issueDetailBody" style="font-size:14px; line-height:1.7; color:var(--text-color);"></div>
+            </div>
+        </div>
+
     </div>
 
     <!-- 업무 등록 모달 (v3.1: 담당자, 시작일, 프로젝트 직접 등록) -->
@@ -2832,12 +3053,15 @@
                     <select id="formProject" style="flex:1;">
                         <option value="">로딩 중...</option>
                     </select>
-                    <button type="button" class="btn-cancel" style="padding:8px 12px; font-size:12px; white-space:nowrap;" onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
+                    <button type="button" class="btn-cancel"
+                        style="padding:8px 12px; font-size:12px; white-space:nowrap;"
+                        onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
                 </div>
                 <div id="newProjectInputWrap" style="display:none; margin-top:8px;">
                     <div style="display:flex; gap:8px;">
                         <input type="text" id="newProjectName" placeholder="새 프로젝트 이름" style="flex:1;">
-                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;" onclick="createNewProject()">생성</button>
+                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;"
+                            onclick="createNewProject()">생성</button>
                     </div>
                 </div>
             </div>
@@ -2917,16 +3141,21 @@
                 </div>
             </div>
             <!-- v3.1.1: 참고사항 타임라인 (가시성 개선) -->
-            <div class="form-group" style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
+            <div class="form-group"
+                style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-weight:600; font-size:14px;">📎 참고사항</span>
-                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;" onclick="toggleRefInput()">+ 추가</button>
+                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;"
+                        onclick="toggleRefInput()">+ 추가</button>
                 </label>
                 <div id="refInputWrap" style="display:none; margin-top:8px;">
-                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)" style="min-height:60px;"></textarea>
+                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)"
+                        style="min-height:60px;"></textarea>
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
-                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;" onclick="toggleRefInput()">취소</button>
-                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;" onclick="submitNewRef()">등록</button>
+                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;"
+                            onclick="toggleRefInput()">취소</button>
+                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;"
+                            onclick="submitNewRef()">등록</button>
                     </div>
                 </div>
                 <div id="refTimeline" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
@@ -3009,7 +3238,8 @@
                 <button type="button" onclick="insertMemoMarkdown('[','](url)')" title="링크">🔗</button>
             </div>
             <div class="memo-edit-modal-body">
-                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea" placeholder="메모 내용을 입력하세요..."></textarea>
+                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea"
+                    placeholder="메모 내용을 입력하세요..."></textarea>
             </div>
             <div class="memo-edit-modal-footer">
                 <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
@@ -3060,7 +3290,7 @@
         </div>
         <div class="judy-typing-carrot" id="judyTyping">
             <img class="carrot-spinner"
-                src="data:image/jpeg;base64,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"
+                src="data:image/jpeg;base64,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"
                 alt="로딩중" />
             주디가 답변을 작성하고 있어요...
         </div>
@@ -3209,6 +3439,7 @@
             // initTasksModule();
         }
 
+
         function showAccessDenied(reason) {
             userBadge.textContent = '⛔ 미인가';
             accessDeniedMsg.innerHTML = reason;
@@ -3248,6 +3479,11 @@
                     window._calendarInitialized = true;
                 } else {
                     loadCalendar();
+                }
+            } else if (viewName === 'issues') {
+                if (!window._issuesInitialized) {
+                    loadIssues();
+                    window._issuesInitialized = true;
                 }
             }
         }
@@ -4059,7 +4295,7 @@
                     <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
                         ${t.isRequester ?
-                            '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
+                        '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
                         t.status === '수락대기' && t.assignee === g_userName ?
                             '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
                             '<select class="status-select" onchange="changeTaskStatus(' + t.row + ', this.value, \'' + t.id + '\')">' +
@@ -4223,7 +4459,7 @@
             if (!name) return showToast('❌ 프로젝트 이름을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('newProjectName').value = '';
@@ -4233,7 +4469,7 @@
                         loadProjectsList();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .createProjectFromWeb(name, g_userName);
         }
 
@@ -4279,14 +4515,14 @@
         // v3.1: 업무 수락
         function acceptTask(rowNum) {
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         loadTasks();
                         if (window._kanbanInitialized) loadKanban();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .acceptTaskFromWeb(rowNum, g_userName);
         }
 
@@ -4299,13 +4535,13 @@
 
         function submitNewRef() {
             var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-            var task = currentTasks.find(function(t) { return t.row === rowNum; });
+            var task = currentTasks.find(function (t) { return t.row === rowNum; });
             if (!task) return;
             var content = document.getElementById('refNewContent').value.trim();
             if (!content) return showToast('❌ 내용을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('refNewContent').value = '';
@@ -4313,7 +4549,7 @@
                         loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .addTaskReference(task.id, content, g_userName);
         }
 
@@ -4322,15 +4558,15 @@
             timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px;">로딩 중...</div>';
 
             google.script.run
-                .withSuccessHandler(function(refs) {
+                .withSuccessHandler(function (refs) {
                     if (!refs || refs.length === 0) {
                         timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px; font-size:13px;">참고사항이 없습니다</div>';
                         return;
                     }
                     var html = '';
-                    refs.forEach(function(ref) {
+                    refs.forEach(function (ref) {
                         var date = ref.createdAt ? new Date(ref.createdAt) : null;
-                        var dateStr = date ? (date.getMonth()+1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2,'0') : '';
+                        var dateStr = date ? (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0') : '';
                         // 링크 자동 감지 (sanitize)
                         var safeContent = ref.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         safeContent = safeContent.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--primary);">$1</a>');
@@ -4347,7 +4583,7 @@
                     });
                     timeline.innerHTML = html;
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     timeline.innerHTML = '<div style="color:var(--danger); padding:8px; font-size:13px;">로드 실패</div>';
                 })
                 .getTaskReferences(taskId);
@@ -4360,11 +4596,11 @@
             if (newText === null || newText.trim() === '' || newText === oldText) return;
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -4374,11 +4610,11 @@
         function deleteRef(refId) {
             if (!confirm('참고사항을 삭제하시겠습니까?')) return;
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -4880,7 +5116,7 @@
             saveBtn.textContent = '저장 중...';
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     if (res.success) {
@@ -4896,7 +5132,7 @@
                         showToast('❌ 수정 실패: ' + (res.message || '알 수 없는 오류'), true);
                     }
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     showToast('❌ 서버 통신 에러', true);
@@ -4923,7 +5159,7 @@
         }
 
         // ESC 키 핸들러
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 var overlay = document.getElementById('memoEditModalOverlay');
                 if (overlay && overlay.style.display !== 'none') {
@@ -4978,7 +5214,7 @@
             wrapper.appendChild(contentDiv);
 
             // 모달에서 수정 완료 시 contentDiv 업데이트 리스너
-            document.addEventListener('memoEdited', function(e) {
+            document.addEventListener('memoEdited', function (e) {
                 if (e.detail.dateStr === dateStr && e.detail.timeStr === timeStr) {
                     currentContent = e.detail.newContent;
                     contentDiv.textContent = currentContent;
@@ -5255,6 +5491,295 @@
             });
 
             console.log('[JudyChat] 패널 초기화 완료');
+        })();
+    </script>
+
+    <!-- Issue Board Module -->
+    <script>
+        (function () {
+            // 상태 관리
+            window._issueState = 'open';
+            window._issuePage = 1;
+            window._issueLoading = false;
+            window._currentActiveView = 'note'; // 현재 활성 탭 추적
+
+            // 원래 switchMainView를 래핑하여 현재 탭 추적
+            const _origSwitchMainView = window.switchMainView;
+            window.switchMainView = function (viewName) {
+                window._currentActiveView = viewName;
+                _origSwitchMainView(viewName);
+            };
+
+            // 이슈 목록 로드
+            window.loadIssues = function () {
+                if (window._issueLoading) return;
+                window._issueLoading = true;
+                window._issuePage = 1;
+
+                var listEl = document.getElementById('issueList');
+                listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">불러오는 중...</div>';
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        window._issueLoading = false;
+                        if (!result || !result.success) {
+                            listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">이슈를 불러올 수 없습니다.</div>';
+                            return;
+                        }
+                        renderIssueList(result.issues, false);
+                        document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
+                    })
+                    .withFailureHandler(function (err) {
+                        window._issueLoading = false;
+                        listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">오류: ' + err.message + '</div>';
+                    })
+                    .getGitHubIssues(window._issueState, 1);
+            };
+
+            // 더보기
+            window.loadMoreIssues = function () {
+                if (window._issueLoading) return;
+                window._issueLoading = true;
+                window._issuePage++;
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        window._issueLoading = false;
+                        if (result && result.success) {
+                            renderIssueList(result.issues, true);
+                            document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
+                        }
+                    })
+                    .withFailureHandler(function () { window._issueLoading = false; })
+                    .getGitHubIssues(window._issueState, window._issuePage);
+            };
+
+            // 탭 전환
+            window.switchIssueTab = function (state) {
+                window._issueState = state;
+                document.getElementById('issueTabOpen').classList.toggle('active', state === 'open');
+                document.getElementById('issueTabClosed').classList.toggle('active', state === 'closed');
+                loadIssues();
+            };
+
+            // 이슈 목록 렌더링
+            function renderIssueList(issues, append) {
+                var listEl = document.getElementById('issueList');
+                if (!append) listEl.innerHTML = '';
+
+                if (!issues || issues.length === 0) {
+                    if (!append) {
+                        listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">' +
+                            (window._issueState === 'open' ? '열린 이슈가 없습니다. 🎉' : '닫힌 이슈가 없습니다.') + '</div>';
+                    }
+                    return;
+                }
+
+                issues.forEach(function (issue) {
+                    var card = document.createElement('div');
+                    card.className = 'issue-card';
+                    card.onclick = function () { openIssueDetail(issue.number); };
+
+                    var labelsHtml = '';
+                    if (issue.labels) {
+                        issue.labels.forEach(function (l) {
+                            if (l.name === 'from-workspace') return; // 내부 라벨은 숨김
+                            labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + l.name + '</span>';
+                        });
+                    }
+
+                    var timeAgo = getTimeAgo(issue.created_at);
+                    var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
+
+                    card.innerHTML =
+                        '<div class="issue-card-title">' + stateIcon + ' #' + issue.number + ' ' + escapeHtml(issue.title) + '</div>' +
+                        '<div class="issue-card-meta">' +
+                        '<span>' + timeAgo + '</span>' +
+                        (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
+                        labelsHtml +
+                        '</div>';
+
+                    listEl.appendChild(card);
+                });
+            }
+
+            // 이슈 제보 폼 열기
+            window.openIssueForm = function () {
+                // 발생 위치 자동 감지
+                var locationInput = document.getElementById('issueLocation');
+                var viewMap = { note: '노트', tasks: '업무', kanban: '칸반', calendar: '달력', issues: '이슈' };
+                locationInput.value = viewMap[window._currentActiveView] || window._currentActiveView || '';
+
+                document.getElementById('issueFormModal').style.display = 'flex';
+            };
+
+            window.closeIssueForm = function () {
+                document.getElementById('issueFormModal').style.display = 'none';
+                // 폼 리셋
+                document.getElementById('issueTitle').value = '';
+                document.getElementById('issueCategory').value = 'bug';
+                document.getElementById('issueSeverity').value = 'medium';
+                document.getElementById('issueLocation').value = '';
+                document.getElementById('issueDescription').value = '';
+                document.getElementById('issueImage').value = '';
+                document.getElementById('issueImagePreview').style.display = 'none';
+            };
+
+            // 이미지 미리보기
+            window.previewIssueImage = function (input) {
+                var preview = document.getElementById('issueImagePreview');
+                var previewImg = document.getElementById('issueImagePreviewImg');
+                if (input.files && input.files[0]) {
+                    if (input.files[0].size > 5 * 1024 * 1024) {
+                        showToast('이미지는 5MB 이내로 제한됩니다.', 'error');
+                        input.value = '';
+                        preview.style.display = 'none';
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        previewImg.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                } else {
+                    preview.style.display = 'none';
+                }
+            };
+
+            // 이슈 제출
+            window.submitIssue = function () {
+                var title = document.getElementById('issueTitle').value.trim();
+                if (!title) { showToast('제목을 입력해 주세요.', 'error'); return; }
+
+                var category = document.getElementById('issueCategory').value;
+                var severity = document.getElementById('issueSeverity').value;
+                var description = document.getElementById('issueDescription').value.trim();
+                var location = document.getElementById('issueLocation').value.trim();
+
+                var submitBtn = document.getElementById('issueSubmitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = '등록 중...';
+
+                // 환경 정보 수집
+                var browserInfo = JSON.stringify({
+                    browser: navigator.userAgent.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/)?.[0] || navigator.userAgent.substring(0, 50),
+                    os: navigator.platform || 'unknown',
+                    screen: screen.width + 'x' + screen.height
+                });
+
+                // 이미지 Base64 추출
+                var imageBase64 = '';
+                var previewImg = document.getElementById('issueImagePreviewImg');
+                if (previewImg.src && document.getElementById('issueImagePreview').style.display !== 'none') {
+                    imageBase64 = previewImg.src;
+                }
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '제보하기';
+                        if (result && result.success) {
+                            showToast('이슈 #' + result.issueNumber + ' 등록 완료!', 'success');
+                            closeIssueForm();
+                            // Optimistic update: 목록 새로고침
+                            if (window._issueState === 'open') loadIssues();
+                        } else {
+                            showToast(result ? result.error : '등록 실패', 'error');
+                        }
+                    })
+                    .withFailureHandler(function (err) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '제보하기';
+                        showToast('오류: ' + err.message, 'error');
+                    })
+                    .submitIssueFromWeb(title, category, severity, description, location, imageBase64, browserInfo);
+            };
+
+            // 이슈 상세 보기
+            window.openIssueDetail = function (issueNumber) {
+                document.getElementById('issueDetailTitle').textContent = '불러오는 중...';
+                document.getElementById('issueDetailBody').innerHTML = '';
+                document.getElementById('issueDetailModal').style.display = 'flex';
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        if (result && result.success) {
+                            var issue = result.issue;
+                            var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
+                            document.getElementById('issueDetailTitle').textContent = stateIcon + ' #' + issue.number + ' ' + issue.title;
+
+                            // body에서 METADATA 블록 제거하고 표시
+                            var body = (issue.body || '').replace(/<!-- METADATA[\s\S]*?-->/, '').trim();
+                                // 간단한 마크다운 → HTML 변환
+                                body = body
+                                    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+                                    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+                                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
+                                    .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                    .replace(/\n/g, '<br>');
+
+                            var labelsHtml = '';
+                            if (issue.labels) {
+                                issue.labels.forEach(function (l) {
+                                    if (l.name === 'from-workspace') return;
+                                    labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + '; margin-right:4px;">' + l.name + '</span>';
+                                });
+                            }
+
+                            var meta = '<div style="margin-bottom:16px; display:flex; gap:6px; flex-wrap:wrap;">' + labelsHtml + '</div>';
+                            meta += '<div style="font-size:12px; color:var(--hint-color); margin-bottom:16px;">등록: ' + formatDate(issue.created_at);
+                            if (issue.closed_at) meta += ' | 해결: ' + formatDate(issue.closed_at);
+                            meta += '</div>';
+
+                            var link = '<a href="' + issue.html_url + '" target="_blank" style="color:var(--primary-mobile); font-size:13px;">GitHub에서 보기 →</a>';
+
+                            document.getElementById('issueDetailBody').innerHTML = meta + '<div style="border-top:1px solid var(--border); padding-top:16px;">' + body + '</div><div style="margin-top:16px;">' + link + '</div>';
+                        } else {
+                            document.getElementById('issueDetailTitle').textContent = '오류';
+                            document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
+                        }
+                    })
+                    .withFailureHandler(function () {
+                        document.getElementById('issueDetailTitle').textContent = '오류';
+                        document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
+                    })
+                    .getGitHubIssueDetail(issueNumber);
+            };
+
+            window.closeIssueDetail = function () {
+                document.getElementById('issueDetailModal').style.display = 'none';
+            };
+
+            // 유틸리티
+            function getTimeAgo(dateStr) {
+                var diff = Date.now() - new Date(dateStr).getTime();
+                var mins = Math.floor(diff / 60000);
+                if (mins < 1) return '방금';
+                if (mins < 60) return mins + '분 전';
+                var hours = Math.floor(mins / 60);
+                if (hours < 24) return hours + '시간 전';
+                var days = Math.floor(hours / 24);
+                if (days < 30) return days + '일 전';
+                return formatDate(dateStr);
+            }
+
+            function formatDate(dateStr) {
+                try {
+                    var d = new Date(dateStr);
+                    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+                        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                } catch (e) { return dateStr; }
+            }
+
+            function escapeHtml(str) {
+                var div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            console.log('[IssueBoard] 모듈 초기화 완료');
         })();
     </script>
 

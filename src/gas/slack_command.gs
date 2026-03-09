@@ -18,7 +18,8 @@
  */
 function sendEphemeralError(userId, channelId, errorMsg) {
   try {
-    const token = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+    const token = getSlackToken();
+
     if (!token || !userId || !channelId) return;
 
     UrlFetchApp.fetch("https://slack.com/api/chat.postEphemeral", {
@@ -162,7 +163,7 @@ function doPost(e) {
     }
     
     if (commandText === '가이드' || commandText === '도움말') {
-      const guideUrl = "https://github.com/syn-glitch/gongdo-task-system/blob/main/%EC%B2%AB_AI_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8_%ED%8C%80%EC%9B%90_%EC%A3%BC%EB%94%94_%EA%B0%80%EC%9D%B4%EB%93%9C.md";
+      const guideUrl = "https://github.com/syn-glitch/gongdo-task-system/blob/main/%EC%B2%AB_AI_%EC%97%90%EC%9D%B4%EC%A0%A0%ED%8A%B8_%ED%8C%80%EC%9B%90_%EC%A3%BC%EB%94%94_%EA%B0%80%EC%9D%B4%EB%93%9C.md";
       
       const payload = {
         "response_type": "ephemeral",
@@ -243,7 +244,7 @@ function doPost(e) {
           
           // Helper: 슬랙에 메시지 즉시 전송
           const replyToSlack = (msg) => {
-             const token = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+             const token = getSlackToken();
              if (!token) return;
              UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
                 method: "post", contentType: "application/json", headers: { "Authorization": "Bearer " + token },
@@ -294,7 +295,7 @@ function doPost(e) {
                ]
              };
              
-             const slackToken = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+             const slackToken = getSlackToken();
              if (slackToken) {
                UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
                   method: "post", contentType: "application/json", headers: { "Authorization": "Bearer " + slackToken },
@@ -491,8 +492,7 @@ function openTaskModal(triggerId, prefillDesc = "", userId = "", channelId = "")
     }
   };
 
-  // 토큰 획득 (안전망)
-  const token = typeof SLACK_TOKEN !== 'undefined' ? SLACK_TOKEN : PropertiesService.getScriptProperties().getProperty("SLACK_TOKEN") || "";
+  const token = getSlackToken();
   if (!token) {
     Logger.log("[ERROR] openTaskModal: SLACK_TOKEN이 정의되지 않았습니다.");
     if (userId && channelId) {
@@ -500,6 +500,7 @@ function openTaskModal(triggerId, prefillDesc = "", userId = "", channelId = "")
     }
     return ContentService.createTextOutput("");
   }
+
 
   const options = {
     method: "post",
@@ -661,7 +662,7 @@ function processAsyncTasks(e) {
             const userUrl = `https://slack.com/api/users.info?user=${data.assignedUserId}`;
             const userRes = UrlFetchApp.fetch(userUrl, {
               method: "get",
-              headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+              headers: { "Authorization": "Bearer " + getSlackToken() },
               muteHttpExceptions: true
             });
             const userJson = JSON.parse(userRes.getContentText());
@@ -717,7 +718,7 @@ function processAsyncTasks(e) {
           const options = {
             method: "post",
             contentType: "application/json",
-            headers: { "Authorization": "Bearer " + SLACK_TOKEN }, 
+            headers: { "Authorization": "Bearer " + getSlackToken() }, 
             payload: JSON.stringify(msgPayload),
             muteHttpExceptions: true
           };
@@ -742,7 +743,8 @@ function processAsyncTasks(e) {
         
         // 2. [1차 업그레이드] 타인을 담당자로 지정했을 경우 타인에게 '지정 알림' DM 전송
         if (data.assignedUserId && data.assignedUserId !== data.userId) {
-          const assignMsg = `📣 *새로운 업무가 배정되었습니다!*\n<@${data.userId}> 님이 당신을 담당자로 지정했습니다.\n\n📌 *프로젝트:* ${data.project}\n📝 *제목:* ${data.title}\n📅 *마감일:* ${data.dueDate || "미정"}\n\n화이팅입니다! 💪`;
+          const webAppUrl = ScriptApp.getService().getUrl();
+          const assignMsg = `📣 *새로운 업무가 배정되었습니다!*\n<@${data.userId}> 님이 당신을 담당자로 지정했습니다.\n\n📌 *프로젝트:* ${data.project}\n📝 *제목:* ${data.title}\n📅 *마감일:* ${data.dueDate || "미정"}\n\n🔗 <${webAppUrl}|내 주디 워크스페이스 열기>\n화이팅입니다! 💪`;
           const result2 = triggerSlackDM(data.assignedUserId, assignMsg);
           if (!result2.ok) {
              const prevError = sheet.getRange(newRow, 12).getValue();
@@ -791,7 +793,7 @@ function fetchUserName(userId) {
     const userUrl = `https://slack.com/api/users.info?user=${userId}`;
     const userRes = UrlFetchApp.fetch(userUrl, {
       method: "get",
-      headers: { "Authorization": "Bearer " + SLACK_TOKEN },
+      headers: { "Authorization": "Bearer " + getSlackToken() },
       muteHttpExceptions: true
     });
     const userJson = JSON.parse(userRes.getContentText());

@@ -3,22 +3,24 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_task_parser.gs
- * @version     v1.1.0
- * @updated     2026-03-09 (KST)
+ * @version     v1.2.0
+ * @updated     2026-03-10 (KST)
  * @agent       에이다 BE (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 비정형 텍스트를 Claude API로 분석하여 정형화된 업무 배열을 추출하고 시트에 자동 등록합니다.
  *
  * @change-summary
- *   AS-IS: API 키를 빈 전역변수(CLAUDE_API_KEY "")로 직접 참조하여 노트 업무등록/요약 기능 불가
- *   TO-BE: getClaudeApiKey() 공통 헬퍼(PropertiesService 기반)로 통일하여 정상 동작
+ *   AS-IS: v1.1.0 — API 호출 시 토큰 사용량 추적 없음
+ *   TO-BE: v1.2.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록 (5곳)
  *
  * @features
- *   - [수정] extractTasksWithClaude() — API 키 로딩을 getClaudeApiKey()로 변경
- *   - [수정] parseTaskFromMemoWeb() — API 키 로딩을 getClaudeApiKey()로 변경
- *   - [수정] summarizeMemoContent() — API 키 로딩을 getClaudeApiKey()로 변경
+ *   - [수정] extractTasksWithClaude() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] parseTaskFromMemoWeb() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] summarizeMemoContent() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] summarizeLongText() — 청크 요약 + 최종 통합 요약 래퍼 적용 (3곳)
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.2.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 5곳 (BNK-2026-03-10-001)
  * v1.1.0 | 2026-03-09 | 에이다 BE | API 키 로딩을 getClaudeApiKey()로 통일 (김감사 QA CRITICAL 해소)
  * v1.0.0 | 2026-03-01 | 에이다 BE | 최초 작성 — AI 업무 추출 및 메모 요약
  * ============================================
@@ -146,9 +148,8 @@ function extractTasksWithClaude(text, userName) {
   };
 
   try {
-    const res = UrlFetchApp.fetch(url, options);
-    const json = JSON.parse(res.getContentText());
-    
+    const json = callClaudeAPI(url, options, "extractTasksWithClaude", userName);
+
     if (json.content && json.content.length > 0) {
       const rawText = json.content[0].text.trim();
       // 혹시라도 AI가 ```json 을 붙여서 응답할 경우를 대비하여 방어 코드
@@ -213,9 +214,8 @@ function parseTaskFromMemoWeb(userName, text) {
       muteHttpExceptions: true
     };
     
-    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-    const json = JSON.parse(res.getContentText());
-    
+    const json = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "parseTaskFromMemoWeb", userName);
+
     if (json.content && json.content.length > 0) {
       const resultText = json.content[0].text.trim();
       let parsedData = {};
@@ -292,8 +292,7 @@ function summarizeMemoContent(text, userName) {
       muteHttpExceptions: true
     };
 
-    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-    const json = JSON.parse(res.getContentText());
+    const json = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "summarizeMemoContent", userName);
 
     if (json.content && json.content.length > 0) {
       return { success: true, summary: json.content[0].text.trim() };
@@ -359,8 +358,7 @@ function summarizeLongText(text, userName, apiKey) {
     };
 
     try {
-      const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", options);
-      const json = JSON.parse(res.getContentText());
+      const json = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "summarizeLongText_chunk", userName);
       if (json.content && json.content.length > 0) {
         chunkSummaries.push(json.content[0].text.trim());
       }
@@ -400,8 +398,7 @@ function summarizeLongText(text, userName, apiKey) {
   };
 
   try {
-    const res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", finalOptions);
-    const json = JSON.parse(res.getContentText());
+    const json = callClaudeAPI("https://api.anthropic.com/v1/messages", finalOptions, "summarizeLongText_merge", userName);
     if (json.content && json.content.length > 0) {
       return {
         success: true,

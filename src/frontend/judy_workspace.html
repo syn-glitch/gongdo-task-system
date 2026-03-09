@@ -51,6 +51,8 @@
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
     <!-- FullCalendar v6 CDN (Security Patch: v6.1.10 → v6.1.15) -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <!-- Google Charts (토큰 사용량 대시보드용) -->
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         :root {
             /* Dark Theme (Default) */
@@ -1550,6 +1552,57 @@
                 filter: drop-shadow(0 0 5px rgba(148, 97, 253, 0.5));
             }
 
+            /* Issue Board Styles */
+            .issue-tab-btn {
+                padding: 6px 16px;
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                background: var(--card-bg);
+                color: var(--hint-color);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+            .issue-tab-btn.active {
+                background: var(--primary-mobile);
+                color: #fff;
+                border-color: var(--primary-mobile);
+            }
+            .issue-card {
+                background: var(--card-bg);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 14px 16px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                transition: border-color 0.2s;
+            }
+            .issue-card:hover {
+                border-color: var(--primary-mobile);
+            }
+            .issue-card-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-color);
+                margin-bottom: 6px;
+            }
+            .issue-card-meta {
+                font-size: 12px;
+                color: var(--hint-color);
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .issue-label {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #fff;
+            }
+
             .view-panel {
                 padding-bottom: var(--bottom-nav-height);
                 /* 탭바 높이만큼 여백 */
@@ -2625,6 +2678,14 @@
             <i>📅</i>
             <span>달력</span>
         </button>
+        <button class="bottom-nav-item" id="btnNavIssues" onclick="switchMainView('issues')">
+            <i>🐛</i>
+            <span>이슈</span>
+        </button>
+        <button class="bottom-nav-item" id="btnNavTokens" onclick="switchMainView('tokens')" style="display:none;">
+            <i>📈</i>
+            <span>토큰</span>
+        </button>
     </div>
 
     <!-- 🎤 Floating Voice Record Button (노트 탭 활성 시 표시) -->
@@ -2640,6 +2701,8 @@
                 <button class="gnb-tab" id="navTasks" onclick="switchMainView('tasks')">📊 내 업무</button>
                 <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
                 <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
+                <button class="gnb-tab" id="navIssues" onclick="switchMainView('issues')">🐛 이슈</button>
+                <button class="gnb-tab" id="navTokens" onclick="switchMainView('tokens')" style="display:none;">📈 토큰</button>
             </div>
         </div>
         <div class="gnb-right">
@@ -2817,6 +2880,160 @@
                 </div>
                 <!-- FullCalendar 컨테이너 -->
                 <div id="calendar"></div>
+            </div>
+        </div>
+
+        <!-- View 5: Issues Board -->
+        <div id="viewIssues" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>🐛 <span>이슈 제보</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
+                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;" onclick="openIssueForm()">+ 이슈 제보</button>
+                    </div>
+                </div>
+
+                <!-- 이슈 탭 (open/closed) -->
+                <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
+                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢 Open</button>
+                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴 Closed</button>
+                </div>
+
+                <!-- 이슈 목록 -->
+                <div id="issueList" style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;"></div>
+
+                <!-- 더보기 -->
+                <div id="issueLoadMore" style="display:none; text-align:center; padding:12px;">
+                    <button class="refresh-btn" onclick="loadMoreIssues()">더 보기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ 📈 토큰 사용량 탭 ═══ -->
+        <div id="viewTokens" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div class="dash-header">
+                    <h1>📈 <span>토큰 사용량</span></h1>
+                    <div class="dash-actions">
+                        <button class="refresh-btn" onclick="loadTokenStats()">🔄 새로고침</button>
+                    </div>
+                </div>
+                <!-- 기간 필터 -->
+                <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
+                    <button class="dash-tab-btn active" id="tokenPeriod1" onclick="switchTokenPeriod(1)">1일</button>
+                    <button class="dash-tab-btn" id="tokenPeriod7" onclick="switchTokenPeriod(7)">7일</button>
+                    <button class="dash-tab-btn" id="tokenPeriod15" onclick="switchTokenPeriod(15)">15일</button>
+                    <button class="dash-tab-btn" id="tokenPeriod30" onclick="switchTokenPeriod(30)">30일</button>
+                </div>
+                <!-- 스크롤 영역 -->
+                <div style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;">
+                    <!-- 요약 카드 -->
+                    <div id="tokenSummaryCards" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;"></div>
+                    <!-- 일별 차트 -->
+                    <div style="background:var(--card-bg); border-radius:12px; padding:16px; margin-bottom:16px;">
+                        <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">📊 일별 사용량</h3>
+                        <div id="tokenDailyChart" style="width:100%; height:280px;"></div>
+                    </div>
+                    <!-- 기능별 + 팀원별 -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div style="background:var(--card-bg); border-radius:12px; padding:16px;">
+                            <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">🍩 기능별 비율</h3>
+                            <div id="tokenFuncChart" style="width:100%; height:240px;"></div>
+                        </div>
+                        <div style="background:var(--card-bg); border-radius:12px; padding:16px;">
+                            <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">👥 팀원별 사용량</h3>
+                            <div id="tokenUserTable"></div>
+                        </div>
+                    </div>
+                    <!-- 최근 로그 -->
+                    <div style="background:var(--card-bg); border-radius:12px; padding:16px;">
+                        <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">📋 최근 호출 로그</h3>
+                        <div id="tokenRecentLogs" style="overflow-x:auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이슈 제보 모달 -->
+        <div id="issueFormModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; font-size:18px;">🐛 이슈 제보</h2>
+                    <button onclick="closeIssueForm()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <!-- 제목 -->
+                    <div>
+                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목 *</label>
+                        <input id="issueTitle" type="text" maxlength="200" placeholder="어떤 문제가 발생했나요?"
+                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                    </div>
+
+                    <!-- 카테고리 + 심각도 -->
+                    <div style="display:flex; gap:12px;">
+                        <div style="flex:1;">
+                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
+                            <select id="issueCategory" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                                <option value="bug">🔴 버그</option>
+                                <option value="feature-error">🟡 기능 오류</option>
+                                <option value="ui-broken">🟠 UI 깨짐</option>
+                                <option value="etc">⚪ 기타</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
+                            <select id="issueSeverity" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                                <option value="medium">보통</option>
+                                <option value="high">높음</option>
+                                <option value="low">낮음</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 발생 위치 (자동 감지 + 수정 가능) -->
+                    <div>
+                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생 위치</label>
+                        <input id="issueLocation" type="text" placeholder="자동 감지됨 (수정 가능)"
+                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                    </div>
+
+                    <!-- 설명 -->
+                    <div>
+                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
+                        <textarea id="issueDescription" rows="4" maxlength="5000" placeholder="어떤 상황에서 발생했는지 자세히 알려주세요"
+                                  style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <!-- 스크린샷 -->
+                    <div>
+                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷 (선택, 최대 5MB)</label>
+                        <input id="issueImage" type="file" accept="image/*"
+                               onchange="previewIssueImage(this)"
+                               style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                        <div id="issueImagePreview" style="margin-top:8px; display:none;">
+                            <img id="issueImagePreviewImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+                        </div>
+                    </div>
+
+                    <!-- 제출 버튼 -->
+                    <button id="issueSubmitBtn" onclick="submitIssue()"
+                            style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
+                        제보하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이슈 상세 모달 -->
+        <div id="issueDetailModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 id="issueDetailTitle" style="margin:0; font-size:18px;"></h2>
+                    <button onclick="closeIssueDetail()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                </div>
+                <div id="issueDetailBody" style="font-size:14px; line-height:1.7; color:var(--text-color);"></div>
             </div>
         </div>
 
@@ -3248,6 +3465,18 @@
                     window._calendarInitialized = true;
                 } else {
                     loadCalendar();
+                }
+            } else if (viewName === 'issues') {
+                if (!window._issuesInitialized) {
+                    loadIssues();
+                    window._issuesInitialized = true;
+                }
+            } else if (viewName === 'tokens') {
+                if (!window._tokensInitialized) {
+                    initTokenModule();
+                    window._tokensInitialized = true;
+                } else {
+                    loadTokenStats();
                 }
             }
         }
@@ -5255,6 +5484,523 @@
             });
 
             console.log('[JudyChat] 패널 초기화 완료');
+        })();
+    </script>
+
+    <!-- Issue Board Module -->
+    <script>
+        (function() {
+            // 상태 관리
+            window._issueState = 'open';
+            window._issuePage = 1;
+            window._issueLoading = false;
+            window._currentActiveView = 'note'; // 현재 활성 탭 추적
+
+            // 원래 switchMainView를 래핑하여 현재 탭 추적
+            const _origSwitchMainView = window.switchMainView;
+            window.switchMainView = function(viewName) {
+                window._currentActiveView = viewName;
+                _origSwitchMainView(viewName);
+            };
+
+            // 이슈 목록 로드
+            window.loadIssues = function() {
+                if (window._issueLoading) return;
+                window._issueLoading = true;
+                window._issuePage = 1;
+
+                var listEl = document.getElementById('issueList');
+                listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">불러오는 중...</div>';
+
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        window._issueLoading = false;
+                        if (!result || !result.success) {
+                            listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">이슈를 불러올 수 없습니다.</div>';
+                            return;
+                        }
+                        renderIssueList(result.issues, false);
+                        document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
+                    })
+                    .withFailureHandler(function(err) {
+                        window._issueLoading = false;
+                        listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">오류: ' + err.message + '</div>';
+                    })
+                    .getGitHubIssues(window._issueState, 1);
+            };
+
+            // 더보기
+            window.loadMoreIssues = function() {
+                if (window._issueLoading) return;
+                window._issueLoading = true;
+                window._issuePage++;
+
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        window._issueLoading = false;
+                        if (result && result.success) {
+                            renderIssueList(result.issues, true);
+                            document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
+                        }
+                    })
+                    .withFailureHandler(function() { window._issueLoading = false; })
+                    .getGitHubIssues(window._issueState, window._issuePage);
+            };
+
+            // 탭 전환
+            window.switchIssueTab = function(state) {
+                window._issueState = state;
+                document.getElementById('issueTabOpen').classList.toggle('active', state === 'open');
+                document.getElementById('issueTabClosed').classList.toggle('active', state === 'closed');
+                loadIssues();
+            };
+
+            // 이슈 목록 렌더링
+            function renderIssueList(issues, append) {
+                var listEl = document.getElementById('issueList');
+                if (!append) listEl.innerHTML = '';
+
+                if (!issues || issues.length === 0) {
+                    if (!append) {
+                        listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">' +
+                            (window._issueState === 'open' ? '열린 이슈가 없습니다. 🎉' : '닫힌 이슈가 없습니다.') + '</div>';
+                    }
+                    return;
+                }
+
+                issues.forEach(function(issue) {
+                    var card = document.createElement('div');
+                    card.className = 'issue-card';
+                    card.onclick = function() { openIssueDetail(issue.number); };
+
+                    var labelsHtml = '';
+                    if (issue.labels) {
+                        issue.labels.forEach(function(l) {
+                            if (l.name === 'from-workspace') return; // 내부 라벨은 숨김
+                            labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + l.name + '</span>';
+                        });
+                    }
+
+                    var timeAgo = getTimeAgo(issue.created_at);
+                    var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
+
+                    card.innerHTML =
+                        '<div class="issue-card-title">' + stateIcon + ' #' + issue.number + ' ' + escapeHtml(issue.title) + '</div>' +
+                        '<div class="issue-card-meta">' +
+                            '<span>' + timeAgo + '</span>' +
+                            (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
+                            labelsHtml +
+                        '</div>';
+
+                    listEl.appendChild(card);
+                });
+            }
+
+            // 이슈 제보 폼 열기
+            window.openIssueForm = function() {
+                // 발생 위치 자동 감지
+                var locationInput = document.getElementById('issueLocation');
+                var viewMap = { note: '노트', tasks: '업무', kanban: '칸반', calendar: '달력', issues: '이슈' };
+                locationInput.value = viewMap[window._currentActiveView] || window._currentActiveView || '';
+
+                document.getElementById('issueFormModal').style.display = 'flex';
+            };
+
+            window.closeIssueForm = function() {
+                document.getElementById('issueFormModal').style.display = 'none';
+                // 폼 리셋
+                document.getElementById('issueTitle').value = '';
+                document.getElementById('issueCategory').value = 'bug';
+                document.getElementById('issueSeverity').value = 'medium';
+                document.getElementById('issueLocation').value = '';
+                document.getElementById('issueDescription').value = '';
+                document.getElementById('issueImage').value = '';
+                document.getElementById('issueImagePreview').style.display = 'none';
+            };
+
+            // 이미지 미리보기
+            window.previewIssueImage = function(input) {
+                var preview = document.getElementById('issueImagePreview');
+                var previewImg = document.getElementById('issueImagePreviewImg');
+                if (input.files && input.files[0]) {
+                    if (input.files[0].size > 5 * 1024 * 1024) {
+                        showToast('이미지는 5MB 이내로 제한됩니다.', 'error');
+                        input.value = '';
+                        preview.style.display = 'none';
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                } else {
+                    preview.style.display = 'none';
+                }
+            };
+
+            // 이슈 제출
+            window.submitIssue = function() {
+                var title = document.getElementById('issueTitle').value.trim();
+                if (!title) { showToast('제목을 입력해 주세요.', 'error'); return; }
+
+                var category = document.getElementById('issueCategory').value;
+                var severity = document.getElementById('issueSeverity').value;
+                var description = document.getElementById('issueDescription').value.trim();
+                var location = document.getElementById('issueLocation').value.trim();
+
+                var submitBtn = document.getElementById('issueSubmitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = '등록 중...';
+
+                // 환경 정보 수집
+                var browserInfo = JSON.stringify({
+                    browser: navigator.userAgent.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/)?.[0] || navigator.userAgent.substring(0, 50),
+                    os: navigator.platform || 'unknown',
+                    screen: screen.width + 'x' + screen.height
+                });
+
+                // 이미지 Base64 추출
+                var imageBase64 = '';
+                var previewImg = document.getElementById('issueImagePreviewImg');
+                if (previewImg.src && document.getElementById('issueImagePreview').style.display !== 'none') {
+                    imageBase64 = previewImg.src;
+                }
+
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '제보하기';
+                        if (result && result.success) {
+                            showToast('이슈 #' + result.issueNumber + ' 등록 완료!', 'success');
+                            closeIssueForm();
+                            // Optimistic update: 목록 새로고침
+                            if (window._issueState === 'open') loadIssues();
+                        } else {
+                            showToast(result ? result.error : '등록 실패', 'error');
+                        }
+                    })
+                    .withFailureHandler(function(err) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '제보하기';
+                        showToast('오류: ' + err.message, 'error');
+                    })
+                    .submitIssueFromWeb(title, category, severity, description, location, imageBase64, browserInfo);
+            };
+
+            // 이슈 상세 보기
+            window.openIssueDetail = function(issueNumber) {
+                document.getElementById('issueDetailTitle').textContent = '불러오는 중...';
+                document.getElementById('issueDetailBody').innerHTML = '';
+                document.getElementById('issueDetailModal').style.display = 'flex';
+
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.success) {
+                            var issue = result.issue;
+                            var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
+                            document.getElementById('issueDetailTitle').textContent = stateIcon + ' #' + issue.number + ' ' + issue.title;
+
+                            // body에서 METADATA 블록 제거하고 표시
+                            var body = (issue.body || '').replace(/<!-- METADATA[\s\S]*?-->/, '').trim();
+                            // 간단한 마크다운 → HTML 변환
+                            body = body
+                                .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+                                .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
+                                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                .replace(/\n/g, '<br>');
+
+                            var labelsHtml = '';
+                            if (issue.labels) {
+                                issue.labels.forEach(function(l) {
+                                    if (l.name === 'from-workspace') return;
+                                    labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + '; margin-right:4px;">' + l.name + '</span>';
+                                });
+                            }
+
+                            var meta = '<div style="margin-bottom:16px; display:flex; gap:6px; flex-wrap:wrap;">' + labelsHtml + '</div>';
+                            meta += '<div style="font-size:12px; color:var(--hint-color); margin-bottom:16px;">등록: ' + formatDate(issue.created_at);
+                            if (issue.closed_at) meta += ' | 해결: ' + formatDate(issue.closed_at);
+                            meta += '</div>';
+
+                            var link = '<a href="' + issue.html_url + '" target="_blank" style="color:var(--primary-mobile); font-size:13px;">GitHub에서 보기 →</a>';
+
+                            document.getElementById('issueDetailBody').innerHTML = meta + '<div style="border-top:1px solid var(--border); padding-top:16px;">' + body + '</div><div style="margin-top:16px;">' + link + '</div>';
+                        } else {
+                            document.getElementById('issueDetailTitle').textContent = '오류';
+                            document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
+                        }
+                    })
+                    .withFailureHandler(function() {
+                        document.getElementById('issueDetailTitle').textContent = '오류';
+                        document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
+                    })
+                    .getGitHubIssueDetail(issueNumber);
+            };
+
+            window.closeIssueDetail = function() {
+                document.getElementById('issueDetailModal').style.display = 'none';
+            };
+
+            // 유틸리티
+            function getTimeAgo(dateStr) {
+                var diff = Date.now() - new Date(dateStr).getTime();
+                var mins = Math.floor(diff / 60000);
+                if (mins < 1) return '방금';
+                if (mins < 60) return mins + '분 전';
+                var hours = Math.floor(mins / 60);
+                if (hours < 24) return hours + '시간 전';
+                var days = Math.floor(hours / 24);
+                if (days < 30) return days + '일 전';
+                return formatDate(dateStr);
+            }
+
+            function formatDate(dateStr) {
+                try {
+                    var d = new Date(dateStr);
+                    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+                        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                } catch (e) { return dateStr; }
+            }
+
+            function escapeHtml(str) {
+                var div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            console.log('[IssueBoard] 모듈 초기화 완료');
+        })();
+    </script>
+
+    <!-- ═══ 📈 토큰 사용량 모듈 ═══ -->
+    <script>
+        (function() {
+            'use strict';
+
+            // 토큰 탭 접근 허용 사용자
+            var TOKEN_ALLOWED_USERS = ['송용남', '정혜림'];
+            var _tokenCurrentPeriod = 7; // 기본 7일
+            var _googleChartsLoaded = false;
+
+            // 기능명 한글 매핑
+            var FUNC_LABELS = {
+                'processJudyWebChat': '채팅',
+                'getDailyBriefingForWeb': '브리핑',
+                'extractTasksWithClaude': '업무 추출',
+                'parseTaskFromMemoWeb': '메모 분석',
+                'summarizeMemoContent': '요약',
+                'summarizeLongText_chunk': '청크 요약',
+                'summarizeLongText_merge': '통합 요약',
+                'askClaude': '일일 보고',
+                'generateMorningBriefing': '모닝 브리핑'
+            };
+
+            // 권한 체크 후 탭 표시
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    var uName = (typeof initUserName !== 'undefined') ? initUserName : '';
+                    if (TOKEN_ALLOWED_USERS.indexOf(uName) !== -1) {
+                        var gnbBtn = document.getElementById('navTokens');
+                        var bottomBtn = document.getElementById('btnNavTokens');
+                        if (gnbBtn) gnbBtn.style.display = '';
+                        if (bottomBtn) bottomBtn.style.display = '';
+                    }
+                }, 500);
+            });
+
+            // Google Charts 초기화
+            function ensureGoogleCharts(callback) {
+                if (_googleChartsLoaded) { callback(); return; }
+                google.charts.load('current', { packages: ['corechart'] });
+                google.charts.setOnLoadCallback(function() {
+                    _googleChartsLoaded = true;
+                    callback();
+                });
+            }
+
+            // 토큰 모듈 초기화
+            window.initTokenModule = function() {
+                ensureGoogleCharts(function() {
+                    loadTokenStats();
+                });
+            };
+
+            // 기간 필터 전환
+            window.switchTokenPeriod = function(period) {
+                _tokenCurrentPeriod = period;
+                [1, 7, 15, 30].forEach(function(p) {
+                    var btn = document.getElementById('tokenPeriod' + p);
+                    if (btn) btn.classList.toggle('active', p === period);
+                });
+                loadTokenStats();
+            };
+
+            // 데이터 로드
+            window.loadTokenStats = function() {
+                var uName = (typeof initUserName !== 'undefined') ? initUserName : '';
+                var container = document.getElementById('tokenSummaryCards');
+                if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--hint-color);">데이터 불러오는 중...</div>';
+
+                google.script.run
+                    .withSuccessHandler(function(data) {
+                        if (!data || data.error) {
+                            if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ ' + (data ? data.error : '데이터 로드 실패') + '</div>';
+                            return;
+                        }
+                        renderTokenDashboard(data);
+                    })
+                    .withFailureHandler(function(err) {
+                        if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ 오류: ' + err.message + '</div>';
+                    })
+                    .getTokenUsageStats(_tokenCurrentPeriod, uName);
+            };
+
+            // 대시보드 렌더링
+            function renderTokenDashboard(data) {
+                var s = data.summary || {};
+                renderSummaryCards(s);
+                if (_googleChartsLoaded) {
+                    renderDailyChart(data.daily || []);
+                    renderFuncChart(data.byFunction || []);
+                }
+                renderUserTable(data.byUser || []);
+                renderRecentLogs(data.recentLogs || []);
+            }
+
+            // 요약 카드
+            function renderSummaryCards(s) {
+                var el = document.getElementById('tokenSummaryCards');
+                if (!el) return;
+                var cards = [
+                    { label: '총 토큰', value: formatNum(s.totalTokens || 0), icon: '🔢' },
+                    { label: 'API 호출', value: formatNum(s.totalCalls || 0) + '회', icon: '📡' },
+                    { label: '예상 비용', value: '$' + (s.estimatedCostUSD || 0).toFixed(3), icon: '💰' },
+                    { label: '일 평균', value: formatNum(s.dailyAvgTokens || 0), icon: '📊' }
+                ];
+                el.innerHTML = cards.map(function(c) {
+                    return '<div style="background:var(--card-bg); border-radius:12px; padding:16px; text-align:center;">'
+                        + '<div style="font-size:20px; margin-bottom:4px;">' + c.icon + '</div>'
+                        + '<div style="font-size:22px; font-weight:700; color:var(--text-color);">' + c.value + '</div>'
+                        + '<div style="font-size:12px; color:var(--hint-color); margin-top:4px;">' + c.label + '</div>'
+                        + '</div>';
+                }).join('');
+            }
+
+            // 일별 차트 (ColumnChart)
+            function renderDailyChart(daily) {
+                var el = document.getElementById('tokenDailyChart');
+                if (!el || daily.length === 0) {
+                    if (el) el.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">데이터 없음</div>';
+                    return;
+                }
+                var rows = [['날짜', 'Input', 'Output']];
+                daily.forEach(function(d) {
+                    var dateLabel = d.date.substring(5); // MM-DD
+                    rows.push([dateLabel, d.inputTokens, d.outputTokens]);
+                });
+                var dataTable = google.visualization.arrayToDataTable(rows);
+                var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                var chart = new google.visualization.ColumnChart(el);
+                chart.draw(dataTable, {
+                    isStacked: true,
+                    chartArea: { width: '85%', height: '75%' },
+                    backgroundColor: 'transparent',
+                    legend: { position: 'top', textStyle: { color: isDark ? '#aaa' : '#555', fontSize: 11 } },
+                    hAxis: { textStyle: { color: isDark ? '#888' : '#666', fontSize: 11 } },
+                    vAxis: { textStyle: { color: isDark ? '#888' : '#666', fontSize: 11 }, minValue: 0 },
+                    colors: ['#4285f4', '#fbbc04'],
+                    bar: { groupWidth: '60%' }
+                });
+            }
+
+            // 기능별 비율 (PieChart)
+            function renderFuncChart(byFunc) {
+                var el = document.getElementById('tokenFuncChart');
+                if (!el || byFunc.length === 0) {
+                    if (el) el.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">데이터 없음</div>';
+                    return;
+                }
+                var rows = [['기능', '토큰']];
+                byFunc.forEach(function(f) {
+                    rows.push([FUNC_LABELS[f.name] || f.name, f.totalTokens]);
+                });
+                var dataTable = google.visualization.arrayToDataTable(rows);
+                var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                var chart = new google.visualization.PieChart(el);
+                chart.draw(dataTable, {
+                    pieHole: 0.4,
+                    chartArea: { width: '90%', height: '85%' },
+                    backgroundColor: 'transparent',
+                    legend: { position: 'bottom', textStyle: { color: isDark ? '#aaa' : '#555', fontSize: 11 } },
+                    pieSliceTextStyle: { fontSize: 11 },
+                    colors: ['#4285f4', '#ea4335', '#fbbc04', '#34a853', '#ff6d01', '#46bdc6', '#7baaf7']
+                });
+            }
+
+            // 팀원별 사용량 테이블
+            function renderUserTable(byUser) {
+                var el = document.getElementById('tokenUserTable');
+                if (!el) return;
+                if (byUser.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px; color:var(--hint-color);">데이터 없음</div>'; return; }
+                var html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">'
+                    + '<thead><tr style="border-bottom:1px solid var(--border);">'
+                    + '<th style="text-align:left; padding:8px 4px; color:var(--hint-color);">사용자</th>'
+                    + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">호출</th>'
+                    + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">토큰</th>'
+                    + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">비율</th>'
+                    + '</tr></thead><tbody>';
+                byUser.forEach(function(u) {
+                    html += '<tr style="border-bottom:1px solid var(--border);">'
+                        + '<td style="padding:8px 4px;">' + u.name + '</td>'
+                        + '<td style="text-align:right; padding:8px 4px;">' + formatNum(u.calls) + '</td>'
+                        + '<td style="text-align:right; padding:8px 4px;">' + formatNum(u.totalTokens) + '</td>'
+                        + '<td style="text-align:right; padding:8px 4px;">' + u.pct + '%</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                el.innerHTML = html;
+            }
+
+            // 최근 로그 테이블
+            function renderRecentLogs(logs) {
+                var el = document.getElementById('tokenRecentLogs');
+                if (!el) return;
+                if (logs.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px; color:var(--hint-color);">데이터 없음</div>'; return; }
+                var html = '<table style="width:100%; border-collapse:collapse; font-size:12px; min-width:500px;">'
+                    + '<thead><tr style="border-bottom:1px solid var(--border);">'
+                    + '<th style="text-align:left; padding:6px 4px; color:var(--hint-color);">시간</th>'
+                    + '<th style="text-align:left; padding:6px 4px; color:var(--hint-color);">기능</th>'
+                    + '<th style="text-align:left; padding:6px 4px; color:var(--hint-color);">사용자</th>'
+                    + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">Input</th>'
+                    + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">Output</th>'
+                    + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">합계</th>'
+                    + '</tr></thead><tbody>';
+                logs.forEach(function(lg) {
+                    var ts = String(lg.timestamp);
+                    var timeStr = ts.length > 10 ? ts.substring(5, 16) : ts;
+                    html += '<tr style="border-bottom:1px solid var(--border);">'
+                        + '<td style="padding:6px 4px; white-space:nowrap;">' + timeStr + '</td>'
+                        + '<td style="padding:6px 4px;">' + (FUNC_LABELS[lg.functionName] || lg.functionName) + '</td>'
+                        + '<td style="padding:6px 4px;">' + lg.userName + '</td>'
+                        + '<td style="text-align:right; padding:6px 4px;">' + formatNum(lg.inputTokens) + '</td>'
+                        + '<td style="text-align:right; padding:6px 4px;">' + formatNum(lg.outputTokens) + '</td>'
+                        + '<td style="text-align:right; padding:6px 4px; font-weight:600;">' + formatNum(lg.totalTokens) + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                el.innerHTML = html;
+            }
+
+            // 숫자 포맷 (1,234)
+            function formatNum(n) {
+                return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+
+            console.log('[TokenModule] 모듈 초기화 완료');
         })();
     </script>
 
