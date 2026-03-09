@@ -14,7 +14,7 @@ const DB_CONFIG = {
       "업무 ID", "업무 유형", "상태", "프로젝트", "업무 제목",
       "상세 내용", "담당자", "요청자", "마감일", "선행 업무",
       "우선순위", "슬랙 링크", "캘린더 ID", "최근 수정일", "시작 시간",
-      "종료 시간", "소요 시간(분)"
+      "종료 시간", "소요 시간(분)", "시작일", "등록자"
     ]
   },
   PROJECTS: {
@@ -24,6 +24,10 @@ const DB_CONFIG = {
   USERS: {
     NAME: "Users",
     HEADERS: ["이름", "슬랙 ID", "이메일"]
+  },
+  TASK_REFERENCES: {
+    NAME: "Task_References",
+    HEADERS: ["Ref_ID", "Task_ID", "Author", "Content", "Action_Type", "Timestamp"]
   }
 };
 
@@ -228,7 +232,7 @@ function applyValidations() {
   if (!taskSheet) return;
 
   // 1. 상태 (C열) 드롭다운
-  setDropdown(taskSheet, 3, ["대기", "진행중", "완료", "보류"]);
+  setDropdown(taskSheet, 3, ["수락대기", "진행중", "완료", "보류", "삭제"]);
   
   // 2. 우선순위 (K열) 드롭다운
   setDropdown(taskSheet, 11, ["🔥 높음", "중간", "낮음"]);

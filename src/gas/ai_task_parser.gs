@@ -1,6 +1,27 @@
 /**
- * [파일명]: ai_task_parser.gs
- * [기능 설명]: 비정형 텍스트를 Claude API로 분석하여 정형화된 업무 배열을 추출하고 시트에 자동 등록합니다.
+ * ============================================
+ * 📋 배포 이력 (Deploy Header)
+ * ============================================
+ * @file        ai_task_parser.gs
+ * @version     v1.1.0
+ * @updated     2026-03-09 (KST)
+ * @agent       에이다 BE (자비스 개발팀)
+ * @ordered-by  용남 대표
+ * @description 비정형 텍스트를 Claude API로 분석하여 정형화된 업무 배열을 추출하고 시트에 자동 등록합니다.
+ *
+ * @change-summary
+ *   AS-IS: API 키를 빈 전역변수(CLAUDE_API_KEY "")로 직접 참조하여 노트 업무등록/요약 기능 불가
+ *   TO-BE: getClaudeApiKey() 공통 헬퍼(PropertiesService 기반)로 통일하여 정상 동작
+ *
+ * @features
+ *   - [수정] extractTasksWithClaude() — API 키 로딩을 getClaudeApiKey()로 변경
+ *   - [수정] parseTaskFromMemoWeb() — API 키 로딩을 getClaudeApiKey()로 변경
+ *   - [수정] summarizeMemoContent() — API 키 로딩을 getClaudeApiKey()로 변경
+ *
+ * ── 변경 이력 ──────────────────────────
+ * v1.1.0 | 2026-03-09 | 에이다 BE | API 키 로딩을 getClaudeApiKey()로 통일 (김감사 QA CRITICAL 해소)
+ * v1.0.0 | 2026-03-01 | 에이다 BE | 최초 작성 — AI 업무 추출 및 메모 요약
+ * ============================================
  */
 
 function parseAndCreateTasks(text, userName) {
@@ -91,13 +112,13 @@ function extractTasksWithClaude(text, userName) {
 
   let apiKey = "";
   try {
-    apiKey = CLAUDE_API_KEY; // ai_report.gs에 정의된 전역 상수 사용
+    apiKey = getClaudeApiKey(); // ai_briefing.gs의 공통 헬퍼 사용 (PropertiesService 기반)
   } catch (e) {
-    console.error("CLAUDE_API_KEY를 찾을 수 없습니다.");
+    console.error("CLAUDE_API_KEY를 찾을 수 없습니다:", e.message);
     return [];
   }
 
-  if (!apiKey || apiKey === "여기에_CLAUDE_API_KEY_입력") {
+  if (!apiKey) {
     console.error("CLAUDE_API_KEY가 올바르지 않습니다.");
     return [];
   }
@@ -148,9 +169,9 @@ function parseTaskFromMemoWeb(userName, text) {
   try {
     if (!text || text.trim() === "") return { success: false, message: "분석할 내용이 없습니다." };
     
-    // API Key 보안 로드
+    // API Key 보안 로드 (ai_briefing.gs의 공통 헬퍼 사용)
     let apiKey = "";
-    try { apiKey = CLAUDE_API_KEY; } catch(e) {}
+    try { apiKey = getClaudeApiKey(); } catch(e) {}
     if (!apiKey) return { success: false, message: "CLAUDE API키 설정이 없습니다." };
 
     // 기준 날짜 주입을 위한 오늘 스트링 (상대 기한 추론용)
@@ -238,7 +259,7 @@ function summarizeMemoContent(text, userName) {
     if (!text || text.trim() === "") return { success: false, message: "요약할 내용이 없습니다." };
 
     let apiKey = "";
-    try { apiKey = CLAUDE_API_KEY; } catch(e) {}
+    try { apiKey = getClaudeApiKey(); } catch(e) {}
     if (!apiKey) return { success: false, message: "CLAUDE API키 설정이 없습니다." };
 
     // [Phase 24 Refactoring] 장문 텍스트 처리
