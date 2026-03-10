@@ -543,11 +543,12 @@ function sendSlackDMById_(slackUserId, message) {
 // ═══════════════════════════════════════════
 
 /**
- * 통합 Webhook 수신 엔드포인트
+ * Webhook 라우터 (GitHub/Agent 웹훅 처리)
+ * doPost()에서 Slack 인터랙션이 아닌 경우 여기로 위임됨
  * - GitHub Issues Webhook (action + issue) → handleIssueCloseWebhook
  * - Agent Task Webhook (taskId) → handleAgentTaskWebhook (github_to_sheet_webhook.gs)
  */
-function doPost(e) {
+function handleWebhookPost(e) {
   try {
     if (!e.postData || !e.postData.contents) {
       return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "빈 요청" }))

@@ -364,6 +364,11 @@ function doPost(e) {
     }
   }
   
+  // 4. Slack 요청이 아닌 경우 → Webhook 라우터로 위임 (GitHub, Agent 등)
+  if (e.postData && e.postData.contents) {
+    return handleWebhookPost(e);
+  }
+
   return ContentService.createTextOutput("알 수 없는 요청입니다.");
 }
 
@@ -1161,6 +1166,23 @@ function handleIssueTeamAssignment(action, slackPayload) {
 
     var owner = "syn-glitch";
     var repo = "gongdo-task-system";
+
+    // 중복 클릭 방지: 이미 assigned:* 라벨이 있는지 확인
+    var issueUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber;
+    var issueResp = UrlFetchApp.fetch(issueUrl, {
+      method: "get",
+      headers: { "Authorization": "token " + githubToken },
+      muteHttpExceptions: true
+    });
+    if (issueResp.getResponseCode() === 200) {
+      var issueData = JSON.parse(issueResp.getContentText());
+      var existingLabels = (issueData.labels || []).map(function(l) { return l.name; });
+      var alreadyAssigned = existingLabels.filter(function(n) { return n.startsWith("assigned:"); });
+      if (alreadyAssigned.length > 0) {
+        sendSlackResponse_(userId, "⚠️ 이슈 #" + issueNumber + "은 이미 *" + alreadyAssigned[0] + "*로 배정되어 있습니다.");
+        return ContentService.createTextOutput("");
+      }
+    }
 
     // 라벨이 없으면 생성
     ensureGitHubLabel_(githubToken, owner, repo, teamLabel,
