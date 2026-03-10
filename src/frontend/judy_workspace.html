@@ -4633,26 +4633,21 @@
             document.getElementById('editDue').value = task.rawDueStr || '';
             document.getElementById('editStatus').value = task.status || '대기';
 
-            // v3.1.4: 발행자(전달 업무) → 읽기 전용 처리
+            // v3.1.5 fix(#4): 발행자(전달 업무)도 수정/삭제 가능하도록 읽기 전용 제한 제거
             const isRequester = task.isRequester === true;
             const modalTitle = document.querySelector('#editModalOverlay .dash-modal h2');
-            modalTitle.textContent = isRequester ? '📋 전달 업무 상세 (읽기 전용)' : '📝 업무 상세 및 수정';
-            document.getElementById('editTitle').readOnly = isRequester;
-            document.getElementById('editDesc').readOnly = isRequester;
-            document.getElementById('editDue').readOnly = isRequester;
-            document.getElementById('editStatus').disabled = isRequester;
-            document.getElementById('submitEditBtn').style.display = isRequester ? 'none' : '';
-            document.querySelector('#editModalOverlay .btn-delete').style.display = isRequester ? 'none' : '';
-            // 참고사항 추가 버튼도 숨김
+            modalTitle.textContent = isRequester ? '📋 전달 업무 상세 및 수정' : '📝 업무 상세 및 수정';
+            document.getElementById('editTitle').readOnly = false;
+            document.getElementById('editDesc').readOnly = false;
+            document.getElementById('editDue').readOnly = false;
+            document.getElementById('editStatus').disabled = false;
+            document.getElementById('submitEditBtn').style.display = '';
+            document.querySelector('#editModalOverlay .btn-delete').style.display = '';
+            // 참고사항 추가 버튼 표시
             const refAddBtn = document.querySelector('#editModalOverlay .form-group [onclick="toggleRefInput()"]');
-            if (refAddBtn) refAddBtn.style.display = isRequester ? 'none' : '';
-            if (isRequester) {
-                document.getElementById('editTitle').style.opacity = '0.7';
-                document.getElementById('editDesc').style.opacity = '0.7';
-            } else {
-                document.getElementById('editTitle').style.opacity = '1';
-                document.getElementById('editDesc').style.opacity = '1';
-            }
+            if (refAddBtn) refAddBtn.style.display = '';
+            document.getElementById('editTitle').style.opacity = '1';
+            document.getElementById('editDesc').style.opacity = '1';
 
             document.getElementById('editModalOverlay').classList.add('show');
 
