@@ -1,0 +1,255 @@
+name: "🕵️ 김감사 QA — 이슈 자동 분석"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  analyze-issue:
+    runs-on: ubuntu-latest
+    # from-workspace 라벨이 있는 이슈만 실행
+    if: contains(toJSON(github.event.issue.labels.*.name), 'from-workspace')
+
+    steps:
+      # 0. 중복 실행 방지 — qa-reviewed 라벨이 이미 있으면 스킵
+      - name: Check if already reviewed
+        id: check_reviewed
+        run: |
+          if echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q 'qa-reviewed'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 1. analyzing 라벨 부착 (분석 중 표시)
+      - name: Add analyzing label
+        if: steps.check_reviewed.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // analyzing 라벨이 없으면 생성
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'analyzing'
+              });
+            } catch (e) {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'analyzing',
+                color: 'fbca04',
+                description: '김감사 QA 분석 중'
+              });
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['analyzing']
+            });
+
+      # 2. 리포 체크아웃 (프롬프트 파일 읽기용)
+      - name: Checkout repo
+        if: steps.check_reviewed.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      # 3. 일일 실행 횟수 제한 (최대 20건/일)
+      - name: Check daily limit
+        if: steps.check_reviewed.outputs.skip == 'false'
+        id: rate_limit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().split('T')[0];
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'kim-qa-issue-analysis.yml',
+              created: `>=${today}`,
+              per_page: 25
+            });
+            const count = runs.total_count || 0;
+            console.log(`Today's run count: ${count}`);
+            if (count > 20) {
+              core.setOutput('exceeded', 'true');
+              core.warning('Daily limit exceeded (20 runs/day)');
+            } else {
+              core.setOutput('exceeded', 'false');
+            }
+
+      # 4. Claude API로 이슈 분석
+      - name: Analyze issue with Claude
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        id: claude_analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # 프롬프트 파일 읽기
+          SYSTEM_PROMPT=$(cat .github/prompts/issue_triage_prompt.md)
+
+          # 이슈 정보 추출 (JSON 이스케이프 처리)
+          ISSUE_TITLE=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
+          ISSUE_BODY=$(echo '${{ github.event.issue.body }}' | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))" | sed 's/^"//;s/"$//')
+          ISSUE_LABELS='${{ join(github.event.issue.labels.*.name, ', ') }}'
+          ISSUE_NUMBER='${{ github.event.issue.number }}'
+
+          USER_MSG="다음 GitHub Issue를 분석해주세요.
+
+          이슈 번호: #${ISSUE_NUMBER}
+          제목: ${ISSUE_TITLE}
+          라벨: ${ISSUE_LABELS}
+
+          본문:
+          ${ISSUE_BODY}"
+
+          # Claude API 호출
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "$(python3 -c "
+          import json, sys
+          system = open('.github/prompts/issue_triage_prompt.md').read()
+          user_msg = '''$USER_MSG'''
+          payload = {
+              'model': 'claude-sonnet-4-5-20250514',
+              'max_tokens': 2000,
+              'system': system,
+              'messages': [{'role': 'user', 'content': user_msg}]
+          }
+          print(json.dumps(payload))
+          ")")
+
+          # 응답에서 텍스트 추출
+          ANALYSIS=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              if 'content' in data and len(data['content']) > 0:
+                  print(data['content'][0]['text'])
+              elif 'error' in data:
+                  print(f\"[분석 실패] {data['error'].get('message', 'Unknown error')}\")
+              else:
+                  print('[분석 실패] 예상치 못한 응답 형식')
+          except Exception as e:
+              print(f'[분석 실패] {str(e)}')
+          ")
+
+          # 멀티라인 출력을 GITHUB_OUTPUT에 저장
+          echo "analysis<<ANALYSIS_EOF" >> $GITHUB_OUTPUT
+          echo "$ANALYSIS" >> $GITHUB_OUTPUT
+          echo "ANALYSIS_EOF" >> $GITHUB_OUTPUT
+
+      # 5. GitHub Issue에 QA 보고서 코멘트 추가
+      - name: Post QA report as comment
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = `${{ steps.claude_analysis.outputs.analysis }}`;
+            const body = `${analysis}\n\n---\n*🤖 김감사 QA팀 자동 분석 (Claude AI) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+      # 6. 라벨 교체: analyzing → qa-reviewed
+      - name: Update labels
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // analyzing 라벨 제거
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: 'analyzing'
+              });
+            } catch (e) { /* 라벨 없으면 무시 */ }
+
+            // qa-reviewed 라벨 추가
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'qa-reviewed'
+              });
+            } catch (e) {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'qa-reviewed',
+                color: '7057ff',
+                description: '김감사 QA 분석 완료'
+              });
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['qa-reviewed']
+            });
+
+      # 7. 슬랙 DM 발송 (요약 + GitHub 링크)
+      - name: Send Slack DM to CEO
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CEO_ID: "U02S3CN9E6R"
+        run: |
+          ISSUE_NUMBER='${{ github.event.issue.number }}'
+          ISSUE_TITLE='${{ github.event.issue.title }}'
+          ISSUE_URL='${{ github.event.issue.html_url }}'
+          LABELS='${{ join(github.event.issue.labels.*.name, ', ') }}'
+
+          # 요약 메시지 (3줄 + 링크)
+          MSG="━━━━━━━━━━━━━━━━━━━━
+          🕵️ *김감사 QA 자동 분석 완료*
+          ━━━━━━━━━━━━━━━━━━━━
+          🔢 이슈 #${ISSUE_NUMBER}: ${ISSUE_TITLE}
+          🏷️ 라벨: ${LABELS}
+          📋 QA 보고서가 GitHub 코멘트에 등록되었습니다.
+
+          🔗 보고서 확인: ${ISSUE_URL}
+
+          💡 상세 분석 내용은 위 링크의 코멘트를 확인해주세요."
+
+          # Slack DM 발송 (chat.postMessage — user ID를 channel로)
+          curl -s -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(python3 -c "
+          import json
+          print(json.dumps({
+              'channel': '${SLACK_CEO_ID}',
+              'text': '''${MSG}'''
+          }))
+          ")" > /dev/null
+
+      # 8. 일일 한도 초과 시 라벨 정리
+      - name: Clean up on rate limit
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: 'analyzing'
+              });
+            } catch (e) {}
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ 김감사 QA 자동 분석 일일 한도(20건) 초과. 수동 검토가 필요합니다.'
+            });

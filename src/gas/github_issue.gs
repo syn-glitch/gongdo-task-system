@@ -164,7 +164,7 @@ function submitIssueFromWeb(title, category, severity, description, location, im
 
   } catch (e) {
     console.error("[submitIssueFromWeb] Error:", e, e.stack);
-    return { success: false, error: "[디버그] " + e.message };
+    return { success: false, error: "이슈 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." };
   }
 }
 
@@ -608,36 +608,6 @@ function getSeverityLabel_(severity) {
 /**
  * GitHub Labels 초기 설정 (1회 실행)
  */
-/**
- * [임시 유틸] GITHUB_TOKEN 설정 + 오래된 SESSION 속성 정리
- * GAS 에디터에서 이 함수를 선택 → 실행 (1회만)
- * ★★★ 실행 후 이 함수 블록을 삭제할 것 ★★★
- */
-function SETUP_GITHUB_TOKEN() {
-  var props = PropertiesService.getScriptProperties();
-
-  // 1. GITHUB_TOKEN 설정 (보안을 위해 하드코딩된 토큰 삭제)
-  // 대표님: ghp_... 형식의 토큰을 [프로젝트 설정 > 스크립트 속성]에 직접 입력하거나
-  // 아래 line에 임시로 넣고 실행 후 즉시 삭제해 주세요.
-  // props.setProperty("GITHUB_TOKEN", "YOUR_TOKEN_HERE");
-  console.log("⚠️ GITHUB_TOKEN 설정은 스크립트 속성에서 직접 진행해 주세요.");
-
-  // 2. 오래된 SESSION_ 속성 정리 (50개 넘는 세션 데이터 삭제)
-  var all = props.getProperties();
-  var deleted = 0;
-  for (var key in all) {
-    if (key.indexOf("SESSION_") === 0) {
-      props.deleteProperty(key);
-      deleted++;
-    }
-  }
-  console.log("🧹 SESSION 속성 " + deleted + "개 삭제 완료");
-
-  // 3. 확인
-  var token = props.getProperty("GITHUB_TOKEN");
-  console.log("🔑 GITHUB_TOKEN 확인: " + (token ? "설정됨 (" + token.substring(0, 8) + "...)" : "미설정"));
-}
-
 function setupGitHubLabels() {
   var labels = [
     { name: "from-workspace", color: "0075ca", description: "워크스페이스에서 제보된 이슈" },
