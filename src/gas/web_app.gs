@@ -43,7 +43,7 @@
 const SLACK_USER_MAP = {
   "U02S3CN9E6R": "syn",
   "U08SJ3SJQ9W": "jieun",
-  "U02SK29URP": "hyerim",
+  "U02SK29UVRP": "hyerim",
   "U0749G2SNBE": "yuna",
   "U04JL09C6DV": "sangho",
   "U02S3EURC21": "kwansu",
@@ -930,9 +930,26 @@ function getOrCreateRefSheet(ss) {
  * @returns {Object} { ok, error, detail }
  */
 function sendTaskDM(targetUserName, message) {
+  // 1. 실명 매핑 확인 (송용남, 이지은 등)
   var slackUserId = USER_NAME_TO_SLACK_ID[targetUserName];
+
+  // 2. 실명 매핑이 없으면 Slack Account ID 매핑 확인 (syn, jieun 등)
   if (!slackUserId) {
-    return { ok: false, error: "USER_NOT_MAPPED", detail: "사용자 '" + targetUserName + "'가 Slack ID 매핑 테이블에 없습니다." };
+    for (var id in SLACK_USER_MAP) {
+      if (SLACK_USER_MAP[id] === targetUserName) {
+        slackUserId = id;
+        break;
+      }
+    }
+  }
+
+  // 3. 여전히 없으면(직접 ID가 넘어온 경우 포함) 그대로 사용 시도 (ID 형식: U...)
+  if (!slackUserId && targetUserName.startsWith("U")) {
+    slackUserId = targetUserName;
+  }
+
+  if (!slackUserId) {
+    return { ok: false, error: "USER_NOT_MAPPED", detail: "사용자 '" + targetUserName + "'가 ID 매팅 테이블에 없습니다." };
   }
   
   try {
