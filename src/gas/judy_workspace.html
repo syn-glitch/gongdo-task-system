@@ -1563,11 +1563,13 @@
                 font-weight: 600;
                 cursor: pointer;
             }
+
             .issue-tab-btn.active {
                 background: var(--primary-mobile);
                 color: #fff;
                 border-color: var(--primary-mobile);
             }
+
             .issue-card {
                 background: var(--card-bg);
                 border: 1px solid var(--border);
@@ -1577,15 +1579,18 @@
                 cursor: pointer;
                 transition: border-color 0.2s;
             }
+
             .issue-card:hover {
                 border-color: var(--primary-mobile);
             }
+
             .issue-card-title {
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--text-color);
                 margin-bottom: 6px;
             }
+
             .issue-card-meta {
                 font-size: 12px;
                 color: var(--hint-color);
@@ -1594,6 +1599,7 @@
                 flex-wrap: wrap;
                 align-items: center;
             }
+
             .issue-label {
                 display: inline-block;
                 padding: 2px 8px;
@@ -1609,8 +1615,13 @@
             }
 
             /* 토큰 탭 모바일 반응형 */
-            #tokenSummaryCards { grid-template-columns: repeat(2, 1fr) !important; }
-            #viewTokens [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+            #tokenSummaryCards {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            #viewTokens [style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
 
             .editor-container {
                 padding: 10px 20px 20px 20px;
@@ -2267,18 +2278,28 @@
         /* ========== Memo Edit Fullscreen Modal ========== */
         .memo-edit-modal-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 10002;
             display: flex;
             align-items: center;
             justify-content: center;
             animation: memoModalFadeIn 0.2s ease;
         }
+
         @keyframes memoModalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         .memo-edit-modal {
             background: var(--surface-elevated);
             width: min(90vw, 800px);
@@ -2286,9 +2307,10 @@
             border-radius: 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
+
         .memo-edit-modal-header {
             display: flex;
             align-items: center;
@@ -2297,6 +2319,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-close {
             background: none;
             border: none;
@@ -2306,12 +2329,17 @@
             padding: 0 4px;
             line-height: 1;
         }
-        .memo-edit-modal-close:hover { color: var(--text-color); }
+
+        .memo-edit-modal-close:hover {
+            color: var(--text-color);
+        }
+
         .memo-edit-modal-title {
             font-size: 16px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .memo-edit-modal-meta {
             padding: 10px 20px;
             font-size: 13px;
@@ -2319,6 +2347,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-toolbar {
             display: flex;
             gap: 4px;
@@ -2328,6 +2357,7 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         .memo-edit-modal-toolbar button {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -2340,16 +2370,19 @@
             min-width: 32px;
             transition: background 0.15s;
         }
+
         .memo-edit-modal-toolbar button:hover {
             background: var(--primary);
             color: white;
         }
+
         .memo-edit-modal-body {
             flex: 1;
             padding: 16px 20px;
             overflow: hidden;
             display: flex;
         }
+
         .memo-edit-modal-textarea {
             width: 100%;
             height: 100%;
@@ -2365,9 +2398,11 @@
             outline: none;
             box-sizing: border-box;
         }
+
         .memo-edit-modal-textarea:focus {
             border-color: var(--primary);
         }
+
         .memo-edit-modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -2376,10 +2411,12 @@
             border-top: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-footer .btn-save-sm {
             padding: 10px 24px;
             font-size: 14px;
         }
+
         .memo-edit-modal-footer .btn-cancel-sm {
             padding: 10px 24px;
             font-size: 14px;
@@ -2391,6 +2428,7 @@
                 justify-content: stretch;
                 background: none;
             }
+
             .memo-edit-modal {
                 width: 100vw;
                 height: 100vh;
@@ -2398,13 +2436,16 @@
                 max-width: none;
                 max-height: none;
             }
+
             .memo-edit-modal-toolbar {
                 padding: 8px 12px;
             }
+
             .memo-edit-modal-toolbar button {
                 padding: 8px 10px;
                 font-size: 12px;
             }
+
             .memo-edit-modal-body {
                 padding: 12px;
             }
@@ -2706,7 +2747,8 @@
                 <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
                 <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
                 <button class="gnb-tab" id="navIssues" onclick="switchMainView('issues')">🐛 이슈</button>
-                <button class="gnb-tab" id="navTokens" onclick="switchMainView('tokens')" style="display:none;">📈 토큰</button>
+                <button class="gnb-tab" id="navTokens" onclick="switchMainView('tokens')" style="display:none;">📈
+                    토큰</button>
             </div>
         </div>
         <div class="gnb-right">
@@ -2894,14 +2936,17 @@
                     <h1>🐛 <span>이슈 제보</span></h1>
                     <div class="dash-actions">
                         <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
-                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;" onclick="openIssueForm()">+ 이슈 제보</button>
+                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;"
+                            onclick="openIssueForm()">+ 이슈 제보</button>
                     </div>
                 </div>
 
                 <!-- 이슈 탭 (open/closed) -->
                 <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
-                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢 Open</button>
-                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴 Closed</button>
+                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢
+                        Open</button>
+                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴
+                        Closed</button>
                 </div>
 
                 <!-- 이슈 목록 -->
@@ -2933,7 +2978,9 @@
                 <!-- 스크롤 영역 -->
                 <div style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;">
                     <!-- 요약 카드 -->
-                    <div id="tokenSummaryCards" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;"></div>
+                    <div id="tokenSummaryCards"
+                        style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+                    </div>
                     <!-- 일별 차트 -->
                     <div style="background:var(--card-bg); border-radius:12px; padding:16px; margin-bottom:16px;">
                         <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">📊 일별 사용량</h3>
@@ -2960,26 +3007,33 @@
         </div>
 
         <!-- 이슈 제보 모달 -->
-        <div id="issueFormModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div id="issueFormModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; font-size:18px;">🐛 이슈 제보</h2>
-                    <button onclick="closeIssueForm()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                    <button onclick="closeIssueForm()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:14px;">
                     <!-- 제목 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목 *</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목
+                            *</label>
                         <input id="issueTitle" type="text" maxlength="200" placeholder="어떤 문제가 발생했나요?"
-                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                     </div>
 
                     <!-- 카테고리 + 심각도 -->
                     <div style="display:flex; gap:12px;">
                         <div style="flex:1;">
-                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
-                            <select id="issueCategory" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
+                            <select id="issueCategory"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
                                 <option value="bug">🔴 버그</option>
                                 <option value="feature-error">🟡 기능 오류</option>
                                 <option value="ui-broken">🟠 UI 깨짐</option>
@@ -2987,8 +3041,10 @@
                             </select>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
-                            <select id="issueSeverity" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
+                            <select id="issueSeverity"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
                                 <option value="medium">보통</option>
                                 <option value="high">높음</option>
                                 <option value="low">낮음</option>
@@ -2998,32 +3054,37 @@
 
                     <!-- 발생 위치 (자동 감지 + 수정 가능) -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생 위치</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생
+                            위치</label>
                         <input id="issueLocation" type="text" placeholder="자동 감지됨 (수정 가능)"
-                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                     </div>
 
                     <!-- 설명 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
                         <textarea id="issueDescription" rows="4" maxlength="5000" placeholder="어떤 상황에서 발생했는지 자세히 알려주세요"
-                                  style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
                     </div>
 
                     <!-- 스크린샷 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷 (선택, 최대 5MB)</label>
-                        <input id="issueImage" type="file" accept="image/*"
-                               onchange="previewIssueImage(this)"
-                               style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷
+                            (선택, 최대 5MB)</label>
+                        <input id="issueImage" type="file" accept="image/*" onchange="previewIssueImage(this)"
+                            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                         <div id="issueImagePreview" style="margin-top:8px; display:none;">
-                            <img id="issueImagePreviewImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+                            <img id="issueImagePreviewImg"
+                                style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
                         </div>
                     </div>
 
                     <!-- 제출 버튼 -->
                     <button id="issueSubmitBtn" onclick="submitIssue()"
-                            style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
+                        style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
                         제보하기
                     </button>
                 </div>
@@ -3031,11 +3092,14 @@
         </div>
 
         <!-- 이슈 상세 모달 -->
-        <div id="issueDetailModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div id="issueDetailModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h2 id="issueDetailTitle" style="margin:0; font-size:18px;"></h2>
-                    <button onclick="closeIssueDetail()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                    <button onclick="closeIssueDetail()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
                 </div>
                 <div id="issueDetailBody" style="font-size:14px; line-height:1.7; color:var(--text-color);"></div>
             </div>
@@ -3053,12 +3117,15 @@
                     <select id="formProject" style="flex:1;">
                         <option value="">로딩 중...</option>
                     </select>
-                    <button type="button" class="btn-cancel" style="padding:8px 12px; font-size:12px; white-space:nowrap;" onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
+                    <button type="button" class="btn-cancel"
+                        style="padding:8px 12px; font-size:12px; white-space:nowrap;"
+                        onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
                 </div>
                 <div id="newProjectInputWrap" style="display:none; margin-top:8px;">
                     <div style="display:flex; gap:8px;">
                         <input type="text" id="newProjectName" placeholder="새 프로젝트 이름" style="flex:1;">
-                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;" onclick="createNewProject()">생성</button>
+                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;"
+                            onclick="createNewProject()">생성</button>
                     </div>
                 </div>
             </div>
@@ -3138,16 +3205,21 @@
                 </div>
             </div>
             <!-- v3.1.1: 참고사항 타임라인 (가시성 개선) -->
-            <div class="form-group" style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
+            <div class="form-group"
+                style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-weight:600; font-size:14px;">📎 참고사항</span>
-                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;" onclick="toggleRefInput()">+ 추가</button>
+                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;"
+                        onclick="toggleRefInput()">+ 추가</button>
                 </label>
                 <div id="refInputWrap" style="display:none; margin-top:8px;">
-                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)" style="min-height:60px;"></textarea>
+                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)"
+                        style="min-height:60px;"></textarea>
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
-                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;" onclick="toggleRefInput()">취소</button>
-                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;" onclick="submitNewRef()">등록</button>
+                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;"
+                            onclick="toggleRefInput()">취소</button>
+                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;"
+                            onclick="submitNewRef()">등록</button>
                     </div>
                 </div>
                 <div id="refTimeline" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
@@ -3230,7 +3302,8 @@
                 <button type="button" onclick="insertMemoMarkdown('[','](url)')" title="링크">🔗</button>
             </div>
             <div class="memo-edit-modal-body">
-                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea" placeholder="메모 내용을 입력하세요..."></textarea>
+                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea"
+                    placeholder="메모 내용을 입력하세요..."></textarea>
             </div>
             <div class="memo-edit-modal-footer">
                 <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
@@ -4210,7 +4283,8 @@
 
             const counts = { '진행중': 0, '대기': 0, '보류': 0, '완료': 0, '수락대기': 0, '전달': 0 };
             tasks.forEach(t => {
-                if (t.isRequester) { counts['전달']++; }
+                // v3.1.3: 신청자 업무도 실제 상태로 집계하되, 수락 전(수락대기)만 '전달'로 별도 표시
+                if (t.isRequester && t.status === '수락대기') { counts['전달']++; }
                 else if (counts[t.status] !== undefined) { counts[t.status]++; }
             });
             const activeCount = counts['진행중'] + counts['대기'] + counts['보류'] + counts['수락대기'] + counts['전달'];
@@ -4294,10 +4368,10 @@
                     </td>
                     <td style="color:var(--hint-color); font-size:13px;">${t.project}</td>
                     <td>${dueHtml}</td>
-                    <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
+                    <td><span class="status-badge badge-${(t.isRequester && t.status === '수락대기') ? '전달' : t.status}">${(t.isRequester && t.status === '수락대기') ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
                         ${t.isRequester ?
-                            '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
+                        '<div style="color:var(--hint-color); font-size:12px; display:flex; align-items:center; gap:4px;"><span style="font-size:10px;">👤</span> ' + t.assignee + '</div>' :
                         t.status === '수락대기' && t.assignee === g_userName ?
                             '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
                             '<select class="status-select" onchange="changeTaskStatus(' + t.row + ', this.value, \'' + t.id + '\')">' +
@@ -4461,7 +4535,7 @@
             if (!name) return showToast('❌ 프로젝트 이름을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('newProjectName').value = '';
@@ -4471,7 +4545,7 @@
                         loadProjectsList();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .createProjectFromWeb(name, g_userName);
         }
 
@@ -4517,14 +4591,14 @@
         // v3.1: 업무 수락
         function acceptTask(rowNum) {
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         loadTasks();
                         if (window._kanbanInitialized) loadKanban();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .acceptTaskFromWeb(rowNum, g_userName);
         }
 
@@ -4537,13 +4611,13 @@
 
         function submitNewRef() {
             var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-            var task = currentTasks.find(function(t) { return t.row === rowNum; });
+            var task = currentTasks.find(function (t) { return t.row === rowNum; });
             if (!task) return;
             var content = document.getElementById('refNewContent').value.trim();
             if (!content) return showToast('❌ 내용을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('refNewContent').value = '';
@@ -4551,7 +4625,7 @@
                         loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .addTaskReference(task.id, content, g_userName);
         }
 
@@ -4560,15 +4634,15 @@
             timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px;">로딩 중...</div>';
 
             google.script.run
-                .withSuccessHandler(function(refs) {
+                .withSuccessHandler(function (refs) {
                     if (!refs || refs.length === 0) {
                         timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px; font-size:13px;">참고사항이 없습니다</div>';
                         return;
                     }
                     var html = '';
-                    refs.forEach(function(ref) {
+                    refs.forEach(function (ref) {
                         var date = ref.createdAt ? new Date(ref.createdAt) : null;
-                        var dateStr = date ? (date.getMonth()+1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2,'0') : '';
+                        var dateStr = date ? (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0') : '';
                         // 링크 자동 감지 (sanitize)
                         var safeContent = ref.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         safeContent = safeContent.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--primary);">$1</a>');
@@ -4585,7 +4659,7 @@
                     });
                     timeline.innerHTML = html;
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     timeline.innerHTML = '<div style="color:var(--danger); padding:8px; font-size:13px;">로드 실패</div>';
                 })
                 .getTaskReferences(taskId);
@@ -4598,11 +4672,11 @@
             if (newText === null || newText.trim() === '' || newText === oldText) return;
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -4612,11 +4686,11 @@
         function deleteRef(refId) {
             if (!confirm('참고사항을 삭제하시겠습니까?')) return;
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -5118,7 +5192,7 @@
             saveBtn.textContent = '저장 중...';
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     if (res.success) {
@@ -5134,7 +5208,7 @@
                         showToast('❌ 수정 실패: ' + (res.message || '알 수 없는 오류'), true);
                     }
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     showToast('❌ 서버 통신 에러', true);
@@ -5161,7 +5235,7 @@
         }
 
         // ESC 키 핸들러
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 var overlay = document.getElementById('memoEditModalOverlay');
                 if (overlay && overlay.style.display !== 'none') {
@@ -5216,7 +5290,7 @@
             wrapper.appendChild(contentDiv);
 
             // 모달에서 수정 완료 시 contentDiv 업데이트 리스너
-            document.addEventListener('memoEdited', function(e) {
+            document.addEventListener('memoEdited', function (e) {
                 if (e.detail.dateStr === dateStr && e.detail.timeStr === timeStr) {
                     currentContent = e.detail.newContent;
                     contentDiv.textContent = currentContent;
@@ -5498,7 +5572,7 @@
 
     <!-- Issue Board Module -->
     <script>
-        (function() {
+        (function () {
             // 상태 관리
             window._issueState = 'open';
             window._issuePage = 1;
@@ -5507,13 +5581,13 @@
 
             // 원래 switchMainView를 래핑하여 현재 탭 추적
             const _origSwitchMainView = window.switchMainView;
-            window.switchMainView = function(viewName) {
+            window.switchMainView = function (viewName) {
                 window._currentActiveView = viewName;
                 _origSwitchMainView(viewName);
             };
 
             // 이슈 목록 로드
-            window.loadIssues = function() {
+            window.loadIssues = function () {
                 if (window._issueLoading) return;
                 window._issueLoading = true;
                 window._issuePage = 1;
@@ -5522,7 +5596,7 @@
                 listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">불러오는 중...</div>';
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         window._issueLoading = false;
                         if (!result || !result.success) {
                             listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">이슈를 불러올 수 없습니다.</div>';
@@ -5531,7 +5605,7 @@
                         renderIssueList(result.issues, false);
                         document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         window._issueLoading = false;
                         listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">오류: ' + err.message + '</div>';
                     })
@@ -5539,25 +5613,25 @@
             };
 
             // 더보기
-            window.loadMoreIssues = function() {
+            window.loadMoreIssues = function () {
                 if (window._issueLoading) return;
                 window._issueLoading = true;
                 window._issuePage++;
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         window._issueLoading = false;
                         if (result && result.success) {
                             renderIssueList(result.issues, true);
                             document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                         }
                     })
-                    .withFailureHandler(function() { window._issueLoading = false; })
+                    .withFailureHandler(function () { window._issueLoading = false; })
                     .getGitHubIssues(window._issueState, window._issuePage);
             };
 
             // 탭 전환
-            window.switchIssueTab = function(state) {
+            window.switchIssueTab = function (state) {
                 window._issueState = state;
                 document.getElementById('issueTabOpen').classList.toggle('active', state === 'open');
                 document.getElementById('issueTabClosed').classList.toggle('active', state === 'closed');
@@ -5577,14 +5651,14 @@
                     return;
                 }
 
-                issues.forEach(function(issue) {
+                issues.forEach(function (issue) {
                     var card = document.createElement('div');
                     card.className = 'issue-card';
-                    card.onclick = function() { openIssueDetail(issue.number); };
+                    card.onclick = function () { openIssueDetail(issue.number); };
 
                     var labelsHtml = '';
                     if (issue.labels) {
-                        issue.labels.forEach(function(l) {
+                        issue.labels.forEach(function (l) {
                             if (l.name === 'from-workspace') return; // 내부 라벨은 숨김
                             labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + l.name + '</span>';
                         });
@@ -5596,9 +5670,9 @@
                     card.innerHTML =
                         '<div class="issue-card-title">' + stateIcon + ' #' + issue.number + ' ' + escapeHtml(issue.title) + '</div>' +
                         '<div class="issue-card-meta">' +
-                            '<span>' + timeAgo + '</span>' +
-                            (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
-                            labelsHtml +
+                        '<span>' + timeAgo + '</span>' +
+                        (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
+                        labelsHtml +
                         '</div>';
 
                     listEl.appendChild(card);
@@ -5606,7 +5680,7 @@
             }
 
             // 이슈 제보 폼 열기
-            window.openIssueForm = function() {
+            window.openIssueForm = function () {
                 // 발생 위치 자동 감지
                 var locationInput = document.getElementById('issueLocation');
                 var viewMap = { note: '노트', tasks: '업무', kanban: '칸반', calendar: '달력', issues: '이슈' };
@@ -5615,7 +5689,7 @@
                 document.getElementById('issueFormModal').style.display = 'flex';
             };
 
-            window.closeIssueForm = function() {
+            window.closeIssueForm = function () {
                 document.getElementById('issueFormModal').style.display = 'none';
                 // 폼 리셋
                 document.getElementById('issueTitle').value = '';
@@ -5628,7 +5702,7 @@
             };
 
             // 이미지 미리보기
-            window.previewIssueImage = function(input) {
+            window.previewIssueImage = function (input) {
                 var preview = document.getElementById('issueImagePreview');
                 var previewImg = document.getElementById('issueImagePreviewImg');
                 if (input.files && input.files[0]) {
@@ -5639,7 +5713,7 @@
                         return;
                     }
                     var reader = new FileReader();
-                    reader.onload = function(e) {
+                    reader.onload = function (e) {
                         previewImg.src = e.target.result;
                         preview.style.display = 'block';
                     };
@@ -5650,7 +5724,7 @@
             };
 
             // 이슈 제출
-            window.submitIssue = function() {
+            window.submitIssue = function () {
                 var title = document.getElementById('issueTitle').value.trim();
                 if (!title) { showToast('제목을 입력해 주세요.', 'error'); return; }
 
@@ -5678,7 +5752,7 @@
                 }
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '제보하기';
                         if (result && result.success) {
@@ -5690,7 +5764,7 @@
                             showToast(result ? result.error : '등록 실패', 'error');
                         }
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '제보하기';
                         showToast('오류: ' + err.message, 'error');
@@ -5699,13 +5773,13 @@
             };
 
             // 이슈 상세 보기
-            window.openIssueDetail = function(issueNumber) {
+            window.openIssueDetail = function (issueNumber) {
                 document.getElementById('issueDetailTitle').textContent = '불러오는 중...';
                 document.getElementById('issueDetailBody').innerHTML = '';
                 document.getElementById('issueDetailModal').style.display = 'flex';
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         if (result && result.success) {
                             var issue = result.issue;
                             var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
@@ -5713,18 +5787,18 @@
 
                             // body에서 METADATA 블록 제거하고 표시
                             var body = (issue.body || '').replace(/<!-- METADATA[\s\S]*?-->/, '').trim();
-                            // 간단한 마크다운 → HTML 변환
-                            body = body
-                                .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-                                .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
-                                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                                .replace(/\n/g, '<br>');
+                                // 간단한 마크다운 → HTML 변환
+                                body = body
+                                    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+                                    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+                                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
+                                    .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                    .replace(/\n/g, '<br>');
 
                             var labelsHtml = '';
                             if (issue.labels) {
-                                issue.labels.forEach(function(l) {
+                                issue.labels.forEach(function (l) {
                                     if (l.name === 'from-workspace') return;
                                     labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + '; margin-right:4px;">' + l.name + '</span>';
                                 });
@@ -5743,14 +5817,14 @@
                             document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
                         }
                     })
-                    .withFailureHandler(function() {
+                    .withFailureHandler(function () {
                         document.getElementById('issueDetailTitle').textContent = '오류';
                         document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
                     })
                     .getGitHubIssueDetail(issueNumber);
             };
 
-            window.closeIssueDetail = function() {
+            window.closeIssueDetail = function () {
                 document.getElementById('issueDetailModal').style.display = 'none';
             };
 
@@ -5787,7 +5861,7 @@
 
     <!-- ═══ 📈 토큰 사용량 모듈 ═══ -->
     <script>
-        (function() {
+        (function () {
             'use strict';
 
             // 토큰 탭 접근 허용 사용자
@@ -5809,7 +5883,7 @@
             };
 
             // 권한 체크 후 탭 표시 — setAuthenticatedUser()에서 호출
-            window.checkAndShowTokenTab = function(uName) {
+            window.checkAndShowTokenTab = function (uName) {
                 if (TOKEN_ALLOWED_USERS.indexOf(uName) !== -1) {
                     var gnbBtn = document.getElementById('navTokens');
                     var bottomBtn = document.getElementById('btnNavTokens');
@@ -5822,23 +5896,23 @@
             function ensureGoogleCharts(callback) {
                 if (_googleChartsLoaded) { callback(); return; }
                 google.charts.load('current', { packages: ['corechart'] });
-                google.charts.setOnLoadCallback(function() {
+                google.charts.setOnLoadCallback(function () {
                     _googleChartsLoaded = true;
                     callback();
                 });
             }
 
             // 토큰 모듈 초기화
-            window.initTokenModule = function() {
-                ensureGoogleCharts(function() {
+            window.initTokenModule = function () {
+                ensureGoogleCharts(function () {
                     loadTokenStats();
                 });
             };
 
             // 기간 필터 전환
-            window.switchTokenPeriod = function(period) {
+            window.switchTokenPeriod = function (period) {
                 _tokenCurrentPeriod = period;
-                [1, 7, 15, 30].forEach(function(p) {
+                [1, 7, 15, 30].forEach(function (p) {
                     var btn = document.getElementById('tokenPeriod' + p);
                     if (btn) btn.classList.toggle('active', p === period);
                 });
@@ -5846,14 +5920,14 @@
             };
 
             // 데이터 로드
-            window.loadTokenStats = function() {
+            window.loadTokenStats = function () {
                 var uName = (typeof g_userName !== 'undefined' && g_userName) ? g_userName : ((typeof initUserName !== 'undefined') ? initUserName : '');
                 console.log('[TokenModule] loadTokenStats called, userName:', uName, ', period:', _tokenCurrentPeriod);
                 var container = document.getElementById('tokenSummaryCards');
                 if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--hint-color);">데이터 불러오는 중...</div>';
 
                 google.script.run
-                    .withSuccessHandler(function(data) {
+                    .withSuccessHandler(function (data) {
                         console.log('[TokenModule] 응답 수신:', data);
                         if (!data || data.error) {
                             if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ ' + (data ? data.error : '데이터 로드 실패 (userName: ' + uName + ')') + '</div>';
@@ -5861,7 +5935,7 @@
                         }
                         renderTokenDashboard(data);
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         console.error('[TokenModule] 호출 실패:', err);
                         if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ 오류: ' + err.message + '</div>';
                     })
@@ -5890,7 +5964,7 @@
                     { label: '예상 비용', value: '$' + (s.estimatedCostUSD || 0).toFixed(3), icon: '💰' },
                     { label: '일 평균', value: formatNum(s.dailyAvgTokens || 0), icon: '📊' }
                 ];
-                el.innerHTML = cards.map(function(c) {
+                el.innerHTML = cards.map(function (c) {
                     return '<div style="background:var(--card-bg); border-radius:12px; padding:16px; text-align:center;">'
                         + '<div style="font-size:20px; margin-bottom:4px;">' + c.icon + '</div>'
                         + '<div style="font-size:22px; font-weight:700; color:var(--text-color);">' + c.value + '</div>'
@@ -5907,7 +5981,7 @@
                     return;
                 }
                 var rows = [['날짜', 'Input', 'Output']];
-                daily.forEach(function(d) {
+                daily.forEach(function (d) {
                     var dateLabel = d.date.substring(5); // MM-DD
                     rows.push([dateLabel, d.inputTokens, d.outputTokens]);
                 });
@@ -5934,7 +6008,7 @@
                     return;
                 }
                 var rows = [['기능', '토큰']];
-                byFunc.forEach(function(f) {
+                byFunc.forEach(function (f) {
                     rows.push([FUNC_LABELS[f.name] || f.name, f.totalTokens]);
                 });
                 var dataTable = google.visualization.arrayToDataTable(rows);
@@ -5962,7 +6036,7 @@
                     + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">토큰</th>'
                     + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">비율</th>'
                     + '</tr></thead><tbody>';
-                byUser.forEach(function(u) {
+                byUser.forEach(function (u) {
                     html += '<tr style="border-bottom:1px solid var(--border);">'
                         + '<td style="padding:8px 4px;">' + u.name + '</td>'
                         + '<td style="text-align:right; padding:8px 4px;">' + formatNum(u.calls) + '</td>'
@@ -5988,7 +6062,7 @@
                     + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">Output</th>'
                     + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">합계</th>'
                     + '</tr></thead><tbody>';
-                logs.forEach(function(lg) {
+                logs.forEach(function (lg) {
                     var ts = String(lg.timestamp);
                     var timeStr = ts.length > 10 ? ts.substring(5, 16) : ts;
                     html += '<tr style="border-bottom:1px solid var(--border);">'

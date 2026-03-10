@@ -510,6 +510,20 @@ function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
       if (start instanceof Date) {
         sheet.getRange(rowNum, 17).setValue(Math.floor((now - start) / 60000));
       }
+
+      // v3.1.3: 신청자에게 완료 알림 DM 발송
+      var requester = String(sheet.getRange(rowNum, 8).getValue()).trim();
+      var title = sheet.getRange(rowNum, 5).getValue();
+      var taskId = sheet.getRange(rowNum, 1).getValue();
+      if (requester && requester !== userName) {
+        try {
+          var webAppUrl = ScriptApp.getService().getUrl();
+          sendTaskDM(requester, "✅ *업무가 완료되었습니다*\n" +
+            "🆔 " + taskId + " | 📝 " + title + "\n" +
+            "👤 담당자: " + userName + "님이 업무를 완료했습니다.\n\n" +
+            "🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
+        } catch (e) { console.error("완료 DM 발송 실패:", e); }
+      }
     }
 
     logActionV2({
