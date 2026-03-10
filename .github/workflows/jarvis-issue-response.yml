@@ -1,8 +1,12 @@
 name: "🤵 자비스 — 이슈 이해보고서 자동 작성"
 
 on:
-  issues:
-    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '이슈 번호'
+        required: true
+        type: string
 
 permissions:
   issues: write
@@ -11,36 +15,54 @@ permissions:
 jobs:
   write-response:
     runs-on: ubuntu-latest
-    # qa-reviewed 라벨이 방금 추가된 경우에만 실행
-    if: github.event.label.name == 'qa-reviewed'
 
     steps:
-      # 0. 중복 실행 방지 — jarvis-reviewed 라벨이 이미 있으면 스킵
-      - name: Check if already responded
-        id: check_done
-        run: |
-          if echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q 'jarvis-reviewed'; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
+      # 0. 이슈 정보 가져오기 (workflow_dispatch에서는 github.event.issue가 없음)
+      - name: Fetch issue data
+        id: issue_data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            const labels = issue.labels.map(l => l.name);
+
+            // jarvis-reviewed 라벨이 이미 있으면 스킵
+            if (labels.includes('jarvis-reviewed')) {
+              core.setOutput('skip', 'true');
+              return;
+            }
+            core.setOutput('skip', 'false');
+            core.setOutput('title', issue.title);
+            core.setOutput('labels', labels.join(', '));
+            core.setOutput('url', issue.html_url);
+
+            // body는 길 수 있으므로 파일로 저장
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/issue_body.txt', issue.body || '');
 
       # 1. 리포 체크아웃
       - name: Checkout repo
-        if: steps.check_done.outputs.skip == 'false'
+        if: steps.issue_data.outputs.skip == 'false'
         uses: actions/checkout@v4
 
       # 2. 김감사 QA 코멘트 가져오기
       - name: Get QA comment
-        if: steps.check_done.outputs.skip == 'false'
+        if: steps.issue_data.outputs.skip == 'false'
         id: get_qa_comment
         uses: actions/github-script@v7
         with:
           script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number
+              issue_number: issueNumber
             });
 
             // 김감사 QA 자동 분석 코멘트 찾기 (가장 최근 것)
@@ -54,33 +76,37 @@ jobs:
 
             if (!qaComment) {
               core.setOutput('found', 'false');
-              core.setOutput('comment', '김감사 QA 코멘트를 찾을 수 없습니다.');
             } else {
               core.setOutput('found', 'true');
-              // 환경변수로 전달하기 위해 파일에 저장
               const fs = require('fs');
               fs.writeFileSync('/tmp/qa_comment.txt', qaComment);
             }
 
       # 3. Claude API로 자비스 이해보고서 작성
       - name: Write understanding report with Claude
-        if: steps.check_done.outputs.skip == 'false' && steps.get_qa_comment.outputs.found == 'true'
+        if: steps.issue_data.outputs.skip == 'false' && steps.get_qa_comment.outputs.found == 'true'
         id: jarvis_report
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ steps.issue_data.outputs.title }}
+          ISSUE_LABELS: ${{ steps.issue_data.outputs.labels }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
           python3 << 'PYTHON_SCRIPT'
           import os, json, urllib.request, urllib.error
 
           api_key = os.environ["ANTHROPIC_API_KEY"]
           issue_title = os.environ.get("ISSUE_TITLE", "")
-          issue_body = os.environ.get("ISSUE_BODY", "")
           issue_labels = os.environ.get("ISSUE_LABELS", "")
           issue_number = os.environ.get("ISSUE_NUMBER", "")
+
+          # 이슈 본문 읽기
+          issue_body = ""
+          try:
+              with open("/tmp/issue_body.txt", "r") as f:
+                  issue_body = f.read()
+          except:
+              issue_body = "(본문 없음)"
 
           # 김감사 QA 코멘트 읽기
           qa_comment = ""
@@ -169,23 +195,24 @@ jobs:
 
       # 4. md 파일 커밋 & 푸시
       - name: Commit report file
-        if: steps.check_done.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
+        if: steps.issue_data.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add reports/jarvis-response/
-          git commit -m "docs: 자비스 이해보고서 — 이슈 #${{ github.event.issue.number }}" || echo "Nothing to commit"
+          git commit -m "docs: 자비스 이해보고서 — 이슈 #${{ inputs.issue_number }}" || echo "Nothing to commit"
           git push || echo "Push failed"
 
       # 5. GitHub Issue에 이해보고서 코멘트 등록
       - name: Post report as comment
-        if: steps.check_done.outputs.skip == 'false'
+        if: steps.issue_data.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const report = process.env.REPORT_RESULT;
             const success = process.env.REPORT_SUCCESS === 'true';
             const filename = process.env.REPORT_FILENAME || '';
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
 
             let body = report;
             if (success && filename) {
@@ -196,7 +223,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               body: body
             });
         env:
@@ -206,10 +233,11 @@ jobs:
 
       # 6. jarvis-reviewed 라벨 추가
       - name: Add jarvis-reviewed label
-        if: steps.check_done.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
+        if: steps.issue_data.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
             try {
               await github.rest.issues.getLabel({
                 owner: context.repo.owner,
@@ -228,19 +256,19 @@ jobs:
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               labels: ['jarvis-reviewed']
             });
 
       # 7. 슬랙 DM 발송
       - name: Send Slack DM to CEO
-        if: steps.check_done.outputs.skip == 'false'
+        if: steps.issue_data.outputs.skip == 'false'
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CEO_ID: "U02S3CN9E6R"
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          ISSUE_TITLE: ${{ steps.issue_data.outputs.title }}
+          ISSUE_URL: ${{ steps.issue_data.outputs.url }}
           REPORT_SUCCESS: ${{ steps.jarvis_report.outputs.success }}
         run: |
           python3 << 'PYTHON_SCRIPT'
