@@ -1608,6 +1608,10 @@
                 /* 탭바 높이만큼 여백 */
             }
 
+            /* 토큰 탭 모바일 반응형 */
+            #tokenSummaryCards { grid-template-columns: repeat(2, 1fr) !important; }
+            #viewTokens [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+
             .editor-container {
                 padding: 10px 20px 20px 20px;
             }
@@ -3424,6 +3428,11 @@
             // 모듈 초기화
             initNoteModule();
             // initTasksModule();
+
+            // [v3.1.4] 토큰 탭 권한 체크 — 인증 완료 시점에서 실행
+            if (typeof checkAndShowTokenTab === 'function') {
+                checkAndShowTokenTab(uname);
+            }
         }
 
         function showAccessDenied(reason) {
@@ -5783,7 +5792,7 @@
 
             // 토큰 탭 접근 허용 사용자
             var TOKEN_ALLOWED_USERS = ['송용남', '정혜림'];
-            var _tokenCurrentPeriod = 7; // 기본 7일
+            var _tokenCurrentPeriod = 1; // 기본 1일
             var _googleChartsLoaded = false;
 
             // 기능명 한글 매핑
@@ -5799,18 +5808,15 @@
                 'generateMorningBriefing': '모닝 브리핑'
             };
 
-            // 권한 체크 후 탭 표시
-            window.addEventListener('load', function() {
-                setTimeout(function() {
-                    var uName = (typeof initUserName !== 'undefined') ? initUserName : '';
-                    if (TOKEN_ALLOWED_USERS.indexOf(uName) !== -1) {
-                        var gnbBtn = document.getElementById('navTokens');
-                        var bottomBtn = document.getElementById('btnNavTokens');
-                        if (gnbBtn) gnbBtn.style.display = '';
-                        if (bottomBtn) bottomBtn.style.display = '';
-                    }
-                }, 500);
-            });
+            // 권한 체크 후 탭 표시 — setAuthenticatedUser()에서 호출
+            window.checkAndShowTokenTab = function(uName) {
+                if (TOKEN_ALLOWED_USERS.indexOf(uName) !== -1) {
+                    var gnbBtn = document.getElementById('navTokens');
+                    var bottomBtn = document.getElementById('btnNavTokens');
+                    if (gnbBtn) gnbBtn.style.display = '';
+                    if (bottomBtn) bottomBtn.style.display = '';
+                }
+            };
 
             // Google Charts 초기화
             function ensureGoogleCharts(callback) {
@@ -5841,19 +5847,22 @@
 
             // 데이터 로드
             window.loadTokenStats = function() {
-                var uName = (typeof initUserName !== 'undefined') ? initUserName : '';
+                var uName = (typeof g_userName !== 'undefined' && g_userName) ? g_userName : ((typeof initUserName !== 'undefined') ? initUserName : '');
+                console.log('[TokenModule] loadTokenStats called, userName:', uName, ', period:', _tokenCurrentPeriod);
                 var container = document.getElementById('tokenSummaryCards');
                 if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--hint-color);">데이터 불러오는 중...</div>';
 
                 google.script.run
                     .withSuccessHandler(function(data) {
+                        console.log('[TokenModule] 응답 수신:', data);
                         if (!data || data.error) {
-                            if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ ' + (data ? data.error : '데이터 로드 실패') + '</div>';
+                            if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ ' + (data ? data.error : '데이터 로드 실패 (userName: ' + uName + ')') + '</div>';
                             return;
                         }
                         renderTokenDashboard(data);
                     })
                     .withFailureHandler(function(err) {
+                        console.error('[TokenModule] 호출 실패:', err);
                         if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ 오류: ' + err.message + '</div>';
                     })
                     .getTokenUsageStats(_tokenCurrentPeriod, uName);

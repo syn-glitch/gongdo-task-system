@@ -3,7 +3,7 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_chat.gs
- * @version     v1.2.0
+ * @version     v1.3.0
  * @updated     2026-03-10 (KST)
  * @agent       에이다 BE (자비스 개발팀)
  * @ordered-by  용남 대표
@@ -15,9 +15,10 @@
  *   TO-BE: v1.2.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록
  *
  * @features
- *   - [수정] processJudyWebChat() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] askClaudeForChat() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용 + API 키 getClaudeApiKey() 교체 (QA F-1)
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.3.0 | 2026-03-10 | 에이다 BE | askClaudeForChat() 래퍼 적용 + API 키 수정 (QA F-1)
  * v1.2.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 (BNK-2026-03-10-001)
  * v1.1.0 | 2026-03-08 | 에이다 BE | Notes_v2 RAG 연동 + 배포 헤더 추가 (QA F-2)
  * v1.0.0 | 2026-03-01 | 클로이 FE | 최초 작성 — 웹 챗봇 + 슬랙 챗봇
@@ -320,32 +321,31 @@ function processAiChatSync(event, ssId) {
  * 사용자 질의응답용 Claude 호출 함수
  */
 function askClaudeForChat(dbContext, userQuery) {
-  // ai_report.gs 에 선언된 변수를 가져옵니다. (동일 프로젝트 내 전역변수로 공유됨)
   let apiKey = "";
   try {
-    apiKey = CLAUDE_API_KEY; 
+    apiKey = getClaudeApiKey();
   } catch (e) {
-    return "⚠️ Claude API 키가 ai_report.gs 파일에 올바르게 설정되어 있는지 확인해주세요.";
+    return "⚠️ Claude API 키가 PropertiesService에 설정되어 있는지 확인해주세요.";
   }
 
   const url = "https://api.anthropic.com/v1/messages";
-  
+
   const systemPrompt = `당신은 팀의 유능한 프로젝트 관리 비서 '주디'입니다.
 주어진 구글 시트 데이터베이스 정보를 바탕으로 사용자의 질문에 한국어로 친절하고 명쾌하게 답변하세요.
 슬랙 마크다운 기호를 적극 활용하여 가독성을 높여주세요. 데이터에 없는 내용은 '데이터에 없습니다'라고 솔직히 말해야 합니다.
 
 ${dbContext}
 `;
-  
+
   const payload = {
-    model: "claude-sonnet-4-20250514", 
+    model: "claude-sonnet-4-20250514",
     max_tokens: 1000,
     system: systemPrompt,
     messages: [
       { role: "user", content: userQuery }
     ]
   };
-  
+
   const options = {
     method: "post",
     headers: {
@@ -356,11 +356,10 @@ ${dbContext}
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
-  
+
   try {
-    const response = UrlFetchApp.fetch(url, options);
-    const result = JSON.parse(response.getContentText());
-    
+    const result = callClaudeAPI(url, options, "askClaudeForChat", "slack");
+
     if (result.error) {
        return `❌ 답변 생성 실패 (API 에러): ${result.error.message}`;
     }

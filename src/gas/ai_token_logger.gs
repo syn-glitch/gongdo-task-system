@@ -30,9 +30,6 @@
 // 상수
 // ═══════════════════════════════════════════
 
-/** Claude API 엔드포인트 */
-var CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-
 /** 토큰 사용량 시트명 */
 var TOKEN_USAGE_SHEET_NAME = "TokenUsage";
 
@@ -197,8 +194,13 @@ function getTokenUsageStats(period, userName) {
       rowDate = new Date(row[1]);
     }
     if (rowDate >= cutoff) {
+      // timestamp를 문자열로 변환 (google.script.run 직렬화 안전)
+      var tsStr = row[0];
+      if (row[0] instanceof Date) {
+        tsStr = Utilities.formatDate(row[0], Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+      }
       filtered.push({
-        timestamp: row[0],
+        timestamp: tsStr,
         date: Utilities.formatDate(
           rowDate instanceof Date && !isNaN(rowDate) ? rowDate : new Date(),
           Session.getScriptTimeZone(), "yyyy-MM-dd"

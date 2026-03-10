@@ -3,21 +3,22 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        ai_report.gs
- * @version     v1.2.0
+ * @version     v1.3.0
  * @updated     2026-03-10 (KST)
  * @agent       에이다 (자비스 개발팀)
  * @ordered-by  용남 대표
  * @description 슬랙 채널에 일간/주간 요약 리포트 전송 (Claude 연동)
  *
  * @change-summary
- *   AS-IS: v1.1.0 — API 호출 시 토큰 사용량 추적 없음
- *   TO-BE: v1.2.0 — callClaudeAPI() 래퍼 적용으로 토큰 사용량 자동 기록
+ *   AS-IS: v1.2.0 — generateMorningBriefing() API 키 하드코딩 (빈 문자열, 401 에러)
+ *   TO-BE: v1.3.0 — getClaudeApiKey() 적용으로 모닝 브리핑 API 인증 정상화
  *
  * @features
  *   - [수정] askClaude() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
- *   - [수정] generateMorningBriefing() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용
+ *   - [수정] generateMorningBriefing() — UrlFetchApp.fetch → callClaudeAPI() 래퍼 적용 + getClaudeApiKey() 적용
  *
  * ── 변경 이력 ──────────────────────────
+ * v1.3.0 | 2026-03-10 | 에이다 BE | generateMorningBriefing() API 키 getClaudeApiKey() 적용 (QA-2026-03-10-002 F-2)
  * v1.2.0 | 2026-03-10 | 에이다 BE | callClaudeAPI() 래퍼 적용 (BNK-2026-03-10-001)
  * v1.1.0 | 2026-03-08 09:56 | 에이다 | [QA-2026-03-08] API키 하드코딩 제거 및 로직 통합
  * v1.0.0 | 2026-02-21 22:28 | 자비스팀 | 최초 작성
@@ -159,17 +160,20 @@ function generateMorningBriefing() {
     ]
   };
   
+  let briefingApiKey = "";
+  try { briefingApiKey = getClaudeApiKey(); } catch(e) { console.error("모닝 브리핑 API 키 오류:", e); return; }
+
   const options = {
     method: "post",
     headers: {
-      "x-api-key": CLAUDE_API_KEY,
+      "x-api-key": briefingApiKey,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json"
     },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
-  
+
   try {
     const result = callClaudeAPI("https://api.anthropic.com/v1/messages", options, "generateMorningBriefing", "system");
 
