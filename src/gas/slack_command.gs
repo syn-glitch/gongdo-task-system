@@ -64,6 +64,11 @@ function doPost(e) {
         return handleIssueTeamAssignment(action, payload);
       }
 
+      // [4단계] 배포 승인/보류 버튼
+      if (action && action.action_id && (action.action_id === "deploy_approve_" || action.action_id === "deploy_hold_")) {
+        return handleDeployDecision(action, payload);
+      }
+
       // 기존 버튼 방식 호환 (필요시)
       if (action && action.action_id === "change_status_action") {
         const parts = action.value.split("|");
@@ -1214,10 +1219,18 @@ function handleIssueTeamAssignment(action, slackPayload) {
         muteHttpExceptions: true
       });
 
-      // 슬랙 응답
-      sendSlackResponse_(userId,
-        "✅ 이슈 #" + issueNumber + "이 *" + teamEmoji + " " + teamName + "*에 배정되었습니다.\n" +
-        "담당팀에서 이해보고서 확인 후 작업을 시작합니다.");
+      // 자비스 배정 시 자동 코드 수정 워크플로우 트리거
+      if (actionId === "assign_team_jarvis") {
+        triggerJarvisAutoFix_(githubToken, owner, repo, issueNumber);
+        sendSlackResponse_(userId,
+          "✅ 이슈 #" + issueNumber + "이 *" + teamEmoji + " " + teamName + "*에 배정되었습니다.\n" +
+          "🤖 자동 코드 수정을 시작합니다. 완료 시 슬랙으로 알려드리겠습니다.");
+      } else {
+        // 강철 AX팀 등 다른 팀 배정
+        sendSlackResponse_(userId,
+          "✅ 이슈 #" + issueNumber + "이 *" + teamEmoji + " " + teamName + "*에 배정되었습니다.\n" +
+          "담당팀에서 이해보고서 확인 후 작업을 시작합니다.");
+      }
     } else {
       Logger.log("[ERROR] GitHub 라벨 추가 실패: " + labelResp.getContentText());
       sendSlackResponse_(userId, "❌ GitHub 라벨 추가 실패. 수동 확인이 필요합니다.");
@@ -1229,6 +1242,121 @@ function handleIssueTeamAssignment(action, slackPayload) {
   }
 
   return ContentService.createTextOutput("");
+}
+
+/**
+ * 배포 승인/보류 처리
+ */
+function handleDeployDecision(action, slackPayload) {
+  try {
+    var userId = slackPayload.user.id;
+    var CEO_SLACK_ID = "U02S3CN9E6R";
+
+    // CEO만 배포 승인 가능
+    if (userId !== CEO_SLACK_ID) {
+      sendSlackResponse_(userId, "❌ 배포 승인은 대표만 가능합니다.");
+      return ContentService.createTextOutput("");
+    }
+
+    var parts = action.value.split("|");
+    var issueNumber = parts[0];
+    var prNumber = parts[1];
+
+    var githubToken = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+    var owner = "syn-glitch";
+    var repo = "gongdo-task-system";
+
+    if (action.action_id === "deploy_approve_") {
+      // PR 머지
+      var mergeUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + prNumber + "/merge";
+      var mergeResp = UrlFetchApp.fetch(mergeUrl, {
+        method: "put",
+        contentType: "application/json",
+        headers: { "Authorization": "token " + githubToken },
+        payload: JSON.stringify({
+          commit_title: "deploy: 이슈 #" + issueNumber + " 수정 배포",
+          merge_method: "squash"
+        }),
+        muteHttpExceptions: true
+      });
+
+      if (mergeResp.getResponseCode() === 200) {
+        // 이슈 닫기
+        var issueUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber;
+        UrlFetchApp.fetch(issueUrl, {
+          method: "patch",
+          contentType: "application/json",
+          headers: { "Authorization": "token " + githubToken },
+          payload: JSON.stringify({ state: "closed" }),
+          muteHttpExceptions: true
+        });
+
+        // 이슈에 배포 완료 코멘트
+        var commentUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments";
+        UrlFetchApp.fetch(commentUrl, {
+          method: "post",
+          contentType: "application/json",
+          headers: { "Authorization": "token " + githubToken },
+          payload: JSON.stringify({
+            body: "## 🚀 배포 완료\n\nPR #" + prNumber + " 머지 완료.\n대표 승인에 의해 배포되었습니다.\n\n> ⚠️ clasp push는 별도 수동 실행이 필요합니다."
+          }),
+          muteHttpExceptions: true
+        });
+
+        sendSlackResponse_(userId,
+          "🚀 *배포 승인 완료*\n" +
+          "• PR #" + prNumber + " → main 머지 완료\n" +
+          "• 이슈 #" + issueNumber + " 닫힘\n\n" +
+          "⚠️ GAS 반영은 `clasp pull && clasp push` 필요");
+      } else {
+        var errMsg = mergeResp.getContentText();
+        Logger.log("[ERROR] PR 머지 실패: " + errMsg);
+        sendSlackResponse_(userId, "❌ PR #" + prNumber + " 머지 실패.\n" + errMsg.substring(0, 200));
+      }
+
+    } else if (action.action_id === "deploy_hold_") {
+      // 보류 처리
+      var commentUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments";
+      UrlFetchApp.fetch(commentUrl, {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": "token " + githubToken },
+        payload: JSON.stringify({
+          body: "## ⏸️ 배포 보류\n\n대표 결정에 의해 배포가 보류되었습니다.\n수동 확인 후 진행해 주세요."
+        }),
+        muteHttpExceptions: true
+      });
+
+      sendSlackResponse_(userId,
+        "⏸️ *배포 보류*\n" +
+        "• 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+        "수동 확인 후 GitHub에서 직접 머지하거나 PR을 닫아주세요.");
+    }
+
+  } catch (e) {
+    Logger.log("[ERROR] handleDeployDecision: " + e.message);
+    sendSlackResponse_(slackPayload.user.id, "❌ 배포 처리 오류: " + e.message);
+  }
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * 자비스 자동 코드 수정 워크플로우 트리거
+ */
+function triggerJarvisAutoFix_(githubToken, owner, repo, issueNumber) {
+  var url = "https://api.github.com/repos/" + owner + "/" + repo + "/actions/workflows/jarvis-auto-fix.yml/dispatches";
+  var resp = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "token " + githubToken },
+    payload: JSON.stringify({
+      ref: "main",
+      inputs: { issue_number: String(issueNumber) }
+    }),
+    muteHttpExceptions: true
+  });
+  Logger.log("[triggerJarvisAutoFix_] 이슈 #" + issueNumber + " → HTTP " + resp.getResponseCode());
 }
 
 /**

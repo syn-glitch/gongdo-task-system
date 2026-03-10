@@ -1,0 +1,307 @@
+name: "🕵️ 김감사 — PR 코드 리뷰 (4단계)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '원본 이슈 번호'
+        required: true
+        type: string
+      pr_number:
+        description: 'PR 번호'
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 이슈 + PR 정보 수집
+      - name: Fetch issue and PR data
+        id: data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const prNumber = parseInt('${{ inputs.pr_number }}');
+
+            // 이슈 정보
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_url', issue.html_url);
+
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/issue_body.txt', issue.body || '');
+
+            // PR diff 가져오기
+            const { data: diff } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              mediaType: { format: 'diff' }
+            });
+            fs.writeFileSync('/tmp/pr_diff.txt', diff);
+
+            // PR 정보
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            core.setOutput('pr_url', pr.html_url);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('changed_files', String(pr.changed_files));
+
+            console.log(`이슈 #${issueNumber}: ${issue.title}`);
+            console.log(`PR #${prNumber}: ${pr.title} (${pr.changed_files} files)`);
+
+      # 2. 체크아웃 (프롬프트 파일 접근)
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 3. Claude API로 코드 리뷰
+      - name: Review PR with Claude
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          ISSUE_TITLE: ${{ steps.data.outputs.issue_title }}
+          CHANGED_FILES: ${{ steps.data.outputs.changed_files }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request, urllib.error
+
+          api_key = os.environ["ANTHROPIC_API_KEY"]
+          issue_number = os.environ["ISSUE_NUMBER"]
+          pr_number = os.environ["PR_NUMBER"]
+          issue_title = os.environ["ISSUE_TITLE"]
+          changed_files = os.environ["CHANGED_FILES"]
+
+          # 파일 읽기
+          with open("/tmp/issue_body.txt") as f:
+              issue_body = f.read()
+          with open("/tmp/pr_diff.txt") as f:
+              pr_diff = f.read()[:15000]  # diff가 너무 길면 잘라냄
+
+          with open(".github/prompts/pr_review_prompt.md") as f:
+              system_prompt = f.read()
+
+          user_msg = f"""다음 이슈의 자동 수정 PR을 리뷰해주세요.
+
+          === 원본 이슈 ===
+          이슈 번호: #{issue_number}
+          제목: {issue_title}
+          본문:
+          {issue_body}
+
+          === PR 정보 ===
+          PR 번호: #{pr_number}
+          변경 파일 수: {changed_files}개
+
+          === 코드 변경사항 (diff) ===
+          {pr_diff}"""
+
+          payload = json.dumps({
+              "model": "claude-sonnet-4-5-20250929",
+              "max_tokens": 2000,
+              "system": system_prompt,
+              "messages": [{"role": "user", "content": user_msg}]
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={
+                  "content-type": "application/json",
+                  "x-api-key": api_key,
+                  "anthropic-version": "2023-06-01"
+              }
+          )
+
+          report = ""
+          verdict = "unknown"
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  data = json.loads(resp.read().decode("utf-8"))
+                  if "content" in data and len(data["content"]) > 0:
+                      report = data["content"][0]["text"]
+                      # 판정 추출
+                      if "❌ 반려" in report:
+                          verdict = "rejected"
+                      elif "⚠️ 조건부" in report:
+                          verdict = "conditional"
+                      elif "✅ 승인" in report:
+                          verdict = "approved"
+          except urllib.error.HTTPError as e:
+              error_body = e.read().decode("utf-8")
+              report = f"[리뷰 실패] API 에러 ({e.code})"
+              verdict = "error"
+          except Exception as e:
+              report = f"[리뷰 실패] {type(e).__name__}: {str(e)}"
+              verdict = "error"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("report<<REPORT_EOF\n")
+              f.write(report + "\n")
+              f.write("REPORT_EOF\n")
+              f.write(f"verdict={verdict}\n")
+          PYTHON_SCRIPT
+
+      # 4. PR에 리뷰 코멘트 등록
+      - name: Post review to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ inputs.pr_number }}');
+            const report = process.env.REPORT;
+            const verdict = process.env.VERDICT;
+
+            let body = report;
+            body += `\n\n---\n*🤖 김감사 QA팀 자동 PR 리뷰 (Claude AI) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });
+        env:
+          REPORT: ${{ steps.review.outputs.report }}
+          VERDICT: ${{ steps.review.outputs.verdict }}
+
+      # 5. 원본 이슈에도 코멘트
+      - name: Post status to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const verdict = '${{ steps.review.outputs.verdict }}';
+            const prUrl = '${{ steps.data.outputs.pr_url }}';
+
+            const verdictMap = {
+              approved: '✅ 승인 — 배포 가능',
+              conditional: '⚠️ 조건부 승인 — 경미한 이슈 존재',
+              rejected: '❌ 반려 — 추가 수정 필요',
+              error: '⚠️ 리뷰 실패',
+              unknown: '⚠️ 판정 불명'
+            };
+
+            let body = `## 🕵️ 김감사 PR 코드 리뷰 완료\n\n`;
+            body += `- PR: ${prUrl}\n`;
+            body += `- 판정: **${verdictMap[verdict] || verdict}**\n\n`;
+
+            if (verdict === 'approved' || verdict === 'conditional') {
+              body += `배포 승인 버튼이 슬랙으로 전송되었습니다.\n`;
+            } else if (verdict === 'rejected') {
+              body += `추가 수정이 필요합니다. 수동 확인 부탁드립니다.\n`;
+            }
+
+            body += `\n---\n*🤖 김감사 QA팀 자동 리뷰*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
+
+      # 6. 슬랙 보고 + 배포 승인 버튼
+      - name: Slack report with deploy button
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CEO_ID: "U02S3CN9E6R"
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request
+
+          slack_token = os.environ["SLACK_TOKEN"]
+          ceo_id = os.environ["SLACK_CEO_ID"]
+          issue_number = "${{ inputs.issue_number }}"
+          pr_number = "${{ inputs.pr_number }}"
+          issue_title = "${{ steps.data.outputs.issue_title }}"
+          issue_url = "${{ steps.data.outputs.issue_url }}"
+          pr_url = "${{ steps.data.outputs.pr_url }}"
+          verdict = "${{ steps.review.outputs.verdict }}"
+
+          verdict_text = {
+              "approved": "✅ 승인",
+              "conditional": "⚠️ 조건부 승인",
+              "rejected": "❌ 반려",
+              "error": "⚠️ 리뷰 실패",
+              "unknown": "⚠️ 판정 불명"
+          }.get(verdict, verdict)
+
+          blocks = [
+              {
+                  "type": "header",
+                  "text": {"type": "plain_text", "text": "🕵️ 김감사 PR 코드 리뷰 완료"}
+              },
+              {
+                  "type": "section",
+                  "fields": [
+                      {"type": "mrkdwn", "text": f"*이슈:* <{issue_url}|#{issue_number}> {issue_title}"},
+                      {"type": "mrkdwn", "text": f"*PR:* <{pr_url}|#{pr_number}>"},
+                      {"type": "mrkdwn", "text": f"*판정:* {verdict_text}"}
+                  ]
+              }
+          ]
+
+          # 승인/조건부 승인일 때만 배포 버튼 추가
+          if verdict in ("approved", "conditional"):
+              blocks.append({
+                  "type": "actions",
+                  "elements": [
+                      {
+                          "type": "button",
+                          "text": {"type": "plain_text", "text": "🚀 배포 승인"},
+                          "style": "primary",
+                          "action_id": "deploy_approve_",
+                          "value": f"{issue_number}|{pr_number}"
+                      },
+                      {
+                          "type": "button",
+                          "text": {"type": "plain_text", "text": "⏸️ 보류"},
+                          "action_id": "deploy_hold_",
+                          "value": f"{issue_number}|{pr_number}"
+                      }
+                  ]
+              })
+          else:
+              blocks.append({
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": "수동 확인이 필요합니다."}
+              })
+
+          payload = json.dumps({
+              "channel": ceo_id,
+              "text": f"김감사 PR 리뷰: 이슈 #{issue_number} — {verdict_text}",
+              "blocks": blocks
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {slack_token}",
+                  "Content-Type": "application/json"
+              }
+          )
+          try:
+              resp = urllib.request.urlopen(req)
+              result = json.loads(resp.read().decode("utf-8"))
+              if not result.get("ok"):
+                  print(f"Slack 에러: {result.get('error')}")
+          except Exception as e:
+              print(f"Slack 발송 실패: {e}")
+          PYTHON_SCRIPT

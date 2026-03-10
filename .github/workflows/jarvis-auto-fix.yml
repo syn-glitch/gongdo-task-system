@@ -1,0 +1,343 @@
+name: "🤵 자비스 — 자동 코드 수정 (4단계)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '이슈 번호'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 이슈 정보 + 기존 보고서 수집
+      - name: Fetch issue and reports
+        id: issue_data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            const labels = issue.labels.map(l => l.name);
+
+            // 이미 PR이 생성된 이슈인지 확인
+            if (labels.includes('fix-pr-created')) {
+              core.setOutput('skip', 'true');
+              console.log('이미 수정 PR이 생성된 이슈입니다. 스킵.');
+              return;
+            }
+
+            core.setOutput('skip', 'false');
+            core.setOutput('title', issue.title);
+            core.setOutput('url', issue.html_url);
+
+            // 이슈 본문 저장
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/issue_body.txt', issue.body || '');
+
+            // 코멘트에서 김감사 QA + 자비스 이해보고서 수집
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            let qaReport = '';
+            let jarvisReport = '';
+            for (let i = comments.length - 1; i >= 0; i--) {
+              const body = comments[i].body || '';
+              if (!qaReport && body.includes('김감사 QA팀 자동 분석')) {
+                qaReport = body;
+              }
+              if (!jarvisReport && body.includes('자비스 개발팀') && body.includes('이해보고서')) {
+                jarvisReport = body;
+              }
+              if (qaReport && jarvisReport) break;
+            }
+
+            fs.writeFileSync('/tmp/qa_report.txt', qaReport || '(QA 보고서 없음)');
+            fs.writeFileSync('/tmp/jarvis_report.txt', jarvisReport || '(이해보고서 없음)');
+
+            core.setOutput('has_qa', qaReport ? 'true' : 'false');
+            core.setOutput('has_jarvis', jarvisReport ? 'true' : 'false');
+            console.log(`이슈 #${issueNumber}: ${issue.title}`);
+            console.log(`QA 보고서: ${qaReport ? '있음' : '없음'}`);
+            console.log(`이해보고서: ${jarvisReport ? '있음' : '없음'}`);
+
+      # 2. 체크아웃
+      - name: Checkout repo
+        if: steps.issue_data.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      # 3. 컨텍스트 파일 준비 (Claude Code Action에 전달)
+      - name: Prepare context
+        if: steps.issue_data.outputs.skip == 'false'
+        run: |
+          # Claude가 참고할 컨텍스트를 하나의 파일로 합침
+          cat > /tmp/fix_context.txt << 'HEADER'
+          === 이슈 정보 ===
+          HEADER
+          echo "이슈 번호: #${{ inputs.issue_number }}" >> /tmp/fix_context.txt
+          echo "제목: ${{ steps.issue_data.outputs.title }}" >> /tmp/fix_context.txt
+          echo "" >> /tmp/fix_context.txt
+          echo "=== 이슈 본문 ===" >> /tmp/fix_context.txt
+          cat /tmp/issue_body.txt >> /tmp/fix_context.txt
+          echo "" >> /tmp/fix_context.txt
+          echo "=== 김감사 QA 분석 보고서 ===" >> /tmp/fix_context.txt
+          cat /tmp/qa_report.txt >> /tmp/fix_context.txt
+          echo "" >> /tmp/fix_context.txt
+          echo "=== 자비스 이해보고서 ===" >> /tmp/fix_context.txt
+          cat /tmp/jarvis_report.txt >> /tmp/fix_context.txt
+
+      # 4. Claude Code Action으로 코드 수정
+      - name: Fix code with Claude
+        if: steps.issue_data.outputs.skip == 'false'
+        id: claude_fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            아래 컨텍스트를 읽고, 이슈에서 보고된 문제를 수정하세요.
+
+            컨텍스트 파일: /tmp/fix_context.txt (cat으로 읽어주세요)
+
+            수정 규칙:
+            1. src/ 디렉토리 내 파일만 수정 가능
+            2. .github/ 디렉토리 수정 금지
+            3. .clasp.json, appsscript.json 수정 금지
+            4. src/frontend/ 파일 수정 시 src/gas/ 에도 동일 파일이 있으면 함께 수정
+            5. 자비스 이해보고서의 "수정 계획"을 우선 참고하여 수정
+            6. 수정이 불가능하면 이유를 설명하세요
+
+            작업 순서:
+            1. /tmp/fix_context.txt 를 읽어서 이슈와 보고서 내용 파악
+            2. 이해보고서에서 언급된 파일/함수를 찾아서 확인
+            3. 코드 수정 수행
+            4. 수정 내용을 간략히 요약
+          claude_args: |
+            --max-turns 25
+            --allowedTools Edit,Read,Write,Glob,Grep,Bash
+
+      # 5. 변경사항 확인
+      - name: Check for changes
+        if: steps.issue_data.outputs.skip == 'false'
+        id: check_changes
+        run: |
+          if [ -n "$(git diff --name-only)" ] || [ -n "$(git diff --cached --name-only)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+
+            # 변경된 파일 목록
+            CHANGED=$(git diff --name-only)
+            echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            echo "✅ 변경된 파일:"
+            echo "$CHANGED"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ 변경된 파일 없음"
+          fi
+
+      # 6. 보안 게이트
+      - name: Security gate
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          FORBIDDEN=$(git diff --name-only | grep -E '^\.(github|clasp)|^appsscript\.json' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "❌ 보안 위반 감지 → 롤백"
+            echo "$FORBIDDEN"
+            git checkout -- .github/ .clasp.json appsscript.json 2>/dev/null || true
+          fi
+
+      # 7. PR 생성
+      - name: Create PR
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: create_pr
+        run: |
+          BRANCH="fix/issue-${{ inputs.issue_number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "fix: 이슈 #${{ inputs.issue_number }} 자동 수정 — ${{ steps.issue_data.outputs.title }}"
+          git push origin "$BRANCH" --force
+
+          PR_URL=$(gh pr create \
+            --title "🤵 이슈 #${{ inputs.issue_number }} 자동 수정 — ${{ steps.issue_data.outputs.title }}" \
+            --body "$(cat <<BODY
+          ## 🤵 자비스 자동 코드 수정
+
+          - **이슈**: #${{ inputs.issue_number }}
+          - **변경 파일**:
+          ${{ steps.check_changes.outputs.changed_files }}
+
+          ### 수정 근거
+          - 김감사 QA 분석 보고서
+          - 자비스 이해보고서 수정 계획
+
+          ---
+          ⏳ 김감사 QA팀 재검토 대기 중
+          BODY
+          )" \
+            --base main \
+            --head "$BRANCH" 2>&1)
+
+          # PR 번호 추출
+          PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+          echo "✅ PR 생성: $PR_URL"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 8. 이슈에 라벨 + 코멘트
+      - name: Update issue
+        if: steps.issue_data.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const hasChanges = '${{ steps.check_changes.outputs.has_changes }}' === 'true';
+            const prUrl = '${{ steps.create_pr.outputs.pr_url }}' || '';
+            const prNumber = '${{ steps.create_pr.outputs.pr_number }}' || '';
+
+            // fix-pr-created 라벨 추가
+            if (hasChanges && prNumber) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'fix-pr-created'
+                });
+              } catch {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'fix-pr-created',
+                  color: 'fbca04',
+                  description: '자동 수정 PR 생성됨'
+                });
+              }
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['fix-pr-created']
+              });
+            }
+
+            // 이슈에 코멘트
+            let body = '';
+            if (hasChanges) {
+              body = `## 🤵 자비스 자동 코드 수정 완료\n\n`;
+              body += `수정 PR이 생성되었습니다: ${prUrl}\n\n`;
+              body += `**변경 파일:**\n`;
+              const files = `${{ steps.check_changes.outputs.changed_files }}`.split('\n').filter(f => f);
+              files.forEach(f => { body += `- \`${f}\`\n`; });
+              body += `\n⏳ 김감사 QA팀 재검토를 기다립니다.\n`;
+            } else {
+              body = `## 🤵 자비스 자동 코드 수정 결과\n\n`;
+              body += `⚠️ 자동 수정으로 변경된 파일이 없습니다.\n`;
+              body += `수동 확인이 필요합니다.\n`;
+            }
+            body += `\n---\n*🤖 자비스 자동 수정 (Claude Code Action) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
+
+      # 9. 슬랙 보고
+      - name: Slack report
+        if: steps.issue_data.outputs.skip == 'false'
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CEO_ID: "U02S3CN9E6R"
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request
+
+          slack_token = os.environ["SLACK_TOKEN"]
+          ceo_id = os.environ["SLACK_CEO_ID"]
+          issue_number = "${{ inputs.issue_number }}"
+          issue_title = "${{ steps.issue_data.outputs.title }}"
+          issue_url = "${{ steps.issue_data.outputs.url }}"
+          has_changes = "${{ steps.check_changes.outputs.has_changes }}" == "true"
+          pr_url = "${{ steps.create_pr.outputs.pr_url }}"
+
+          if has_changes:
+              status = "✅ 코드 수정 완료 → PR 생성됨"
+              detail = f"🔗 PR: {pr_url}"
+              next_step = "⏳ 김감사 QA팀 재검토 진행 예정"
+          else:
+              status = "⚠️ 자동 수정 실패 (변경 없음)"
+              detail = "수동 확인이 필요합니다."
+              next_step = ""
+
+          msg = (
+              f"━━━━━━━━━━━━━━━━━━━━\n"
+              f"🤵 *자비스 자동 코드 수정 결과*\n"
+              f"━━━━━━━━━━━━━━━━━━━━\n"
+              f"🔢 이슈 #{issue_number}: {issue_title}\n"
+              f"📋 {status}\n"
+              f"{detail}\n"
+          )
+          if next_step:
+              msg += f"{next_step}\n"
+          msg += f"\n🔗 이슈: {issue_url}"
+
+          payload = json.dumps({
+              "channel": ceo_id,
+              "text": msg
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {slack_token}",
+                  "Content-Type": "application/json"
+              }
+          )
+          try:
+              urllib.request.urlopen(req)
+          except Exception as e:
+              print(f"Slack 발송 실패: {e}")
+          PYTHON_SCRIPT
+
+      # 10. 김감사 PR 리뷰 워크플로우 트리거
+      - name: Trigger QA review
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.create_pr.outputs.pr_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'kim-qa-pr-review.yml',
+              ref: 'main',
+              inputs: {
+                issue_number: '${{ inputs.issue_number }}',
+                pr_number: '${{ steps.create_pr.outputs.pr_number }}'
+              }
+            });
+            console.log('김감사 PR 리뷰 워크플로우 트리거 완료');
