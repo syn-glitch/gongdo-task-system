@@ -260,15 +260,15 @@ jobs:
               status = "⚠️ 이해보고서 작성 실패"
               action = "수동 확인이 필요합니다."
 
-          msg = f"""━━━━━━━━━━━━━━━━━━━━
-🤵 *자비스 개발팀 이해보고서*
-━━━━━━━━━━━━━━━━━━━━
-🔢 이슈 #{issue_number}: {issue_title}
-📋 상태: {status}
-
-{action}
-
-🔗 확인: {issue_url}"""
+          msg = (
+              f"━━━━━━━━━━━━━━━━━━━━\n"
+              f"🤵 *자비스 개발팀 이해보고서*\n"
+              f"━━━━━━━━━━━━━━━━━━━━\n"
+              f"🔢 이슈 #{issue_number}: {issue_title}\n"
+              f"📋 상태: {status}\n\n"
+              f"{action}\n\n"
+              f"🔗 확인: {issue_url}"
+          )
 
           payload = json.dumps({
               "channel": ceo_id,
