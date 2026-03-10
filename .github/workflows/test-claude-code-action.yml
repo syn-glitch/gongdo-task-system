@@ -1,0 +1,147 @@
+name: "🧪 테스트 — Claude Code Action 동작 확인"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '테스트할 이슈 번호'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  test-claude-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 체크아웃
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. 이슈 정보 가져오기
+      - name: Fetch issue data
+        id: issue_data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            core.setOutput('title', issue.title);
+            core.setOutput('body', (issue.body || '').substring(0, 2000));
+            console.log(`Issue #${issueNumber}: ${issue.title}`);
+
+      # 3. Claude Code Action으로 코드 수정 시도
+      - name: Fix with Claude Code
+        id: claude_fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            이 GitHub 이슈를 분석하고 수정하세요. 이것은 테스트입니다.
+
+            이슈 번호: #${{ inputs.issue_number }}
+            제목: ${{ steps.issue_data.outputs.title }}
+            본문: ${{ steps.issue_data.outputs.body }}
+
+            수정 규칙:
+            - src/ 디렉토리 내 파일만 수정 가능
+            - .github/ 디렉토리 수정 금지
+            - .clasp.json, appsscript.json 수정 금지
+            - 수정이 불가능하면 이유를 설명하세요
+
+            테스트 목적: Claude Code Action이 정상 동작하는지 확인합니다.
+            실제 수정이 어렵다면, src/gas/ 디렉토리의 관련 파일에 수정이 필요한 위치를 코멘트로만 표시해도 됩니다.
+          claude_args: |
+            --max-turns 5
+            --allowedTools Edit,Read,Write,Glob,Grep,Bash
+
+      # 4. 변경사항 확인
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [ -n "$(git diff --name-only)" ] || [ -n "$(git diff --cached --name-only)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+            git diff --name-only >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "✅ 변경된 파일:"
+            git diff --name-only
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ 변경된 파일 없음"
+          fi
+
+      # 5. 보안 게이트: .github/ 변경 감지
+      - name: Security gate
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          FORBIDDEN=$(git diff --name-only | grep -E '^\.github/' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "❌ 보안 위반: .github/ 디렉토리 수정 감지"
+            echo "$FORBIDDEN"
+            git checkout -- .github/
+            echo "→ .github/ 변경사항 롤백 완료"
+          fi
+
+      # 6. PR 생성 (변경사항 있을 때만)
+      - name: Create PR
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: create_pr
+        run: |
+          BRANCH="fix/issue-${{ inputs.issue_number }}-test"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "test: Claude Code 자동 수정 테스트 (이슈 #${{ inputs.issue_number }})"
+          git push origin "$BRANCH" --force
+
+          PR_URL=$(gh pr create \
+            --title "🧪 [테스트] 이슈 #${{ inputs.issue_number }} 자동 수정" \
+            --body "$(cat <<'BODY'
+          ## 테스트 PR — Claude Code Action 동작 확인
+
+          - 이슈: #${{ inputs.issue_number }}
+          - 목적: Claude Code Action이 코드 수정 + PR 생성이 가능한지 확인
+          - 변경 파일: ${{ steps.check_changes.outputs.changed_files }}
+
+          ⚠️ 이 PR은 테스트 목적입니다. 확인 후 close해주세요.
+          BODY
+          )" \
+            --base main \
+            --head "$BRANCH" 2>&1) || true
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "PR 생성 결과: $PR_URL"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 7. 이슈에 결과 코멘트
+      - name: Post result to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasChanges = '${{ steps.check_changes.outputs.has_changes }}' === 'true';
+            const prUrl = '${{ steps.create_pr.outputs.pr_url }}' || '생성되지 않음';
+
+            let body = `## 🧪 Claude Code Action 테스트 결과\n\n`;
+            body += `| 항목 | 결과 |\n|------|------|\n`;
+            body += `| Claude Code 실행 | ✅ 성공 |\n`;
+            body += `| 코드 변경 | ${hasChanges ? '✅ 변경됨' : '⚠️ 변경 없음'} |\n`;
+            body += `| PR 생성 | ${hasChanges ? '✅ ' + prUrl : '➖ 해당 없음'} |\n`;
+            body += `\n---\n*🧪 Claude Code Action 테스트 워크플로우*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt('${{ inputs.issue_number }}'),
+              body: body
+            });
