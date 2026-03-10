@@ -139,6 +139,8 @@ jobs:
 
           analysis = ""
           success = False
+          input_tokens = 0
+          output_tokens = 0
           try:
               with urllib.request.urlopen(req) as resp:
                   data = json.loads(resp.read().decode("utf-8"))
@@ -147,8 +149,12 @@ jobs:
                       success = True
                   else:
                       analysis = f"[분석 실패] 응답에 content 없음: {json.dumps(data, ensure_ascii=False)[:200]}"
+                  usage = data.get("usage", {})
+                  input_tokens = usage.get("input_tokens", 0)
+                  output_tokens = usage.get("output_tokens", 0)
           except urllib.error.HTTPError as e:
               error_body = e.read().decode("utf-8")
+              print(f"API HTTP {e.code}: {error_body[:500]}")
               try:
                   err_data = json.loads(error_body)
                   err_msg = err_data.get("error", {}).get("message", error_body[:200])
@@ -158,12 +164,20 @@ jobs:
           except Exception as e:
               analysis = f"[분석 실패] {type(e).__name__}: {str(e)}"
 
+          # 비용 계산 (Sonnet: $3/MTok input, $15/MTok output)
+          cost_usd = (input_tokens * 3 / 1_000_000) + (output_tokens * 15 / 1_000_000)
+          token_summary = f"{input_tokens:,} in + {output_tokens:,} out = ${cost_usd:.4f}"
+          print(f"토큰: {token_summary}")
+
           # GITHUB_OUTPUT에 저장
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write("analysis<<ANALYSIS_EOF\n")
               f.write(analysis + "\n")
               f.write("ANALYSIS_EOF\n")
               f.write(f"success={str(success).lower()}\n")
+              f.write(f"input_tokens={input_tokens}\n")
+              f.write(f"output_tokens={output_tokens}\n")
+              f.write(f"cost_usd={cost_usd:.4f}\n")
           PYTHON_SCRIPT
 
       # 5. GitHub Issue에 QA 보고서 코멘트 추가
@@ -268,6 +282,9 @@ jobs:
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
           ANALYSIS_SUCCESS: ${{ steps.claude_analysis.outputs.success }}
+          COST_USD: ${{ steps.claude_analysis.outputs.cost_usd }}
+          INPUT_TOKENS: ${{ steps.claude_analysis.outputs.input_tokens }}
+          OUTPUT_TOKENS: ${{ steps.claude_analysis.outputs.output_tokens }}
         run: |
           python3 << 'PYTHON_SCRIPT'
           import os, json, urllib.request
@@ -279,6 +296,12 @@ jobs:
           issue_url = os.environ["ISSUE_URL"]
           labels = os.environ["ISSUE_LABELS"]
           success = os.environ.get("ANALYSIS_SUCCESS", "false") == "true"
+          cost_usd = os.environ.get("COST_USD", "0")
+          input_tokens = os.environ.get("INPUT_TOKENS", "0")
+          output_tokens = os.environ.get("OUTPUT_TOKENS", "0")
+
+          cost_val = float(cost_usd) if cost_usd else 0
+          cost_krw = int(cost_val * 1400)
 
           if success:
               status = "✅ 분석 완료"
@@ -302,7 +325,8 @@ jobs:
                           f"━━━━━━━━━━━━━━━━━━━━\n"
                           f"🔢 이슈 #{issue_number}: {issue_title}\n"
                           f"🏷️ 라벨: {labels}\n"
-                          f"📋 상태: {status}\n\n"
+                          f"📋 상태: {status}\n"
+                          f"💰 토큰: {input_tokens} in + {output_tokens} out | ${cost_val:.4f} (₩{cost_krw:,})\n\n"
                           f"🔗 <{issue_url}|보고서 확인>"
                       )
                   }

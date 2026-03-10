@@ -300,6 +300,7 @@ jobs:
               f"━━━━━━━━━━━━━━━━━━━━\n"
               f"🔢 이슈 #{issue_number}: {issue_title}\n"
               f"📋 {status}\n"
+              f"💰 Claude Code Action (멀티턴) — 비용은 Anthropic 대시보드 참고\n"
               f"{detail}\n"
           )
           if next_step:
