@@ -257,7 +257,7 @@ jobs:
               labels: ['qa-failed']
             });
 
-      # 7. 슬랙 DM 발송 (요약 + GitHub 링크)
+      # 7. 슬랙 DM 발송 (Block Kit 버튼 — 팀 배정 선택)
       - name: Send Slack DM to CEO
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
         env:
@@ -285,18 +285,62 @@ jobs:
           else:
               status = "⚠️ 분석 실패 (수동 검토 필요)"
 
-          msg = f"""━━━━━━━━━━━━━━━━━━━━
-          🕵️ *김감사 QA 자동 분석*
-          ━━━━━━━━━━━━━━━━━━━━
-          🔢 이슈 #{issue_number}: {issue_title}
-          🏷️ 라벨: {labels}
-          📋 상태: {status}
+          fallback_text = (
+              f"🕵️ 김감사 QA 자동 분석 | "
+              f"이슈 #{issue_number}: {issue_title} | "
+              f"상태: {status}"
+          )
 
-          🔗 보고서 확인: {issue_url}"""
+          blocks = [
+              {
+                  "type": "section",
+                  "text": {
+                      "type": "mrkdwn",
+                      "text": (
+                          f"━━━━━━━━━━━━━━━━━━━━\n"
+                          f"🕵️ *김감사 QA 자동 분석*\n"
+                          f"━━━━━━━━━━━━━━━━━━━━\n"
+                          f"🔢 이슈 #{issue_number}: {issue_title}\n"
+                          f"🏷️ 라벨: {labels}\n"
+                          f"📋 상태: {status}\n\n"
+                          f"🔗 <{issue_url}|보고서 확인>"
+                      )
+                  }
+              }
+          ]
+
+          # 분석 성공 시 팀 배정 버튼 추가
+          if success:
+              blocks.append({
+                  "type": "section",
+                  "text": {
+                      "type": "mrkdwn",
+                      "text": "📋 *이슈 처리 담당팀을 선택해주세요:*"
+                  }
+              })
+              blocks.append({
+                  "type": "actions",
+                  "elements": [
+                      {
+                          "type": "button",
+                          "text": {"type": "plain_text", "text": "🤵 자비스 개발팀"},
+                          "style": "primary",
+                          "action_id": "assign_team_jarvis",
+                          "value": f"{issue_number}"
+                      },
+                      {
+                          "type": "button",
+                          "text": {"type": "plain_text", "text": "🔧 강철 AX팀"},
+                          "action_id": "assign_team_gangcheol",
+                          "value": f"{issue_number}"
+                      }
+                  ]
+              })
 
           payload = json.dumps({
               "channel": ceo_id,
-              "text": msg
+              "text": fallback_text,
+              "blocks": blocks
           }).encode("utf-8")
 
           req = urllib.request.Request(
@@ -308,7 +352,10 @@ jobs:
               }
           )
           try:
-              urllib.request.urlopen(req)
+              resp = urllib.request.urlopen(req)
+              result = json.loads(resp.read().decode("utf-8"))
+              if not result.get("ok"):
+                  print(f"Slack API 에러: {result.get('error', 'unknown')}")
           except Exception as e:
               print(f"Slack DM 발송 실패: {e}")
           PYTHON_SCRIPT

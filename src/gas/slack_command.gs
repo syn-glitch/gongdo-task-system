@@ -59,6 +59,11 @@ function doPost(e) {
         return handleInlineStatusChange(rowNum, newStatus, payload.user.id);
       }
       
+      // [4단계] 이슈 담당팀 배정 버튼 (김감사 QA → 팀 선택)
+      if (action && action.action_id && action.action_id.startsWith("assign_team_")) {
+        return handleIssueTeamAssignment(action, payload);
+      }
+
       // 기존 버튼 방식 호환 (필요시)
       if (action && action.action_id === "change_status_action") {
         const parts = action.value.split("|");
@@ -1115,4 +1120,134 @@ function warmupProjectCache() {
   } catch (e) {
     Logger.log("[ERROR] warmupProjectCache 실패: " + e.message);
   }
+}
+
+// ═══════════════════════════════════════════
+// [4단계] 이슈 담당팀 배정 핸들러
+// ═══════════════════════════════════════════
+
+/**
+ * 슬랙 버튼 클릭 → GitHub Issue에 담당팀 라벨 추가 + 슬랙 응답
+ * action_id: "assign_team_jarvis" 또는 "assign_team_gangcheol"
+ * value: 이슈 번호 (문자열)
+ */
+function handleIssueTeamAssignment(action, slackPayload) {
+  try {
+    var actionId = action.action_id;
+    var issueNumber = parseInt(action.value, 10);
+    var userId = slackPayload.user.id;
+
+    // 팀 정보 결정
+    var teamLabel, teamName, teamEmoji;
+    if (actionId === "assign_team_jarvis") {
+      teamLabel = "assigned:jarvis";
+      teamName = "자비스 개발팀";
+      teamEmoji = "🤵";
+    } else if (actionId === "assign_team_gangcheol") {
+      teamLabel = "assigned:gangcheol";
+      teamName = "강철 AX팀";
+      teamEmoji = "🔧";
+    } else {
+      return ContentService.createTextOutput("");
+    }
+
+    // GitHub Issue에 라벨 추가
+    var githubToken = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+    if (!githubToken) {
+      Logger.log("[ERROR] GITHUB_TOKEN 미설정");
+      sendSlackResponse_(userId, "❌ GitHub 토큰이 설정되지 않았습니다.");
+      return ContentService.createTextOutput("");
+    }
+
+    var owner = "syn-glitch";
+    var repo = "gongdo-task-system";
+
+    // 라벨이 없으면 생성
+    ensureGitHubLabel_(githubToken, owner, repo, teamLabel,
+      teamLabel === "assigned:jarvis" ? "0e8a16" : "5319e7",
+      teamEmoji + " " + teamName + " 배정");
+
+    // 이슈에 라벨 추가
+    var labelUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/labels";
+    var labelResp = UrlFetchApp.fetch(labelUrl, {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": "token " + githubToken },
+      payload: JSON.stringify({ labels: [teamLabel] }),
+      muteHttpExceptions: true
+    });
+
+    if (labelResp.getResponseCode() === 200) {
+      // GitHub Issue에 배정 코멘트 추가
+      var commentUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments";
+      UrlFetchApp.fetch(commentUrl, {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": "token " + githubToken },
+        payload: JSON.stringify({
+          body: teamEmoji + " **담당팀 배정: " + teamName + "**\n\n" +
+                "용남 대표가 이 이슈를 " + teamName + "에 배정했습니다.\n" +
+                "담당팀은 이해보고서를 확인하고 작업을 진행해 주세요."
+        }),
+        muteHttpExceptions: true
+      });
+
+      // 슬랙 응답
+      sendSlackResponse_(userId,
+        "✅ 이슈 #" + issueNumber + "이 *" + teamEmoji + " " + teamName + "*에 배정되었습니다.\n" +
+        "담당팀에서 이해보고서 확인 후 작업을 시작합니다.");
+    } else {
+      Logger.log("[ERROR] GitHub 라벨 추가 실패: " + labelResp.getContentText());
+      sendSlackResponse_(userId, "❌ GitHub 라벨 추가 실패. 수동 확인이 필요합니다.");
+    }
+
+  } catch (e) {
+    Logger.log("[ERROR] handleIssueTeamAssignment: " + e.message);
+    sendSlackResponse_(slackPayload.user.id, "❌ 팀 배정 처리 중 오류: " + e.message);
+  }
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * GitHub 라벨 존재 확인 → 없으면 생성
+ */
+function ensureGitHubLabel_(token, owner, repo, labelName, color, description) {
+  var url = "https://api.github.com/repos/" + owner + "/" + repo + "/labels/" + encodeURIComponent(labelName);
+  var resp = UrlFetchApp.fetch(url, {
+    method: "get",
+    headers: { "Authorization": "token " + token },
+    muteHttpExceptions: true
+  });
+
+  if (resp.getResponseCode() === 404) {
+    var createUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/labels";
+    UrlFetchApp.fetch(createUrl, {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": "token " + token },
+      payload: JSON.stringify({
+        name: labelName,
+        color: color,
+        description: description
+      }),
+      muteHttpExceptions: true
+    });
+  }
+}
+
+/**
+ * 슬랙 DM 응답 발송
+ */
+function sendSlackResponse_(userId, message) {
+  var token = getSlackToken();
+  if (!token) return;
+
+  UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + token },
+    payload: JSON.stringify({ channel: userId, text: message }),
+    muteHttpExceptions: true
+  });
 }
