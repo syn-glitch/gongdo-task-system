@@ -1,0 +1,290 @@
+name: "🤵 자비스 — 이슈 이해보고서 자동 작성"
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  write-response:
+    runs-on: ubuntu-latest
+    # qa-reviewed 라벨이 방금 추가된 경우에만 실행
+    if: github.event.label.name == 'qa-reviewed'
+
+    steps:
+      # 0. 중복 실행 방지 — jarvis-reviewed 라벨이 이미 있으면 스킵
+      - name: Check if already responded
+        id: check_done
+        run: |
+          if echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q 'jarvis-reviewed'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 1. 리포 체크아웃
+      - name: Checkout repo
+        if: steps.check_done.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      # 2. 김감사 QA 코멘트 가져오기
+      - name: Get QA comment
+        if: steps.check_done.outputs.skip == 'false'
+        id: get_qa_comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            // 김감사 QA 자동 분석 코멘트 찾기 (가장 최근 것)
+            let qaComment = '';
+            for (let i = comments.length - 1; i >= 0; i--) {
+              if (comments[i].body && comments[i].body.includes('김감사 QA팀 자동 분석')) {
+                qaComment = comments[i].body;
+                break;
+              }
+            }
+
+            if (!qaComment) {
+              core.setOutput('found', 'false');
+              core.setOutput('comment', '김감사 QA 코멘트를 찾을 수 없습니다.');
+            } else {
+              core.setOutput('found', 'true');
+              // 환경변수로 전달하기 위해 파일에 저장
+              const fs = require('fs');
+              fs.writeFileSync('/tmp/qa_comment.txt', qaComment);
+            }
+
+      # 3. Claude API로 자비스 이해보고서 작성
+      - name: Write understanding report with Claude
+        if: steps.check_done.outputs.skip == 'false' && steps.get_qa_comment.outputs.found == 'true'
+        id: jarvis_report
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request, urllib.error
+
+          api_key = os.environ["ANTHROPIC_API_KEY"]
+          issue_title = os.environ.get("ISSUE_TITLE", "")
+          issue_body = os.environ.get("ISSUE_BODY", "")
+          issue_labels = os.environ.get("ISSUE_LABELS", "")
+          issue_number = os.environ.get("ISSUE_NUMBER", "")
+
+          # 김감사 QA 코멘트 읽기
+          qa_comment = ""
+          try:
+              with open("/tmp/qa_comment.txt", "r") as f:
+                  qa_comment = f.read()
+          except:
+              qa_comment = "(김감사 QA 코멘트 없음)"
+
+          # 시스템 프롬프트 읽기
+          with open(".github/prompts/jarvis_issue_response_prompt.md", "r") as f:
+              system_prompt = f.read()
+
+          user_msg = f"""다음 이슈와 김감사 QA 보고서를 읽고 자비스 개발팀 이해보고서를 작성해주세요.
+
+          === 원본 이슈 ===
+          이슈 번호: #{issue_number}
+          제목: {issue_title}
+          라벨: {issue_labels}
+
+          본문:
+          {issue_body}
+
+          === 김감사 QA 분석 보고서 ===
+          {qa_comment}"""
+
+          payload = json.dumps({
+              "model": "claude-sonnet-4-5-20250929",
+              "max_tokens": 2000,
+              "system": system_prompt,
+              "messages": [{"role": "user", "content": user_msg}]
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={
+                  "content-type": "application/json",
+                  "x-api-key": api_key,
+                  "anthropic-version": "2023-06-01"
+              }
+          )
+
+          report = ""
+          success = False
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  data = json.loads(resp.read().decode("utf-8"))
+                  if "content" in data and len(data["content"]) > 0:
+                      report = data["content"][0]["text"]
+                      success = True
+                  else:
+                      report = f"[보고서 작성 실패] 응답에 content 없음"
+          except urllib.error.HTTPError as e:
+              error_body = e.read().decode("utf-8")
+              try:
+                  err_data = json.loads(error_body)
+                  err_msg = err_data.get("error", {}).get("message", error_body[:200])
+                  report = f"[보고서 작성 실패] API 에러 ({e.code}): {err_msg}"
+              except:
+                  report = f"[보고서 작성 실패] HTTP {e.code}"
+          except Exception as e:
+              report = f"[보고서 작성 실패] {type(e).__name__}: {str(e)}"
+
+          # 보고서를 파일로 저장 (md 파일 커밋용)
+          if success:
+              from datetime import datetime, timezone, timedelta
+              kst = timezone(timedelta(hours=9))
+              now = datetime.now(kst)
+              date_str = now.strftime("%Y-%m-%d")
+              safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in issue_title)[:50].strip()
+              filename = f"reports/jarvis-response/{date_str}_issue-{issue_number}_{safe_title}.md"
+              os.makedirs(os.path.dirname(filename), exist_ok=True)
+              with open(filename, "w") as f:
+                  f.write(report)
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write(f"filename={filename}\n")
+
+          # GITHUB_OUTPUT에 저장
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("report<<REPORT_EOF\n")
+              f.write(report + "\n")
+              f.write("REPORT_EOF\n")
+              f.write(f"success={str(success).lower()}\n")
+          PYTHON_SCRIPT
+
+      # 4. md 파일 커밋 & 푸시
+      - name: Commit report file
+        if: steps.check_done.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/jarvis-response/
+          git commit -m "docs: 자비스 이해보고서 — 이슈 #${{ github.event.issue.number }}" || echo "Nothing to commit"
+          git push || echo "Push failed"
+
+      # 5. GitHub Issue에 이해보고서 코멘트 등록
+      - name: Post report as comment
+        if: steps.check_done.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = process.env.REPORT_RESULT;
+            const success = process.env.REPORT_SUCCESS === 'true';
+            const filename = process.env.REPORT_FILENAME || '';
+
+            let body = report;
+            if (success && filename) {
+              body += `\n\n📄 [이해보고서 파일](/${context.repo.owner}/${context.repo.repo}/blob/main/${filename})`;
+            }
+            body += `\n\n---\n*🤖 자비스 개발팀 자동 이해보고서 (Claude AI) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+        env:
+          REPORT_RESULT: ${{ steps.jarvis_report.outputs.report }}
+          REPORT_SUCCESS: ${{ steps.jarvis_report.outputs.success }}
+          REPORT_FILENAME: ${{ steps.jarvis_report.outputs.filename }}
+
+      # 6. jarvis-reviewed 라벨 추가
+      - name: Add jarvis-reviewed label
+        if: steps.check_done.outputs.skip == 'false' && steps.jarvis_report.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'jarvis-reviewed'
+              });
+            } catch (e) {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'jarvis-reviewed',
+                color: '1f6feb',
+                description: '자비스 이해보고서 작성 완료'
+              });
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['jarvis-reviewed']
+            });
+
+      # 7. 슬랙 DM 발송
+      - name: Send Slack DM to CEO
+        if: steps.check_done.outputs.skip == 'false'
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CEO_ID: "U02S3CN9E6R"
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          REPORT_SUCCESS: ${{ steps.jarvis_report.outputs.success }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request
+
+          slack_token = os.environ["SLACK_TOKEN"]
+          ceo_id = os.environ["SLACK_CEO_ID"]
+          issue_number = os.environ["ISSUE_NUMBER"]
+          issue_title = os.environ["ISSUE_TITLE"]
+          issue_url = os.environ["ISSUE_URL"]
+          success = os.environ.get("REPORT_SUCCESS", "false") == "true"
+
+          if success:
+              status = "✅ 이해보고서 작성 완료"
+              action = "확인 후 수정 작업 승인 부탁드립니다."
+          else:
+              status = "⚠️ 이해보고서 작성 실패"
+              action = "수동 확인이 필요합니다."
+
+          msg = f"""━━━━━━━━━━━━━━━━━━━━
+🤵 *자비스 개발팀 이해보고서*
+━━━━━━━━━━━━━━━━━━━━
+🔢 이슈 #{issue_number}: {issue_title}
+📋 상태: {status}
+
+{action}
+
+🔗 확인: {issue_url}"""
+
+          payload = json.dumps({
+              "channel": ceo_id,
+              "text": msg
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {slack_token}",
+                  "Content-Type": "application/json"
+              }
+          )
+          try:
+              urllib.request.urlopen(req)
+          except Exception as e:
+              print(f"Slack DM 발송 실패: {e}")
+          PYTHON_SCRIPT
