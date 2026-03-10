@@ -61,7 +61,7 @@ jobs:
             테스트 목적: Claude Code Action이 정상 동작하는지 확인합니다.
             실제 수정이 어렵다면, src/gas/ 디렉토리의 관련 파일에 수정이 필요한 위치를 코멘트로만 표시해도 됩니다.
           claude_args: |
-            --max-turns 5
+            --max-turns 20
             --allowedTools Edit,Read,Write,Glob,Grep,Bash
 
       # 4. 변경사항 확인
