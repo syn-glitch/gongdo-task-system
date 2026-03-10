@@ -31,7 +31,6 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // analyzing 라벨이 없으면 생성
             try {
               await github.rest.issues.getLabel({
                 owner: context.repo.owner,
@@ -83,68 +82,89 @@ jobs:
               core.setOutput('exceeded', 'false');
             }
 
-      # 4. Claude API로 이슈 분석
+      # 4. Claude API로 이슈 분석 [CI-01 수정: 환경변수로 안전하게 전달]
       - name: Analyze issue with Claude
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
         id: claude_analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          # 프롬프트 파일 읽기
-          SYSTEM_PROMPT=$(cat .github/prompts/issue_triage_prompt.md)
+          # python3 스크립트로 안전하게 JSON 생성 + API 호출 + 응답 파싱
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request, urllib.error
 
-          # 이슈 정보 추출 (JSON 이스케이프 처리)
-          ISSUE_TITLE=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
-          ISSUE_BODY=$(echo '${{ github.event.issue.body }}' | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))" | sed 's/^"//;s/"$//')
-          ISSUE_LABELS='${{ join(github.event.issue.labels.*.name, ', ') }}'
-          ISSUE_NUMBER='${{ github.event.issue.number }}'
+          # 환경변수에서 안전하게 읽기
+          api_key = os.environ["ANTHROPIC_API_KEY"]
+          issue_title = os.environ.get("ISSUE_TITLE", "")
+          issue_body = os.environ.get("ISSUE_BODY", "")
+          issue_labels = os.environ.get("ISSUE_LABELS", "")
+          issue_number = os.environ.get("ISSUE_NUMBER", "")
 
-          USER_MSG="다음 GitHub Issue를 분석해주세요.
+          # 시스템 프롬프트 읽기
+          with open(".github/prompts/issue_triage_prompt.md", "r") as f:
+              system_prompt = f.read()
 
-          이슈 번호: #${ISSUE_NUMBER}
-          제목: ${ISSUE_TITLE}
-          라벨: ${ISSUE_LABELS}
+          # 유저 메시지 조합
+          user_msg = f"""다음 GitHub Issue를 분석해주세요.
+
+          이슈 번호: #{issue_number}
+          제목: {issue_title}
+          라벨: {issue_labels}
 
           본문:
-          ${ISSUE_BODY}"
+          {issue_body}"""
 
-          # Claude API 호출
-          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
-            -H "content-type: application/json" \
-            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
-            -H "anthropic-version: 2023-06-01" \
-            -d "$(python3 -c "
-          import json, sys
-          system = open('.github/prompts/issue_triage_prompt.md').read()
-          user_msg = '''$USER_MSG'''
-          payload = {
-              'model': 'claude-sonnet-4-5-20250514',
-              'max_tokens': 2000,
-              'system': system,
-              'messages': [{'role': 'user', 'content': user_msg}]
-          }
-          print(json.dumps(payload))
-          ")")
+          # API 요청 페이로드
+          payload = json.dumps({
+              "model": "claude-sonnet-4-5-20250514",
+              "max_tokens": 2000,
+              "system": system_prompt,
+              "messages": [{"role": "user", "content": user_msg}]
+          }).encode("utf-8")
 
-          # 응답에서 텍스트 추출
-          ANALYSIS=$(echo "$RESPONSE" | python3 -c "
-          import sys, json
+          # API 호출
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={
+                  "content-type": "application/json",
+                  "x-api-key": api_key,
+                  "anthropic-version": "2023-06-01"
+              }
+          )
+
+          analysis = ""
+          success = False
           try:
-              data = json.load(sys.stdin)
-              if 'content' in data and len(data['content']) > 0:
-                  print(data['content'][0]['text'])
-              elif 'error' in data:
-                  print(f\"[분석 실패] {data['error'].get('message', 'Unknown error')}\")
-              else:
-                  print('[분석 실패] 예상치 못한 응답 형식')
+              with urllib.request.urlopen(req) as resp:
+                  data = json.loads(resp.read().decode("utf-8"))
+                  if "content" in data and len(data["content"]) > 0:
+                      analysis = data["content"][0]["text"]
+                      success = True
+                  else:
+                      analysis = f"[분석 실패] 응답에 content 없음: {json.dumps(data, ensure_ascii=False)[:200]}"
+          except urllib.error.HTTPError as e:
+              error_body = e.read().decode("utf-8")
+              try:
+                  err_data = json.loads(error_body)
+                  err_msg = err_data.get("error", {}).get("message", error_body[:200])
+                  analysis = f"[분석 실패] API 에러 ({e.code}): {err_msg}"
+              except Exception:
+                  analysis = f"[분석 실패] HTTP {e.code}: {error_body[:200]}"
           except Exception as e:
-              print(f'[분석 실패] {str(e)}')
-          ")
+              analysis = f"[분석 실패] {type(e).__name__}: {str(e)}"
 
-          # 멀티라인 출력을 GITHUB_OUTPUT에 저장
-          echo "analysis<<ANALYSIS_EOF" >> $GITHUB_OUTPUT
-          echo "$ANALYSIS" >> $GITHUB_OUTPUT
-          echo "ANALYSIS_EOF" >> $GITHUB_OUTPUT
+          # GITHUB_OUTPUT에 저장
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("analysis<<ANALYSIS_EOF\n")
+              f.write(analysis + "\n")
+              f.write("ANALYSIS_EOF\n")
+              f.write(f"success={str(success).lower()}\n")
+          PYTHON_SCRIPT
 
       # 5. GitHub Issue에 QA 보고서 코멘트 추가
       - name: Post QA report as comment
@@ -152,7 +172,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const analysis = `${{ steps.claude_analysis.outputs.analysis }}`;
+            const analysis = process.env.ANALYSIS_RESULT;
             const body = `${analysis}\n\n---\n*🤖 김감사 QA팀 자동 분석 (Claude AI) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
 
             await github.rest.issues.createComment({
@@ -161,14 +181,15 @@ jobs:
               issue_number: context.issue.number,
               body: body
             });
+        env:
+          ANALYSIS_RESULT: ${{ steps.claude_analysis.outputs.analysis }}
 
-      # 6. 라벨 교체: analyzing → qa-reviewed
-      - name: Update labels
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+      # 6. 라벨 교체 [CI-03 수정: 분석 실패 시 qa-failed 라벨]
+      - name: Update labels on success
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            // analyzing 라벨 제거
             try {
               await github.rest.issues.removeLabel({
                 owner: context.repo.owner,
@@ -176,9 +197,8 @@ jobs:
                 issue_number: context.issue.number,
                 name: 'analyzing'
               });
-            } catch (e) { /* 라벨 없으면 무시 */ }
+            } catch (e) {}
 
-            // qa-reviewed 라벨 추가
             try {
               await github.rest.issues.getLabel({
                 owner: context.repo.owner,
@@ -201,41 +221,97 @@ jobs:
               labels: ['qa-reviewed']
             });
 
+      - name: Update labels on failure
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: 'analyzing'
+              });
+            } catch (e) {}
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'qa-failed'
+              });
+            } catch (e) {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'qa-failed',
+                color: 'd73a4a',
+                description: '김감사 QA 자동 분석 실패'
+              });
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['qa-failed']
+            });
+
       # 7. 슬랙 DM 발송 (요약 + GitHub 링크)
       - name: Send Slack DM to CEO
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CEO_ID: "U02S3CN9E6R"
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+          ANALYSIS_SUCCESS: ${{ steps.claude_analysis.outputs.success }}
         run: |
-          ISSUE_NUMBER='${{ github.event.issue.number }}'
-          ISSUE_TITLE='${{ github.event.issue.title }}'
-          ISSUE_URL='${{ github.event.issue.html_url }}'
-          LABELS='${{ join(github.event.issue.labels.*.name, ', ') }}'
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request
 
-          # 요약 메시지 (3줄 + 링크)
-          MSG="━━━━━━━━━━━━━━━━━━━━
-          🕵️ *김감사 QA 자동 분석 완료*
+          slack_token = os.environ["SLACK_TOKEN"]
+          ceo_id = os.environ["SLACK_CEO_ID"]
+          issue_number = os.environ["ISSUE_NUMBER"]
+          issue_title = os.environ["ISSUE_TITLE"]
+          issue_url = os.environ["ISSUE_URL"]
+          labels = os.environ["ISSUE_LABELS"]
+          success = os.environ.get("ANALYSIS_SUCCESS", "false") == "true"
+
+          if success:
+              status = "✅ 분석 완료"
+          else:
+              status = "⚠️ 분석 실패 (수동 검토 필요)"
+
+          msg = f"""━━━━━━━━━━━━━━━━━━━━
+          🕵️ *김감사 QA 자동 분석*
           ━━━━━━━━━━━━━━━━━━━━
-          🔢 이슈 #${ISSUE_NUMBER}: ${ISSUE_TITLE}
-          🏷️ 라벨: ${LABELS}
-          📋 QA 보고서가 GitHub 코멘트에 등록되었습니다.
+          🔢 이슈 #{issue_number}: {issue_title}
+          🏷️ 라벨: {labels}
+          📋 상태: {status}
 
-          🔗 보고서 확인: ${ISSUE_URL}
+          🔗 보고서 확인: {issue_url}"""
 
-          💡 상세 분석 내용은 위 링크의 코멘트를 확인해주세요."
+          payload = json.dumps({
+              "channel": ceo_id,
+              "text": msg
+          }).encode("utf-8")
 
-          # Slack DM 발송 (chat.postMessage — user ID를 channel로)
-          curl -s -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer ${SLACK_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$(python3 -c "
-          import json
-          print(json.dumps({
-              'channel': '${SLACK_CEO_ID}',
-              'text': '''${MSG}'''
-          }))
-          ")" > /dev/null
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {slack_token}",
+                  "Content-Type": "application/json"
+              }
+          )
+          try:
+              urllib.request.urlopen(req)
+          except Exception as e:
+              print(f"Slack DM 발송 실패: {e}")
+          PYTHON_SCRIPT
 
       # 8. 일일 한도 초과 시 라벨 정리
       - name: Clean up on rate limit
