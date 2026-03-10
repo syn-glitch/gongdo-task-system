@@ -100,6 +100,7 @@ jobs:
           BRANCH="fix/issue-${{ inputs.issue_number }}-test"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "test: Claude Code 자동 수정 테스트 (이슈 #${{ inputs.issue_number }})"
