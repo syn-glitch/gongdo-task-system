@@ -145,7 +145,13 @@ jobs:
                           verdict = "approved"
           except urllib.error.HTTPError as e:
               error_body = e.read().decode("utf-8")
-              report = f"[리뷰 실패] API 에러 ({e.code})"
+              print(f"API HTTP {e.code}: {error_body[:500]}")
+              try:
+                  err_data = json.loads(error_body)
+                  err_msg = err_data.get("error", {}).get("message", error_body[:200])
+              except:
+                  err_msg = error_body[:200]
+              report = f"[리뷰 실패] API 에러 ({e.code}): {err_msg}"
               verdict = "error"
           except Exception as e:
               report = f"[리뷰 실패] {type(e).__name__}: {str(e)}"
