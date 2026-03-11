@@ -2,7 +2,7 @@ name: "🕵️ 김감사 QA — 이슈 자동 분석"
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   issues: write
