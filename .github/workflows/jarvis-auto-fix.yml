@@ -84,53 +84,47 @@ jobs:
         if: steps.issue_data.outputs.skip == 'false'
         uses: actions/checkout@v4
 
-      # 3. 컨텍스트 파일 준비 (Claude Code Action에 전달)
-      - name: Prepare context
+      # 3. 프롬프트 + 컨텍스트 준비 (전용 프롬프트에 이슈 컨텍스트를 인라인 결합)
+      - name: Prepare prompt
         if: steps.issue_data.outputs.skip == 'false'
+        id: prep
         run: |
-          # Claude가 참고할 컨텍스트를 하나의 파일로 합침
-          cat > /tmp/fix_context.txt << 'HEADER'
-          === 이슈 정보 ===
-          HEADER
-          echo "이슈 번호: #${{ inputs.issue_number }}" >> /tmp/fix_context.txt
-          echo "제목: ${{ steps.issue_data.outputs.title }}" >> /tmp/fix_context.txt
-          echo "" >> /tmp/fix_context.txt
-          echo "=== 이슈 본문 ===" >> /tmp/fix_context.txt
-          cat /tmp/issue_body.txt >> /tmp/fix_context.txt
-          echo "" >> /tmp/fix_context.txt
-          echo "=== 김감사 QA 분석 보고서 ===" >> /tmp/fix_context.txt
-          cat /tmp/qa_report.txt >> /tmp/fix_context.txt
-          echo "" >> /tmp/fix_context.txt
-          echo "=== 자비스 이해보고서 ===" >> /tmp/fix_context.txt
-          cat /tmp/jarvis_report.txt >> /tmp/fix_context.txt
+          # 전용 CI 프롬프트 읽기
+          PROMPT=$(cat .github/prompts/jarvis_auto_fix_prompt.md)
 
-      # 4. Claude Code Action으로 코드 수정
+          # 이슈 컨텍스트 조합
+          CONTEXT="=== 이슈 정보 ===
+          이슈 번호: #${{ inputs.issue_number }}
+          제목: ${{ steps.issue_data.outputs.title }}
+
+          === 이슈 본문 ===
+          $(cat /tmp/issue_body.txt)
+
+          === 김감사 QA 분석 보고서 ===
+          $(cat /tmp/qa_report.txt)
+
+          === 자비스 이해보고서 ===
+          $(cat /tmp/jarvis_report.txt)"
+
+          # 프롬프트 + 컨텍스트를 합쳐서 GITHUB_OUTPUT에 저장
+          {
+            echo "full_prompt<<PROMPT_EOF"
+            echo "$PROMPT"
+            echo ""
+            echo "$CONTEXT"
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # 4. Claude Code Action으로 코드 수정 (CI 전용 프롬프트 적용)
       - name: Fix code with Claude
         if: steps.issue_data.outputs.skip == 'false'
         id: claude_fix
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            아래 컨텍스트를 읽고, 이슈에서 보고된 문제를 수정하세요.
-
-            컨텍스트 파일: /tmp/fix_context.txt (cat으로 읽어주세요)
-
-            수정 규칙:
-            1. src/ 디렉토리 내 파일만 수정 가능
-            2. .github/ 디렉토리 수정 금지
-            3. .clasp.json, appsscript.json 수정 금지
-            4. src/frontend/ 파일 수정 시 src/gas/ 에도 동일 파일이 있으면 함께 수정
-            5. 자비스 이해보고서의 "수정 계획"을 우선 참고하여 수정
-            6. 수정이 불가능하면 이유를 설명하세요
-
-            작업 순서:
-            1. /tmp/fix_context.txt 를 읽어서 이슈와 보고서 내용 파악
-            2. 이해보고서에서 언급된 파일/함수를 찾아서 확인
-            3. 코드 수정 수행
-            4. 수정 내용을 간략히 요약
+          prompt: ${{ steps.prep.outputs.full_prompt }}
           claude_args: |
-            --max-turns 25
+            --max-turns 40
             --allowedTools Edit,Read,Write,Glob,Grep,Bash
 
       # 5. 변경사항 확인

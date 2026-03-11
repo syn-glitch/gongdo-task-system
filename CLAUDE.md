@@ -66,6 +66,10 @@
 - clasp push는 코드만 업로드, 배포 업데이트는 사용자가 수동 수행
 - 승인 없이 clasp push, git push 등 클라우드 업로드 절대 금지
 
+## CI 환경 (GitHub Actions)
+
+GitHub Actions CI에서 Claude Code Action으로 실행될 때는, prompt에 전달된 CI 전용 지침이 본 문서의 에이전트 팀 프로토콜(업무 착수 프로토콜, 역할 경계, 완료 보고 등)보다 우선한다.
+
 ## 기술 메모
 
 - Tasks 시트 C열(상태)에 데이터 유효성 검사 있음 → 새 상태값 설정 시 `setDataValidation(null)` 필요
