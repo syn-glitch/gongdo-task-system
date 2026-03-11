@@ -58,33 +58,10 @@ jobs:
         if: steps.check_reviewed.outputs.skip == 'false'
         uses: actions/checkout@v4
 
-      # 3. 일일 실행 횟수 제한 (최대 20건/일)
-      - name: Check daily limit
-        if: steps.check_reviewed.outputs.skip == 'false'
-        id: rate_limit
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().split('T')[0];
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'kim-qa-issue-analysis.yml',
-              created: `>=${today}`,
-              per_page: 25
-            });
-            const count = runs.total_count || 0;
-            console.log(`Today's run count: ${count}`);
-            if (count > 20) {
-              core.setOutput('exceeded', 'true');
-              core.warning('Daily limit exceeded (20 runs/day)');
-            } else {
-              core.setOutput('exceeded', 'false');
-            }
 
-      # 4. Claude API로 이슈 분석
+
       - name: Analyze issue with Claude
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        if: steps.check_reviewed.outputs.skip == 'false'
         id: claude_analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -172,9 +149,8 @@ jobs:
               f.write(f"cost_usd={cost_usd:.4f}\n")
           PYTHON_SCRIPT
 
-      # 5. GitHub Issue에 QA 보고서 코멘트 추가
       - name: Post QA report as comment
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        if: steps.check_reviewed.outputs.skip == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -190,9 +166,8 @@ jobs:
         env:
           ANALYSIS_RESULT: ${{ steps.claude_analysis.outputs.analysis }}
 
-      # 6. 라벨 교체 — 성공 시
       - name: Update labels on success
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success == 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.claude_analysis.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -227,9 +202,8 @@ jobs:
               labels: ['qa-reviewed']
             });
 
-      # 7. 라벨 교체 — 실패 시
       - name: Update labels on failure
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success != 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.claude_analysis.outputs.success != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -264,9 +238,8 @@ jobs:
               labels: ['qa-failed']
             });
 
-      # 8. 슬랙 DM 발송 (분석 결과 보고 + 팀 배정 버튼)
       - name: Send Slack DM to CEO
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        if: steps.check_reviewed.outputs.skip == 'false'
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CEO_ID: "U02S3CN9E6R"
@@ -377,9 +350,8 @@ jobs:
               print(f"Slack DM 발송 실패: {e}")
           PYTHON_SCRIPT
 
-      # 9. 자비스 이해보고서 워크플로우 자동 호출
       - name: Trigger Jarvis workflow
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success == 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.claude_analysis.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -394,23 +366,4 @@ jobs:
             });
             console.log(`Triggered jarvis workflow for issue #${context.issue.number}`);
 
-      # 10. 일일 한도 초과 시 라벨 정리
-      - name: Clean up on rate limit
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            try {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                name: 'analyzing'
-              });
-            } catch (e) {}
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '⚠️ 김감사 QA 자동 분석 일일 한도(20건) 초과. 수동 검토가 필요합니다.'
-            });
+
