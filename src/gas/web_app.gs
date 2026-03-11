@@ -458,7 +458,8 @@ function getAllTasksForWeb(userId) {
       requester: String(row[7] || "").trim(),
       startTime: startTime instanceof Date ? startTime.getTime() : null,
       durationMin: !isNaN(parseFloat(durationMin)) ? parseFloat(durationMin) : null,
-      startDate: plannedStartStr
+      startDate: plannedStartStr,
+      ccAssignees: String(row[19] || "").trim()
     });
   }
 
@@ -476,11 +477,20 @@ function getMyTasksForWeb(userId) {
   var slackUsername = SLACK_USER_MAP[userId] || "";
   return allTasks.filter(function(t) {
     var isAssignee = t.assignee === userName || t.assignee === slackUsername;
-    var isRequester = (t.requester === userName || t.requester === slackUsername) && t.assignee !== userName && t.assignee !== slackUsername;
-    return isAssignee || isRequester;
+    var isRequester = (t.requester === userName || t.requester === slackUsername) && !isAssignee;
+    var isCc = t.ccAssignees ? t.ccAssignees.split(",").some(function(n) {
+      n = n.trim();
+      return n === userName || n === slackUsername;
+    }) : false;
+    return isAssignee || isRequester || isCc;
   }).map(function(t) {
     var isMyAssignment = t.assignee === userName || t.assignee === slackUsername;
-    t.isRequester = !isMyAssignment;
+    var isCc = !isMyAssignment && t.ccAssignees ? t.ccAssignees.split(",").some(function(n) {
+      n = n.trim();
+      return n === userName || n === slackUsername;
+    }) : false;
+    t.isRequester = !isMyAssignment && !isCc;
+    t.isCcOnly = isCc;
     return t;
   });
 }
@@ -537,7 +547,7 @@ function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
 /**
  * 업무 수정 — QA M-10: 화이트리스트 필드만 수용 + 길이 제한
  */
-function updateTaskFromWeb(rowNum, title, desc, dueDate, status, userName) {
+function updateTaskFromWeb(rowNum, title, desc, dueDate, status, userName, ccAssignees) {
   var validation = validateTaskInput({ title: title, desc: desc, dueDate: dueDate, status: status });
   if (!validation.valid) return { success: false, message: validation.reason };
 
@@ -549,6 +559,9 @@ function updateTaskFromWeb(rowNum, title, desc, dueDate, status, userName) {
     sheet.getRange(rowNum, 6).setValue(String(desc || "").substring(0, MAX_DESC_LENGTH));
     sheet.getRange(rowNum, 9).setValue(dueDate ? new Date(dueDate) : "");
     sheet.getRange(rowNum, 3).setValue(status);
+    if (ccAssignees !== undefined) {
+      sheet.getRange(rowNum, 20).setValue(String(ccAssignees || "").substring(0, 500));
+    }
 
     logActionV2({
       userId: userName, action: "UPDATE", targetId: taskId,
@@ -650,13 +663,16 @@ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueD
       initialStatus = "수락대기";
     }
 
+    var ccArr = Array.isArray(opts.ccAssignees) ? opts.ccAssignees.filter(function(n) { return n && n.trim(); }) : [];
+    var ccStr = ccArr.join(",");
+
     var rowData = [
       newId, "일반", initialStatus, projectName || "DEFAULT",
       String(title).substring(0, MAX_TITLE_LENGTH),
       String(desc || "").substring(0, MAX_DESC_LENGTH),
       assigneeName, userName, dueDate ? new Date(dueDate) : "",
       "", "", "", "", today, today,
-      "", "", "", startDate  // P(15)=시작시간, Q(16)=종료, R(17)=소요시간, S(18)=시작예정일
+      "", "", "", startDate, ccStr  // P(15)=시작시간, Q(16)=종료, R(17)=소요시간, S(18)=시작예정일, T(19)=참조자
     ];
 
     sheet.appendRow(rowData);
@@ -666,13 +682,15 @@ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueD
 
     logActionV2({
       userId: userName, action: "REGISTER", targetId: newId,
-      newValue: title, details: "웹 대시보드 신규 등록 (담당: " + assigneeName + ")"
+      newValue: title, details: "웹 대시보드 신규 등록 (담당: " + assigneeName + (ccStr ? ", 참조: " + ccStr : "") + ")"
     });
+
+    var webAppUrl = "";
+    try { webAppUrl = ScriptApp.getService().getUrl(); } catch(e) {}
 
     // 슬랙 알림: 담당자가 본인이 아니면 담당자에게 DM
     if (assigneeName !== userName) {
       try {
-        var webAppUrl = ScriptApp.getService().getUrl();
         sendTaskDM(assigneeName, "📋 *새 업무가 배정되었습니다*\n" +
           "📂 " + (projectName || "DEFAULT") + " | " + newId + "\n" +
           "📝 " + title + "\n" +
@@ -682,6 +700,21 @@ function registerTaskFromWeb(userId, projectCode, projectName, title, desc, dueD
           "🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
       } catch (e) { console.error("DM 발송 실패:", e); }
     }
+
+    // 슬랙 알림: 참조자에게 DM
+    ccArr.forEach(function(ccName) {
+      if (ccName !== userName) {
+        try {
+          sendTaskDM(ccName, "👁 *업무 참조 알림*\n" +
+            "📂 " + (projectName || "DEFAULT") + " | " + newId + "\n" +
+            "📝 " + title + "\n" +
+            "👤 요청자: " + userName + "\n" +
+            "👤 담당자: " + assigneeName + "\n" +
+            "📅 마감일: " + (dueDate || "미지정") + "\n\n" +
+            "🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
+        } catch (e) { console.error("CC DM 발송 실패:", e); }
+      }
+    });
 
     try {
       if (typeof sendTaskNotification === "function") sendTaskNotification(newRow);

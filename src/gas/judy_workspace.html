@@ -2223,6 +2223,11 @@
             color: #2196F3;
         }
 
+        .badge-참조 {
+            background: rgba(156, 39, 176, 0.15);
+            color: #ab47bc;
+        }
+
         .due-tag {
             font-size: 12px;
             white-space: nowrap;
@@ -3614,6 +3619,13 @@
                 </select>
                 <small style="color:var(--hint-color); font-size:11px;">다른 사람 지정 시 '수락대기' 상태로 등록됩니다</small>
             </div>
+            <div class="form-group">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span>참조자 <small style="color:var(--hint-color); font-size:11px; font-weight:400;">(선택 · 내용을 함께 알아야 하는 팀원)</small></span>
+                    <button type="button" class="btn-cancel" style="padding:4px 10px; font-size:12px;" onclick="addRegCcRow()">+ 추가</button>
+                </label>
+                <div id="formCcList"></div>
+            </div>
             <div class="form-group" style="display:flex; gap:16px;">
                 <div style="flex:1;">
                     <label>시작예정일</label>
@@ -3686,6 +3698,14 @@
                     </div>
                 </div>
                 <div id="refTimeline" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+            </div>
+
+            <div class="form-group">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span>참조자 <small style="color:var(--hint-color); font-size:11px; font-weight:400;">(선택)</small></span>
+                    <button type="button" class="btn-cancel" style="padding:4px 10px; font-size:12px;" onclick="addEditCcRow()">+ 추가</button>
+                </label>
+                <div id="editCcList"></div>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
@@ -4868,9 +4888,11 @@
                     </td>
                     <td style="color:var(--hint-color); font-size:13px;">${t.project}</td>
                     <td>${dueHtml}</td>
-                    <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
+                    <td><span class="status-badge badge-${t.isCcOnly ? '참조' : t.isRequester ? '전달' : t.status}">${t.isCcOnly ? '👁 참조' : t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
-                        ${t.isRequester ?
+                        ${t.isCcOnly ?
+                        '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
+                        t.isRequester ?
                         '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
                         t.status === '수락대기' && t.assignee === g_userName ?
                             '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
@@ -4992,6 +5014,7 @@
             document.getElementById('formDesc').value = '';
             document.getElementById('formDue').value = '';
             document.getElementById('formStatus').value = '대기';
+            document.getElementById('formCcList').innerHTML = '';
 
             // [Phase 4] 추출 데이터가 있으면 폼에 채워넣기
             if (prefillData) {
@@ -5002,7 +5025,10 @@
 
             if (!projectsLoaded) loadProjectsList();
         }
-        function closeRegModal() { document.getElementById('regModalOverlay').classList.remove('show'); }
+        function closeRegModal() {
+            document.getElementById('regModalOverlay').classList.remove('show');
+            document.getElementById('formCcList').innerHTML = '';
+        }
 
         function loadProjectsList() {
             google.script.run
@@ -5049,6 +5075,34 @@
                 .createProjectFromWeb(name, g_userName);
         }
 
+        // === 참조자(CC) 유틸 ===
+        const MEMBER_OPTIONS = ['송용남', '이지은', '정혜림', '문유나', '이상호', '김관수', '김민석'];
+        function buildMemberSelectHtml(selected) {
+            return MEMBER_OPTIONS.map(function(n) {
+                return '<option value="' + n + '"' + (n === selected ? ' selected' : '') + '>' + n + '</option>';
+            }).join('');
+        }
+        function addRegCcRow(sel) {
+            var list = document.getElementById('formCcList');
+            var div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:8px; align-items:center; margin-top:6px;';
+            div.innerHTML = '<select style="flex:1;"><option value="">-- 선택 --</option>' + buildMemberSelectHtml(sel || '') + '</select><button type="button" class="btn-cancel" style="padding:4px 8px; font-size:12px;" onclick="this.parentElement.remove()">✕</button>';
+            list.appendChild(div);
+        }
+        function getRegCcAssignees() {
+            return Array.from(document.querySelectorAll('#formCcList select')).map(function(s) { return s.value.trim(); }).filter(Boolean);
+        }
+        function addEditCcRow(sel) {
+            var list = document.getElementById('editCcList');
+            var div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:8px; align-items:center; margin-top:6px;';
+            div.innerHTML = '<select style="flex:1;"><option value="">-- 선택 --</option>' + buildMemberSelectHtml(sel || '') + '</select><button type="button" class="btn-cancel" style="padding:4px 8px; font-size:12px;" onclick="this.parentElement.remove()">✕</button>';
+            list.appendChild(div);
+        }
+        function getEditCcAssignees() {
+            return Array.from(document.querySelectorAll('#editCcList select')).map(function(s) { return s.value.trim(); }).filter(Boolean);
+        }
+
         function submitNewTask() {
             const projectSel = document.getElementById('formProject');
             const projectCode = projectSel.value;
@@ -5069,6 +5123,8 @@
             var opts = {};
             if (assignee) opts.assigneeName = assignee;
             if (startDate) opts.startDate = startDate;
+            const regCcAssignees = getRegCcAssignees();
+            if (regCcAssignees.length > 0) opts.ccAssignees = regCcAssignees;
 
             google.script.run
                 .withSuccessHandler(res => {
@@ -5224,6 +5280,16 @@
 
             document.getElementById('editModalOverlay').classList.add('show');
 
+            // CC 참조자 초기화 및 로드
+            const editCcList = document.getElementById('editCcList');
+            editCcList.innerHTML = '';
+            if (task.ccAssignees) {
+                task.ccAssignees.split(',').forEach(function(name) {
+                    name = name.trim();
+                    if (name) addEditCcRow(name);
+                });
+            }
+
             // v3.1: 참고사항 로드
             document.getElementById('refInputWrap').style.display = 'none';
             document.getElementById('refNewContent').value = '';
@@ -5271,7 +5337,7 @@
                     btn.disabled = false; btn.textContent = '수정하기';
                     handleApiError(err.message);
                 })
-                .updateTaskFromWeb(rowNum, title, desc, due, status, g_userName);
+                .updateTaskFromWeb(rowNum, title, desc, due, status, g_userName, getEditCcAssignees().join(','));
         }
 
         // === 업무 삭제 ===
