@@ -2756,8 +2756,11 @@
 
         .cal-card .cal-title {
             flex: 1;
+            min-width: 0;
+            /* flex item truncation fix */
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
             font-weight: 500;
         }
 

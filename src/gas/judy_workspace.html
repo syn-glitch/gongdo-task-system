@@ -2745,6 +2745,8 @@
             white-space: nowrap;
             text-overflow: ellipsis;
             color: var(--text-color);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .cal-card .cal-dot {
@@ -2756,8 +2758,11 @@
 
         .cal-card .cal-title {
             flex: 1;
+            min-width: 0;
+            /* flex item truncation fix */
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
             font-weight: 500;
         }
 
