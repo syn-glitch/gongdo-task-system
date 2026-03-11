@@ -3,25 +3,26 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        judy_workspace.html
- * @version     v3.2.0
- * @updated     2026-03-11 22:30 (KST)
- * @author      클로이 (자비스팀, 꼼꼼이 문서팀 검토)
+ * @version     v3.3.0
+ * @updated     2026-03-12 (KST)
+ * @author      자비스 (자비스 개발팀)
  * @ordered-by  용남 대표
- * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 히스토리 v3.2.0.
- *              대화 내역 저장, 복원, 세션 관리, 드로어 UI 추가.
+ * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 히스토리 v3.2.0 + 모바일 UX/UI iOS 최적화 Phase 1.
  *
  * @change-summary
- *   AS-IS: v3.1.0 — 채팅 내용 휘발 (새로고침 시 초기화)
- *   TO-BE: v3.2.0 — 채팅 히스토리 기능 (localStorage 기반 세션 보관 및 전환)
+ *   AS-IS: v3.2.0 — 모바일 UX 최적화 미적용 (viewport 미설정, 터치 피드백 없음, blur 미강화)
+ *   TO-BE: v3.3.0 — 모바일 UX/UI iOS 네이티브 최적화 Phase 1 (STEP 0~5)
  *
  * @features
- *   - [추가] 📋 히스토리/➕ 새 대화/✕ 닫기 3버튼 헤더 UI
- *   - [추가] 대화 세션 관리 (localStorage 기반 safeSetItem 적용)
- *   - [추가] 세션 히스토리 드로어 (사이드 메뉴 전환 및 삭제)
- *   - [추가] 삭제 취소(Undo) 토스트 기능
- *   - [수정] 패널 오픈 시 마지막 활성 세션 자동 복원 로직
+ *   - [추가] STEP 0: viewport 메타태그 (viewport-fit=cover, maximum-scale=1.0)
+ *   - [수정] STEP 1: Spring 애니메이션 (bottom-sheet, dash-modal, fadeIn)
+ *   - [추가] STEP 2: 모바일 터치 피드백 (10개 대상 :active scale 0.97)
+ *   - [수정] STEP 3: Blur 강화 (overlay blur, bottom-nav saturate, reduced-motion fallback)
+ *   - [추가] STEP 4: Safe Area 전면 적용 (view-panel, gnb, dash-header)
+ *   - [추가] STEP 5: 모바일 스크롤바 숨김 (6개 스크롤 컨테이너)
  *
  * ── 변경 이력 ──────────────────────────
+ * v3.3.0 | 2026-03-12 | 자비스 | 모바일 UX/UI iOS 최적화 Phase 1 (STEP 0~5)
  * v3.2.0 | 2026-03-11 | 클로이 FE | 주디 채팅 히스토리 기능 (v3.2.0)
  * v3.1.0 | 2026-03-09 | 클로이 FE | 업무 관리 v3.1 고도화 (JARVIS-2026-03-09-001)
  * v2.9.2 | 2026-03-09 | 클로이 FE | 풀스크린 모달 에디터 (PRD-2026-03-09-001)
@@ -1919,6 +1920,7 @@
             .toggle-completed-btn {
                 -webkit-tap-highlight-color: transparent;
             }
+
             .bottom-nav-item:active,
             .kanban-card:active,
             .issue-row:active,
@@ -1938,9 +1940,11 @@
                 padding-left: env(safe-area-inset-left, 0px);
                 padding-right: env(safe-area-inset-right, 0px);
             }
+
             .gnb {
                 padding-top: env(safe-area-inset-top, 0px);
             }
+
             .dash-header {
                 padding-left: max(20px, env(safe-area-inset-left, 0px));
                 padding-right: max(20px, env(safe-area-inset-right, 0px));
@@ -1955,6 +1959,7 @@
             #calendar {
                 scrollbar-width: none;
             }
+
             .sidebar-content::-webkit-scrollbar,
             .task-list-wrapper::-webkit-scrollbar,
             .kanban-task-list::-webkit-scrollbar,
@@ -1967,7 +1972,9 @@
 
         /* [M-3] prefers-reduced-motion fallback */
         @media (prefers-reduced-motion: reduce) {
-            .bottom-sheet-overlay, .dash-modal-overlay {
+
+            .bottom-sheet-overlay,
+            .dash-modal-overlay {
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
             }
@@ -5706,16 +5713,8 @@
                     },
                     color: getStatusColor(t.status)
                 };
-                // 멀티데이: 시작예정일 ~ 마감일
-                if (t.startDate && t.startDate !== t.rawDueStr) {
-                    ev.start = t.startDate;
-                    // FullCalendar end는 exclusive이므로 마감일 +1일
-                    const endDate = new Date(t.rawDueStr);
-                    endDate.setDate(endDate.getDate() + 1);
-                    ev.end = endDate.toISOString().split('T')[0];
-                } else {
-                    ev.start = t.rawDueStr;
-                }
+                // 단일 데이 모드 (사용자 요청: 여러 일정 칸 차지하지 않도록 1일짜리로 고정)
+                ev.start = t.rawDueStr;
                 return ev;
             });
 
