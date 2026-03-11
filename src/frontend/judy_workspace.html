@@ -3,25 +3,26 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        judy_workspace.html
- * @version     v3.1.0
- * @updated     2026-03-09 (KST)
- * @author      클로이 & 에이다 (자비스팀)
+ * @version     v3.2.0
+ * @updated     2026-03-11 22:30 (KST)
+ * @author      클로이 (자비스팀, 꼼꼼이 문서팀 검토)
  * @ordered-by  용남 대표
- * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 패널.
- *              프로젝트 직접 등록, 담당자 수락 프로세스, 참고사항 히스토리, 시작예정일.
+ * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 히스토리 v3.2.0.
+ *              대화 내역 저장, 복원, 세션 관리, 드로어 UI 추가.
  *
  * @change-summary
- *   AS-IS: v2.9.2 — 기본 업무 등록 (프로젝트 선택만, 담당자 본인 고정)
- *   TO-BE: v3.1.0 — 업무 관리 고도화 (프로젝트 생성, 수락 프로세스, 참고사항 CRUD, 시작예정일)
+ *   AS-IS: v3.1.0 — 채팅 내용 휘발 (새로고침 시 초기화)
+ *   TO-BE: v3.2.0 — 채팅 히스토리 기능 (localStorage 기반 세션 보관 및 전환)
  *
  * @features
- *   - [추가] 프로젝트 직접 등록 인라인 UI (+ 새 프로젝트 버튼)
- *   - [추가] 담당자 셀렉트 + 수락대기 상태 + [✅ 수락] 버튼
- *   - [추가] 시작예정일 필드 (업무 등록 모달)
- *   - [추가] 참고사항 타임라인 UI (추가/수정/삭제 + 링크 자동 감지)
- *   - [추가] 요약바 수락대기 카운트 표시
+ *   - [추가] 📋 히스토리/➕ 새 대화/✕ 닫기 3버튼 헤더 UI
+ *   - [추가] 대화 세션 관리 (localStorage 기반 safeSetItem 적용)
+ *   - [추가] 세션 히스토리 드로어 (사이드 메뉴 전환 및 삭제)
+ *   - [추가] 삭제 취소(Undo) 토스트 기능
+ *   - [수정] 패널 오픈 시 마지막 활성 세션 자동 복원 로직
  *
  * ── 변경 이력 ──────────────────────────
+ * v3.2.0 | 2026-03-11 | 클로이 FE | 주디 채팅 히스토리 기능 (v3.2.0)
  * v3.1.0 | 2026-03-09 | 클로이 FE | 업무 관리 v3.1 고도화 (JARVIS-2026-03-09-001)
  * v2.9.2 | 2026-03-09 | 클로이 FE | 풀스크린 모달 에디터 (PRD-2026-03-09-001)
  * v2.9.1 | 2026-03-09 | 클로이 FE | 채팅 패널 리사이즈 잔상 수정 — CSS transform 전환
@@ -358,6 +359,152 @@
 
         .judy-chat-close:hover {
             background: var(--surface-elevated);
+        }
+
+        /* ═══ 히스토리 드로어 + 헤더 버튼 ═══ */
+        .judy-chat-header-btns {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .judy-chat-history-btn,
+        .judy-chat-new-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 17px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .judy-chat-history-btn:hover,
+        .judy-chat-new-btn:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-session-bar {
+            padding: 6px 16px;
+            font-size: 13px;
+            color: var(--hint-color);
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .judy-chat-session-bar:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-session-bar .chevron {
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .judy-chat-session-bar .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .judy-chat-history-drawer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-color);
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-drawer.open {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .judy-chat-history-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 8px;
+        }
+
+        .judy-chat-history-item:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-history-item.active {
+            background: rgba(187, 134, 252, 0.12);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .judy-chat-history-item .hist-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .judy-chat-history-item .hist-meta {
+            font-size: 11px;
+            color: var(--hint-color);
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-delete {
+            opacity: 0;
+            border: none;
+            background: transparent;
+            color: var(--danger, #e74c3c);
+            cursor: pointer;
+            font-size: 13px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-item:hover .judy-chat-history-delete {
+            opacity: 0.6;
+        }
+
+        .judy-chat-history-delete:hover {
+            opacity: 1 !important;
+            background: rgba(231, 76, 60, 0.15);
+        }
+
+        .judy-chat-history-empty {
+            padding: 20px 16px;
+            text-align: center;
+            color: var(--hint-color);
+            font-size: 13px;
+        }
+
+        /* 모바일: 오버레이 방식 드로어 */
+        @media (max-width: 768px) {
+            .judy-chat-history-drawer.open {
+                position: absolute;
+                left: 0;
+                right: 0;
+                max-height: 60vh;
+                background: var(--surface, var(--bg-color));
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                z-index: 10;
+            }
         }
 
         .judy-chat-messages {
@@ -1563,11 +1710,13 @@
                 font-weight: 600;
                 cursor: pointer;
             }
+
             .issue-tab-btn.active {
                 background: var(--primary-mobile);
                 color: #fff;
                 border-color: var(--primary-mobile);
             }
+
             .issue-card {
                 background: var(--card-bg);
                 border: 1px solid var(--border);
@@ -1577,15 +1726,18 @@
                 cursor: pointer;
                 transition: border-color 0.2s;
             }
+
             .issue-card:hover {
                 border-color: var(--primary-mobile);
             }
+
             .issue-card-title {
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--text-color);
                 margin-bottom: 6px;
             }
+
             .issue-card-meta {
                 font-size: 12px;
                 color: var(--hint-color);
@@ -1594,6 +1746,7 @@
                 flex-wrap: wrap;
                 align-items: center;
             }
+
             .issue-label {
                 display: inline-block;
                 padding: 2px 8px;
@@ -1609,8 +1762,13 @@
             }
 
             /* 토큰 탭 모바일 반응형 */
-            #tokenSummaryCards { grid-template-columns: repeat(2, 1fr) !important; }
-            #viewTokens [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+            #tokenSummaryCards {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            #viewTokens [style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
 
             .editor-container {
                 padding: 10px 20px 20px 20px;
@@ -2267,18 +2425,28 @@
         /* ========== Memo Edit Fullscreen Modal ========== */
         .memo-edit-modal-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 10002;
             display: flex;
             align-items: center;
             justify-content: center;
             animation: memoModalFadeIn 0.2s ease;
         }
+
         @keyframes memoModalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         .memo-edit-modal {
             background: var(--surface-elevated);
             width: min(90vw, 800px);
@@ -2286,9 +2454,10 @@
             border-radius: 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
+
         .memo-edit-modal-header {
             display: flex;
             align-items: center;
@@ -2297,6 +2466,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-close {
             background: none;
             border: none;
@@ -2306,12 +2476,17 @@
             padding: 0 4px;
             line-height: 1;
         }
-        .memo-edit-modal-close:hover { color: var(--text-color); }
+
+        .memo-edit-modal-close:hover {
+            color: var(--text-color);
+        }
+
         .memo-edit-modal-title {
             font-size: 16px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .memo-edit-modal-meta {
             padding: 10px 20px;
             font-size: 13px;
@@ -2319,6 +2494,7 @@
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-toolbar {
             display: flex;
             gap: 4px;
@@ -2328,6 +2504,7 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         .memo-edit-modal-toolbar button {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -2340,16 +2517,19 @@
             min-width: 32px;
             transition: background 0.15s;
         }
+
         .memo-edit-modal-toolbar button:hover {
             background: var(--primary);
             color: white;
         }
+
         .memo-edit-modal-body {
             flex: 1;
             padding: 16px 20px;
             overflow: hidden;
             display: flex;
         }
+
         .memo-edit-modal-textarea {
             width: 100%;
             height: 100%;
@@ -2365,9 +2545,11 @@
             outline: none;
             box-sizing: border-box;
         }
+
         .memo-edit-modal-textarea:focus {
             border-color: var(--primary);
         }
+
         .memo-edit-modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -2376,10 +2558,12 @@
             border-top: 1px solid var(--border);
             flex-shrink: 0;
         }
+
         .memo-edit-modal-footer .btn-save-sm {
             padding: 10px 24px;
             font-size: 14px;
         }
+
         .memo-edit-modal-footer .btn-cancel-sm {
             padding: 10px 24px;
             font-size: 14px;
@@ -2391,6 +2575,7 @@
                 justify-content: stretch;
                 background: none;
             }
+
             .memo-edit-modal {
                 width: 100vw;
                 height: 100vh;
@@ -2398,13 +2583,16 @@
                 max-width: none;
                 max-height: none;
             }
+
             .memo-edit-modal-toolbar {
                 padding: 8px 12px;
             }
+
             .memo-edit-modal-toolbar button {
                 padding: 8px 10px;
                 font-size: 12px;
             }
+
             .memo-edit-modal-body {
                 padding: 12px;
             }
@@ -2706,7 +2894,8 @@
                 <button class="gnb-tab" id="navKanban" onclick="switchMainView('kanban')">📋 칸반</button>
                 <button class="gnb-tab" id="navCalendar" onclick="switchMainView('calendar')">📅 달력</button>
                 <button class="gnb-tab" id="navIssues" onclick="switchMainView('issues')">🐛 이슈</button>
-                <button class="gnb-tab" id="navTokens" onclick="switchMainView('tokens')" style="display:none;">📈 토큰</button>
+                <button class="gnb-tab" id="navTokens" onclick="switchMainView('tokens')" style="display:none;">📈
+                    토큰</button>
             </div>
         </div>
         <div class="gnb-right">
@@ -2894,14 +3083,17 @@
                     <h1>🐛 <span>이슈 제보</span></h1>
                     <div class="dash-actions">
                         <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
-                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;" onclick="openIssueForm()">+ 이슈 제보</button>
+                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;"
+                            onclick="openIssueForm()">+ 이슈 제보</button>
                     </div>
                 </div>
 
                 <!-- 이슈 탭 (open/closed) -->
                 <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
-                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢 Open</button>
-                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴 Closed</button>
+                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢
+                        Open</button>
+                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴
+                        Closed</button>
                 </div>
 
                 <!-- 이슈 목록 -->
@@ -2933,7 +3125,9 @@
                 <!-- 스크롤 영역 -->
                 <div style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;">
                     <!-- 요약 카드 -->
-                    <div id="tokenSummaryCards" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;"></div>
+                    <div id="tokenSummaryCards"
+                        style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+                    </div>
                     <!-- 일별 차트 -->
                     <div style="background:var(--card-bg); border-radius:12px; padding:16px; margin-bottom:16px;">
                         <h3 style="margin:0 0 12px 0; font-size:14px; color:var(--hint-color);">📊 일별 사용량</h3>
@@ -2960,26 +3154,33 @@
         </div>
 
         <!-- 이슈 제보 모달 -->
-        <div id="issueFormModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div id="issueFormModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; font-size:18px;">🐛 이슈 제보</h2>
-                    <button onclick="closeIssueForm()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                    <button onclick="closeIssueForm()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:14px;">
                     <!-- 제목 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목 *</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">제목
+                            *</label>
                         <input id="issueTitle" type="text" maxlength="200" placeholder="어떤 문제가 발생했나요?"
-                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                     </div>
 
                     <!-- 카테고리 + 심각도 -->
                     <div style="display:flex; gap:12px;">
                         <div style="flex:1;">
-                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
-                            <select id="issueCategory" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">카테고리</label>
+                            <select id="issueCategory"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
                                 <option value="bug">🔴 버그</option>
                                 <option value="feature-error">🟡 기능 오류</option>
                                 <option value="ui-broken">🟠 UI 깨짐</option>
@@ -2987,8 +3188,10 @@
                             </select>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
-                            <select id="issueSeverity" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
+                            <label
+                                style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">심각도</label>
+                            <select id="issueSeverity"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color);">
                                 <option value="medium">보통</option>
                                 <option value="high">높음</option>
                                 <option value="low">낮음</option>
@@ -2998,32 +3201,37 @@
 
                     <!-- 발생 위치 (자동 감지 + 수정 가능) -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생 위치</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">발생
+                            위치</label>
                         <input id="issueLocation" type="text" placeholder="자동 감지됨 (수정 가능)"
-                               style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                     </div>
 
                     <!-- 설명 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">설명</label>
                         <textarea id="issueDescription" rows="4" maxlength="5000" placeholder="어떤 상황에서 발생했는지 자세히 알려주세요"
-                                  style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
+                            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--card-bg); color:var(--text-color); resize:vertical; box-sizing:border-box;"></textarea>
                     </div>
 
                     <!-- 스크린샷 -->
                     <div>
-                        <label style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷 (선택, 최대 5MB)</label>
-                        <input id="issueImage" type="file" accept="image/*"
-                               onchange="previewIssueImage(this)"
-                               style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
+                        <label
+                            style="font-size:13px; font-weight:600; color:var(--hint-color); margin-bottom:4px; display:block;">스크린샷
+                            (선택, 최대 5MB)</label>
+                        <input id="issueImage" type="file" accept="image/*" onchange="previewIssueImage(this)"
+                            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--card-bg); color:var(--text-color); box-sizing:border-box;">
                         <div id="issueImagePreview" style="margin-top:8px; display:none;">
-                            <img id="issueImagePreviewImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+                            <img id="issueImagePreviewImg"
+                                style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
                         </div>
                     </div>
 
                     <!-- 제출 버튼 -->
                     <button id="issueSubmitBtn" onclick="submitIssue()"
-                            style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
+                        style="width:100%; padding:12px; background:var(--primary-mobile); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;">
                         제보하기
                     </button>
                 </div>
@@ -3031,11 +3239,14 @@
         </div>
 
         <!-- 이슈 상세 모달 -->
-        <div id="issueDetailModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-            <div style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div id="issueDetailModal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+            <div
+                style="background:var(--bg-color); border-radius:16px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h2 id="issueDetailTitle" style="margin:0; font-size:18px;"></h2>
-                    <button onclick="closeIssueDetail()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
+                    <button onclick="closeIssueDetail()"
+                        style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button>
                 </div>
                 <div id="issueDetailBody" style="font-size:14px; line-height:1.7; color:var(--text-color);"></div>
             </div>
@@ -3053,12 +3264,15 @@
                     <select id="formProject" style="flex:1;">
                         <option value="">로딩 중...</option>
                     </select>
-                    <button type="button" class="btn-cancel" style="padding:8px 12px; font-size:12px; white-space:nowrap;" onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
+                    <button type="button" class="btn-cancel"
+                        style="padding:8px 12px; font-size:12px; white-space:nowrap;"
+                        onclick="toggleNewProjectInput()">+ 새 프로젝트</button>
                 </div>
                 <div id="newProjectInputWrap" style="display:none; margin-top:8px;">
                     <div style="display:flex; gap:8px;">
                         <input type="text" id="newProjectName" placeholder="새 프로젝트 이름" style="flex:1;">
-                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;" onclick="createNewProject()">생성</button>
+                        <button type="button" class="btn-submit" style="padding:8px 16px; font-size:12px;"
+                            onclick="createNewProject()">생성</button>
                     </div>
                 </div>
             </div>
@@ -3138,16 +3352,21 @@
                 </div>
             </div>
             <!-- v3.1.1: 참고사항 타임라인 (가시성 개선) -->
-            <div class="form-group" style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
+            <div class="form-group"
+                style="border-top:2px solid var(--primary); padding-top:12px; margin-top:12px; background:var(--bg-surface, rgba(0,0,0,0.02)); border-radius:8px; padding:12px;">
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-weight:600; font-size:14px;">📎 참고사항</span>
-                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;" onclick="toggleRefInput()">+ 추가</button>
+                    <button type="button" class="btn-submit" style="padding:4px 12px; font-size:12px;"
+                        onclick="toggleRefInput()">+ 추가</button>
                 </label>
                 <div id="refInputWrap" style="display:none; margin-top:8px;">
-                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)" style="min-height:60px;"></textarea>
+                    <textarea id="refNewContent" placeholder="참고사항을 입력하세요 (텍스트, 링크 등)"
+                        style="min-height:60px;"></textarea>
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
-                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;" onclick="toggleRefInput()">취소</button>
-                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;" onclick="submitNewRef()">등록</button>
+                        <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:12px;"
+                            onclick="toggleRefInput()">취소</button>
+                        <button type="button" class="btn-submit" style="padding:6px 12px; font-size:12px;"
+                            onclick="submitNewRef()">등록</button>
                     </div>
                 </div>
                 <div id="refTimeline" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
@@ -3177,6 +3396,19 @@
                 <button class="btn-cancel" onclick="closeDeleteConfirm()">취소</button>
                 <button class="btn-submit" id="confirmDeleteBtn" style="background: var(--danger);"
                     onclick="executeDeleteTask()">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메모 삭제 확인 모달 -->
+    <div class="dash-modal-overlay" id="confirmModal" onclick="if(event.target===this)closeConfirmModal()"
+        style="z-index: 200;">
+        <div class="dash-modal" style="width: 400px; border-top: 4px solid var(--danger);">
+            <h2>🗑️ 메모 삭제</h2>
+            <p id="confirmMsg" style="margin-bottom: 16px; color: var(--text-secondary); white-space: pre-wrap;"></p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn-cancel" id="confirmCancelBtn">취소</button>
+                <button class="btn-submit" id="confirmOkBtn" style="background: var(--danger);">삭제하기</button>
             </div>
         </div>
     </div>
@@ -3230,11 +3462,16 @@
                 <button type="button" onclick="insertMemoMarkdown('[','](url)')" title="링크">🔗</button>
             </div>
             <div class="memo-edit-modal-body">
-                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea" placeholder="메모 내용을 입력하세요..."></textarea>
+                <textarea id="memoEditTextarea" class="memo-edit-modal-textarea"
+                    placeholder="메모 내용을 입력하세요..."></textarea>
             </div>
-            <div class="memo-edit-modal-footer">
-                <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
-                <button class="btn-save-sm" id="memoEditSaveBtn" onclick="saveMemoEditModal()">💾 저장</button>
+            <div class="memo-edit-modal-footer" style="justify-content: space-between;">
+                <button class="btn-cancel-sm" id="memoEditDelBtn" onclick="deleteMemoFromEditModal()"
+                    style="color: #dc3545; border-color: rgba(220,53,69,0.3);">🗑️ 삭제</button>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
+                    <button class="btn-save-sm" id="memoEditSaveBtn" onclick="saveMemoEditModal()">💾 저장</button>
+                </div>
             </div>
         </div>
     </div>
@@ -3273,12 +3510,20 @@
     <div class="judy-chat-panel" id="judyChatPanel" style="width: 380px;">
         <div class="judy-chat-resizer" id="judyChatResizer"></div>
         <div class="judy-chat-header">
-            <h3>🐰 주디 (v2.8.7)</h3>
-            <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
+            <h3>🐰 주디 (v3.2.0)</h3>
+            <div class="judy-chat-header-btns">
+                <button class="judy-chat-history-btn" id="judyHistoryBtn" onclick="toggleHistoryDrawer()"
+                    title="대화 이력">📋</button>
+                <button class="judy-chat-new-btn" id="judyNewChatBtn" onclick="startNewChat()" title="새 대화">＋</button>
+                <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
+            </div>
         </div>
-        <div class="judy-chat-messages" id="judyChatMessages">
-            <div class="judy-msg ai">안녕하세요! 주디입니다 🐰<br>업무, 일정, 메모를 물어보세요.</div>
+        <div class="judy-chat-session-bar" id="judySessionBar" onclick="toggleHistoryDrawer()">
+            <span id="judySessionTitle">새 대화</span>
+            <span class="chevron" id="judySessionChevron">▾</span>
         </div>
+        <div class="judy-chat-history-drawer" id="judyHistoryDrawer"></div>
+        <div class="judy-chat-messages" id="judyChatMessages"></div>
         <div class="judy-typing-carrot" id="judyTyping">
             <img class="carrot-spinner"
                 src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBARXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAQKADAAQAAAABAAAAQAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+IB2ElDQ19QUk9GSUxFAAEBAAAByAAAAAAEMAAAbW50clJHQiBYWVogB+AAAQABAAAAAAAAYWNzcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJZGVzYwAAAPAAAAAkclhZWgAAARQAAAAUZ1hZWgAAASgAAAAUYlhZWgAAATwAAAAUd3RwdAAAAVAAAAAUclRSQwAAAWQAAAAoZ1RSQwAAAWQAAAAoYlRSQwAAAWQAAAAoY3BydAAAAYwAAAA8bWx1YwAAAAAAAAABAAAADGVuVVMAAAAIAAAAHABzAFIARwBCWFlaIAAAAAAAAG+iAAA49QAAA5BYWVogAAAAAAAAYpkAALeFAAAY2lhZWiAAAAAAAAAkoAAAD4QAALbPWFlaIAAAAAAAAPbWAAEAAAAA0y1wYXJhAAAAAAAEAAAAAmZmAADypwAADVkAABPQAAAKWwAAAAAAAAAAbWx1YwAAAAAAAAABAAAADGVuVVMAAAAgAAAAHABHAG8AbwBnAGwAZQAgAEkAbgBjAC4AIAAyADAAMQA2/8AAEQgAQABAAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMAAgICAgICAwICAwUDAwMFBgUFBQUGCAYGBgYGCAoICAgICAgKCgoKCgoKCgwMDAwMDA4ODg4ODw8PDw8PDw8PD//bAEMBAgICBAQEBwQEBxALCQsQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEP/dAAQABP/aAAwDAQACEQMRAD8A+0PbFNd1RS7kKqjJJOABVHw1enxLpiahaoE3M6shb7rIcEZ4+tZ3je5i0PQ55NVil+zTgxs8Sl9mRwTt6D3r/OWhkOIlVjB03Zvorn9a5xmlPCUqspySlBPRu2q6P59RkfivRZ9Rj0yKYtLKdqkD5CfTPv2rogwYZXB9xXyhDqdpPbfatOuQ0qnMZU8hx0+nNeseF/Gnhyxh0/w7JcSQ7FWPzplwrueWJbJwWYnr619hxbwRDCKEsHeWmq3enV226aW7n5z4ScYZtnlGvWxuH5Ywekkmk/7qve7Vnd30utNT1kW8tyDHEdpPU+leT61q0sHiC60RjvaDYzEg4AxxkgYyc5xnOOele0vcwW1tI6EYiUsfwFfLGlaB4z8U+Nm1fTI7W70Y2k1xOViBvG1CSUiMGc/cjWEAKgba393dyPpPBPhyOLx9TEVZWjSje3dvZfhf1se/xDnlb2ThS0Tutf63e1jq7zxBNHfpdTW8l1bwFEmliGUiLnhXPRc5zyenavSIpVuGWSM/K3Nec6t4Q8W/DHxpceLte1O5Ph/VtJl06PTlkU6d5twv72VlH3pOd2GGd3QkDFd/4GtlutG+2yRsEEhjAc53AqGVvY464/nX6N4t8DYT6hTq4G0ZUk3yrRcu7su63v183Y8bhbiatTqy9vLnjO2vaXb+v8z/0Pq34X6Ktz4KgMjyoZ2lk3JkcM5/Dt3r0v8AsmGOxEKtvAHSX5j+tSfDmD+zvCWnQfxCBM+uWGf612r+W64cA/UD/Pqa/E48AUZUo6627f8ABP2LNeJqlXE1Z95N/ifm54r1iKPxTqzXKJaxWs7RBVAUBEOB+fX8ao3ardwleMHjmut/aB8PxaP4xkvIf3MGrrwRgETIOdue4GPxGa8n0C5W3UWSHbHjCAlQqsBkqo+8x5yzEnmvi61JUZOlF/C7fdof09wzUhWwNGrBWTitPz/E9a8F/EnU9NlXQtbja9tlUqki8yhAOQR/FgfjgV7Z4UsrS1tLi88Da7NpK3rKWa32yxttzjfHIGCkZPTFfIl1PLp99b6pbgl7WVZQM/e2nJH4jivpHSre0u0j1vQpjaSXKLIGT7jhhkb06H3718z/AGnUybFfWsItJq0lrZ/dZp9mvPQ+d4t4Rw2Jjp7jet91fzWv9dD0688Exa/tn8X6++qvCFljMkmVVhnJWPO0Eg46HFcnrHxq+FPgpo9M1bVI4I4MpFbRK00s03oxQFVyePmIJP0rjPHGu3svw7utWvrKe+ktL2FHtLEyl7iFJFEmBH8xDhiCDwMV8MarFDYlb2zWaa1nZ1hkuIxGwKBSwZVLBWBYd/1r7zCZpWzDDupUpqMZaNJuUmt7OTv7u10lr1fQ/OMp4Tw9StKnjK7SpuzfuqMW3ZWS1cpaqNl0buf/0f0et0htoktoBtjjAAHXgD/Cp5bhIYnlfgKMkfTt29hWckmfu/Nn9f59T+lc54r1uDR9KmuZTlYUMhHc7fujoOWavhc7zFYXCzrdlp69D77AYSVatGlHVtnzH8Y9ITx5qrW5JLaKCYnHa4kHzn8iB+dfK0M1zpOpvaainl3MI2cjqCeo+tfZ2i20j2huLn5prlmlkPqzEk/rXmvxH+H8Wu2xvLECO9hyUb19j7Gv5hwfEP8AtEo1H7rZ/YGQ1YYelDB9Iq3z6/ieRtKLmH5jkkduletfCnWS9jPokzfPYvuTn/llJz+jZ/MV89WN7cWk7affoYriI7WU+v8AhXZ+EtXTSPF9g7yhVvSbdhnGRJ93A/3gK9/OMMq2Gkl01R7WYUOek0fSWn+O4Ph9exX2uxyrpUszI11Epf7NL0/eKOdjDGCOh+tVPHl18JfEWjaxY+E/E9rpOoeJNu9Edvs1w7Ef6+MqyoGPJkAUr1yea6aOO1ljZLqJZYrgbZUYblcdORXM/wDCovAkjmWyu5NOR23GJXXYD148wcfhXv5DiMPiqUKmGqqFRJKUW+XVK11tdM/BcXhYYXGOvVU1re8UpRet0pJp7Pys99Hqf//S+xI/HODiaE/kD/U1498VPHunq1ta3U/k2rt585PACx8RxgdznnHtXzrqXxJ1vWLeSSzbyLcFhsifAIBIOXOfzGK+b9R1m+vb6c3Fx/aUkDYOHOAr8gAnPTp+FfzNi8bVx9L2VSUrebT/AE/Nn9Qcc8N1uD8vWdOlGpJSUeVOyV72lJ+TS0X/AIEj9LtH1/TL6wt7uwk823lRWjbH3gR19q3pEWVMnoa+UPgdr73Ph19GuJS82nuCMn/lnJyMewYGvqS3uN0KZ7ivx/NcB7CtKC6M+i4bzuOY5fQzCn9tJvye0l8ndHkHxD+G0euRnUtLxBqMQJU44b/Zb2/lXzWZLm0EljdRtBfwEF933t45Bz6Z6Y49K++XYMMEV5Z46+HVn4qiFzbOLW/i+5MBn/gLDuDXq5Lnzpfuq3w/kfd5fnNlyVfvO28O6gusaHZ6ih4uI0f8WAJH4Gtoxkcqa5bwXos/h3w/a6VcSiaSENlgMDlicAegziutBA618/ieVVJKD0vofPYprnfK9Ln/2Q=="
@@ -4297,7 +4542,7 @@
                     <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
                         ${t.isRequester ?
-                            '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
+                        '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
                         t.status === '수락대기' && t.assignee === g_userName ?
                             '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
                             '<select class="status-select" onchange="changeTaskStatus(' + t.row + ', this.value, \'' + t.id + '\')">' +
@@ -4461,7 +4706,7 @@
             if (!name) return showToast('❌ 프로젝트 이름을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('newProjectName').value = '';
@@ -4471,7 +4716,7 @@
                         loadProjectsList();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .createProjectFromWeb(name, g_userName);
         }
 
@@ -4517,14 +4762,14 @@
         // v3.1: 업무 수락
         function acceptTask(rowNum) {
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         loadTasks();
                         if (window._kanbanInitialized) loadKanban();
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .acceptTaskFromWeb(rowNum, g_userName);
         }
 
@@ -4537,13 +4782,13 @@
 
         function submitNewRef() {
             var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-            var task = currentTasks.find(function(t) { return t.row === rowNum; });
+            var task = currentTasks.find(function (t) { return t.row === rowNum; });
             if (!task) return;
             var content = document.getElementById('refNewContent').value.trim();
             if (!content) return showToast('❌ 내용을 입력하세요', true);
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         document.getElementById('refNewContent').value = '';
@@ -4551,7 +4796,7 @@
                         loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
-                .withFailureHandler(function(err) { showToast('❌ ' + err.message, true); })
+                .withFailureHandler(function (err) { showToast('❌ ' + err.message, true); })
                 .addTaskReference(task.id, content, g_userName);
         }
 
@@ -4560,15 +4805,15 @@
             timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px;">로딩 중...</div>';
 
             google.script.run
-                .withSuccessHandler(function(refs) {
+                .withSuccessHandler(function (refs) {
                     if (!refs || refs.length === 0) {
                         timeline.innerHTML = '<div style="text-align:center; color:var(--hint-color); padding:8px; font-size:13px;">참고사항이 없습니다</div>';
                         return;
                     }
                     var html = '';
-                    refs.forEach(function(ref) {
+                    refs.forEach(function (ref) {
                         var date = ref.createdAt ? new Date(ref.createdAt) : null;
-                        var dateStr = date ? (date.getMonth()+1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2,'0') : '';
+                        var dateStr = date ? (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0') : '';
                         // 링크 자동 감지 (sanitize)
                         var safeContent = ref.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         safeContent = safeContent.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--primary);">$1</a>');
@@ -4585,7 +4830,7 @@
                     });
                     timeline.innerHTML = html;
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     timeline.innerHTML = '<div style="color:var(--danger); padding:8px; font-size:13px;">로드 실패</div>';
                 })
                 .getTaskReferences(taskId);
@@ -4598,11 +4843,11 @@
             if (newText === null || newText.trim() === '' || newText === oldText) return;
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -4612,11 +4857,11 @@
         function deleteRef(refId) {
             if (!confirm('참고사항을 삭제하시겠습니까?')) return;
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     if (res.success) {
                         showToast('✅ ' + res.message);
                         var rowNum = parseInt(document.getElementById('editRowNum').value, 10);
-                        var task = currentTasks.find(function(t) { return t.row === rowNum; });
+                        var task = currentTasks.find(function (t) { return t.row === rowNum; });
                         if (task) loadReferences(task.id);
                     } else { showToast('❌ ' + res.message, true); }
                 })
@@ -4633,26 +4878,20 @@
             document.getElementById('editDue').value = task.rawDueStr || '';
             document.getElementById('editStatus').value = task.status || '대기';
 
-            // v3.1.4: 발행자(전달 업무) → 읽기 전용 처리
+            // v3.1.8: 발행자(전달 업무)도 수정/삭제 가능
             const isRequester = task.isRequester === true;
             const modalTitle = document.querySelector('#editModalOverlay .dash-modal h2');
-            modalTitle.textContent = isRequester ? '📋 전달 업무 상세 (읽기 전용)' : '📝 업무 상세 및 수정';
-            document.getElementById('editTitle').readOnly = isRequester;
-            document.getElementById('editDesc').readOnly = isRequester;
-            document.getElementById('editDue').readOnly = isRequester;
-            document.getElementById('editStatus').disabled = isRequester;
-            document.getElementById('submitEditBtn').style.display = isRequester ? 'none' : '';
-            document.querySelector('#editModalOverlay .btn-delete').style.display = isRequester ? 'none' : '';
-            // 참고사항 추가 버튼도 숨김
+            modalTitle.textContent = isRequester ? '📋 전달 업무 상세' : '📝 업무 상세 및 수정';
+            document.getElementById('editTitle').readOnly = false;
+            document.getElementById('editDesc').readOnly = false;
+            document.getElementById('editDue').readOnly = false;
+            document.getElementById('editStatus').disabled = false;
+            document.getElementById('submitEditBtn').style.display = '';
+            document.querySelector('#editModalOverlay .btn-delete').style.display = '';
             const refAddBtn = document.querySelector('#editModalOverlay .form-group [onclick="toggleRefInput()"]');
-            if (refAddBtn) refAddBtn.style.display = isRequester ? 'none' : '';
-            if (isRequester) {
-                document.getElementById('editTitle').style.opacity = '0.7';
-                document.getElementById('editDesc').style.opacity = '0.7';
-            } else {
-                document.getElementById('editTitle').style.opacity = '1';
-                document.getElementById('editDesc').style.opacity = '1';
-            }
+            if (refAddBtn) refAddBtn.style.display = '';
+            document.getElementById('editTitle').style.opacity = '1';
+            document.getElementById('editDesc').style.opacity = '1';
 
             document.getElementById('editModalOverlay').classList.add('show');
 
@@ -5118,7 +5357,7 @@
             saveBtn.textContent = '저장 중...';
 
             google.script.run
-                .withSuccessHandler(function(res) {
+                .withSuccessHandler(function (res) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     if (res.success) {
@@ -5134,7 +5373,7 @@
                         showToast('❌ 수정 실패: ' + (res.message || '알 수 없는 오류'), true);
                     }
                 })
-                .withFailureHandler(function() {
+                .withFailureHandler(function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '💾 저장';
                     showToast('❌ 서버 통신 에러', true);
@@ -5145,6 +5384,47 @@
                     timeStr: ctx.timeStr,
                     originalContent: ctx.getCurrentContent(),
                     newContent: newText
+                });
+        }
+
+        function deleteMemoFromEditModal() {
+            if (!_memoEditCtx) return;
+            var ctx = _memoEditCtx;
+            var content = ctx.getCurrentContent();
+            var preview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+
+            if (!confirm('다음 메모를 삭제하시겠습니까?\n\n"' + preview + '"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return;
+
+            var delBtn = document.getElementById('memoEditDelBtn');
+            if (delBtn) { delBtn.disabled = true; delBtn.textContent = '삭제 중...'; }
+
+            google.script.run
+                .withSuccessHandler(function (res) {
+                    if (res.success) {
+                        // DOM 제거 먼저 (모달 닫기 전에 참조 확보)
+                        var blockToRemove = null;
+                        if (ctx.contentDiv && ctx.contentDiv.parentElement) {
+                            blockToRemove = ctx.contentDiv.closest('.memo-block');
+                        }
+                        closeMemoEditModal(true);
+                        if (blockToRemove) blockToRemove.remove();
+                        cachedSidebarData = null;
+                        loadSidebarData(g_userName);
+                        showToast('🗑️ 메모가 삭제되었습니다.');
+                    } else {
+                        if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
+                        showToast('❌ 삭제 실패: ' + (res.message || '알 수 없는 오류'), true);
+                    }
+                })
+                .withFailureHandler(function () {
+                    if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
+                    showToast('❌ 서버 통신 에러', true);
+                })
+                .deleteArchivedMemo({
+                    userName: g_userName,
+                    dateStr: ctx.dateStr,
+                    timeStr: ctx.timeStr,
+                    originalContent: content
                 });
         }
 
@@ -5161,7 +5441,7 @@
         }
 
         // ESC 키 핸들러
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 var overlay = document.getElementById('memoEditModalOverlay');
                 if (overlay && overlay.style.display !== 'none') {
@@ -5216,7 +5496,7 @@
             wrapper.appendChild(contentDiv);
 
             // 모달에서 수정 완료 시 contentDiv 업데이트 리스너
-            document.addEventListener('memoEdited', function(e) {
+            document.addEventListener('memoEdited', function (e) {
                 if (e.detail.dateStr === dateStr && e.detail.timeStr === timeStr) {
                     currentContent = e.detail.newContent;
                     contentDiv.textContent = currentContent;
@@ -5310,21 +5590,24 @@
         }
 
         let currentDeleteAction = null;
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+            currentDeleteAction = null;
+        }
         function executeDeleteFlow(memoBlock, userName, dateStr, timeStr, originalContent) {
             const preview = originalContent.length > 50 ? originalContent.substring(0, 50) + "..." : originalContent;
             document.getElementById('confirmMsg').innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
             currentDeleteAction = () => {
-                document.getElementById('confirmModal').style.display = 'none';
+                closeConfirmModal();
                 const btnDel = memoBlock.querySelector('.action-delete');
                 if (btnDel) btnDel.disabled = true;
                 google.script.run
                     .withSuccessHandler(res => {
                         if (res.success) {
-                            memoBlock.style.transition = 'opacity 0.3s';
-                            memoBlock.style.opacity = '0';
-                            setTimeout(() => memoBlock.remove(), 300);
+                            memoBlock.remove();
                             showToast('🗑️ 메모가 삭제되었습니다.');
                             cachedSidebarData = null;
+                            loadSidebarData(g_userName);
                         } else {
                             if (btnDel) btnDel.disabled = false;
                             showToast('❌ 삭제 실패: ' + res.message, true);
@@ -5336,13 +5619,12 @@
                     })
                     .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
             }
-            document.getElementById('confirmModal').style.display = 'flex';
+            document.getElementById('confirmModal').classList.add('show');
             document.getElementById('confirmCancelBtn').focus();
         }
 
         document.getElementById('confirmCancelBtn').addEventListener('click', () => {
-            document.getElementById('confirmModal').style.display = 'none';
-            currentDeleteAction = null;
+            closeConfirmModal();
         });
         document.getElementById('confirmOkBtn').addEventListener('click', () => {
             if (currentDeleteAction) currentDeleteAction();
@@ -5364,21 +5646,291 @@
             var judyTyping = document.getElementById('judyTyping');
             var judyChatOpen = false;
             var judyChatResizer = document.getElementById('judyChatResizer');
+            var judyHistoryDrawer = document.getElementById('judyHistoryDrawer');
+            var judySessionTitle = document.getElementById('judySessionTitle');
+            var judySessionChevron = document.getElementById('judySessionChevron');
 
             if (!judyChatPanel || !judyChatInput) {
                 console.warn('[JudyChat] 패널 DOM 요소를 찾을 수 없습니다.');
                 return;
             }
 
+            // ═══ 세션 상태 관리 ═══
+            var MAX_SESSIONS = 30;
+            var _sessions = [];       // 세션 배열
+            var _activeSessionId = null;
+            var _historyOpen = false;
+            var _deleteUndoTimer = null;
 
-            // Resizer logic
+            // ─── localStorage 안전 저장 (QA C-001) ───
+            function _getStorageKey() {
+                var userName = localStorage.getItem('judy_userName') || 'default';
+                return 'judy_chat_' + userName;
+            }
+
+            function safeSetItem(key, data) {
+                var json = JSON.stringify(data);
+                try {
+                    localStorage.setItem(key, json);
+                    return true;
+                } catch (e) {
+                    if ((e.name === 'QuotaExceededError' || e.code === 22) && data.sessions && data.sessions.length > 1) {
+                        data.sessions.sort(function (a, b) { return new Date(a.updatedAt) - new Date(b.updatedAt); });
+                        var removed = data.sessions.shift();
+                        if (data.activeSessionId === removed.id) {
+                            data.activeSessionId = data.sessions[0] ? data.sessions[0].id : null;
+                        }
+                        showToast('💾 저장 공간 부족 — "' + (removed.title || '오래된 대화') + '" 자동 정리됨');
+                        return safeSetItem(key, data);
+                    }
+                    showToast('⚠️ 대화 저장에 실패했습니다.', true);
+                    console.error('[JudyChat] localStorage 저장 실패:', e);
+                    return false;
+                }
+            }
+
+            // ─── 세션 로드/저장 ───
+            function loadSessions() {
+                try {
+                    var raw = localStorage.getItem(_getStorageKey());
+                    if (raw) {
+                        var data = JSON.parse(raw);
+                        _sessions = data.sessions || [];
+                        _activeSessionId = data.activeSessionId || null;
+                    } else {
+                        _sessions = [];
+                        _activeSessionId = null;
+                    }
+                } catch (e) {
+                    console.error('[JudyChat] 세션 로드 실패:', e);
+                    _sessions = [];
+                    _activeSessionId = null;
+                }
+            }
+
+            function saveSessions() {
+                var data = {
+                    sessions: _sessions,
+                    activeSessionId: _activeSessionId,
+                    maxSessions: MAX_SESSIONS
+                };
+                safeSetItem(_getStorageKey(), data);
+            }
+
+            function getActiveSession() {
+                if (!_activeSessionId) return null;
+                for (var i = 0; i < _sessions.length; i++) {
+                    if (_sessions[i].id === _activeSessionId) return _sessions[i];
+                }
+                return null;
+            }
+
+            // ─── 유틸리티 ───
+            function generateSessionId() {
+                return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            function generateTitle(firstUserMessage) {
+                var text = (firstUserMessage || '새 대화').trim();
+                if (text.length <= 20) return text;
+                var truncated = '';
+                var words = text.split(' ');
+                for (var i = 0; i < words.length; i++) {
+                    var next = truncated ? truncated + ' ' + words[i] : words[i];
+                    if (next.length > 18) break;
+                    truncated = next;
+                }
+                return (truncated || text.substr(0, 18)) + '...';
+            }
+
+            function formatTime(dateStr) {
+                try {
+                    var d = new Date(dateStr);
+                    var now = new Date();
+                    var isToday = d.toDateString() === now.toDateString();
+                    if (isToday) {
+                        return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                    }
+                    return (d.getMonth() + 1) + '/' + d.getDate();
+                } catch (e) { return ''; }
+            }
+
+            // ─── 세션 복원 (QA M-002: appendJudyMsg 재사용 필수) ───
+            function restoreSession(session) {
+                judyChatMessages.innerHTML = '';
+                if (!session || !session.messages || session.messages.length === 0) {
+                    appendJudyMsg('안녕하세요! 주디입니다 🐰\n업무, 일정, 메모를 물어보세요.', 'ai');
+                    return;
+                }
+                session.messages.forEach(function (msg) {
+                    appendJudyMsg(msg.content, msg.role);
+                });
+                judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
+            }
+
+            function updateSessionBar() {
+                var session = getActiveSession();
+                if (judySessionTitle) {
+                    judySessionTitle.textContent = session ? session.title : '새 대화';
+                }
+            }
+
+            // ─── 히스토리 드로어 렌더링 ───
+            function renderHistoryDrawer() {
+                if (!judyHistoryDrawer) return;
+                if (_sessions.length === 0) {
+                    judyHistoryDrawer.innerHTML = '<div class="judy-chat-history-empty">대화 이력이 없습니다</div>';
+                    return;
+                }
+                var sorted = _sessions.slice().sort(function (a, b) {
+                    return new Date(b.updatedAt) - new Date(a.updatedAt);
+                });
+                var html = '';
+                sorted.forEach(function (s) {
+                    var isActive = s.id === _activeSessionId;
+                    html += '<div class="judy-chat-history-item' + (isActive ? ' active' : '') + '" onclick="switchSession(\'' + s.id + '\')">';
+                    html += '<span class="hist-title">' + (s.title || '새 대화').replace(/</g, '&lt;') + '</span>';
+                    html += '<span class="hist-meta">' + formatTime(s.updatedAt || s.createdAt) + '</span>';
+                    html += '<button class="judy-chat-history-delete" onclick="event.stopPropagation(); deleteSession(\'' + s.id + '\')" title="삭제">🗑️</button>';
+                    html += '</div>';
+                });
+                judyHistoryDrawer.innerHTML = html;
+            }
+
+            // ═══ 이벤트 핸들러 ═══
+
+            // 히스토리 드로어 토글
+            window.toggleHistoryDrawer = function () {
+                _historyOpen = !_historyOpen;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.toggle('open', _historyOpen);
+                if (judySessionChevron) judySessionChevron.classList.toggle('open', _historyOpen);
+                if (_historyOpen) renderHistoryDrawer();
+            };
+
+            // 새 대화 시작
+            window.startNewChat = function () {
+                // 현재 세션이 빈 세션(메시지 0건)이면 저장하지 않고 삭제 (QA m-002)
+                var current = getActiveSession();
+                if (current && (!current.messages || current.messages.length === 0)) {
+                    _sessions = _sessions.filter(function (s) { return s.id !== current.id; });
+                }
+                var newSession = {
+                    id: generateSessionId(),
+                    title: '새 대화',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    messages: []
+                };
+                // 세션 수 제한
+                if (_sessions.length >= MAX_SESSIONS) {
+                    _sessions.sort(function (a, b) { return new Date(a.updatedAt) - new Date(b.updatedAt); });
+                    _sessions.shift();
+                }
+                _sessions.push(newSession);
+                _activeSessionId = newSession.id;
+                saveSessions();
+                restoreSession(newSession);
+                updateSessionBar();
+                if (_historyOpen) renderHistoryDrawer();
+                // 드로어 닫기
+                _historyOpen = false;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                if (judySessionChevron) judySessionChevron.classList.remove('open');
+                judyChatInput.focus();
+            };
+
+            // 대화 전환
+            window.switchSession = function (sessionId) {
+                if (sessionId === _activeSessionId) {
+                    // 같은 세션이면 드로어만 닫기
+                    window.toggleHistoryDrawer();
+                    return;
+                }
+                _activeSessionId = sessionId;
+                var session = getActiveSession();
+                if (session) {
+                    restoreSession(session);
+                    updateSessionBar();
+                    saveSessions();
+                }
+                // 드로어 닫기
+                _historyOpen = false;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                if (judySessionChevron) judySessionChevron.classList.remove('open');
+            };
+
+            // 대화 삭제 (Undo 토스트 3초 — QA m-003)
+            window.deleteSession = function (sessionId) {
+                var sessionIdx = -1;
+                var sessionToDelete = null;
+                for (var i = 0; i < _sessions.length; i++) {
+                    if (_sessions[i].id === sessionId) {
+                        sessionIdx = i;
+                        sessionToDelete = _sessions[i];
+                        break;
+                    }
+                }
+                if (sessionIdx === -1) return;
+
+                // 즉시 UI에서 제거
+                _sessions.splice(sessionIdx, 1);
+                var wasActive = (sessionId === _activeSessionId);
+                if (wasActive) {
+                    _activeSessionId = _sessions.length > 0 ? _sessions[_sessions.length - 1].id : null;
+                    var next = getActiveSession();
+                    if (next) {
+                        restoreSession(next);
+                    } else {
+                        window.startNewChat();
+                    }
+                    updateSessionBar();
+                }
+                saveSessions();
+                renderHistoryDrawer();
+
+                // Undo 토스트
+                if (_deleteUndoTimer) clearTimeout(_deleteUndoTimer);
+
+                // 토스트에 Undo 버튼 포함
+                var toastEl = document.getElementById('toast');
+                var toastMsgEl = document.getElementById('toastMsg');
+                if (toastEl && toastMsgEl) {
+                    toastMsgEl.innerHTML = '🗑️ "' + (sessionToDelete.title || '대화').replace(/</g, '&lt;') + '" 삭제됨 <button onclick="undoDeleteSession()" style="margin-left:8px;padding:2px 10px;border:1px solid var(--primary);background:transparent;color:var(--primary);border-radius:4px;cursor:pointer;font-size:12px;">취소</button>';
+                    toastEl.classList.add('show');
+
+                    // 3초 후 토스트 닫기 (되돌리기 불가)
+                    _deleteUndoTimer = setTimeout(function () {
+                        toastEl.classList.remove('show');
+                        sessionToDelete = null; // 참조 해제
+                    }, 3000);
+
+                    // Undo 핸들러
+                    window.undoDeleteSession = function () {
+                        if (!sessionToDelete) return;
+                        clearTimeout(_deleteUndoTimer);
+                        _sessions.push(sessionToDelete);
+                        if (wasActive) {
+                            _activeSessionId = sessionToDelete.id;
+                            restoreSession(sessionToDelete);
+                            updateSessionBar();
+                        }
+                        saveSessions();
+                        renderHistoryDrawer();
+                        toastEl.classList.remove('show');
+                        showToast('↩️ 삭제가 취소되었습니다.');
+                        sessionToDelete = null;
+                    };
+                }
+            };
+
+            // ═══ Resizer logic ═══
             if (judyChatResizer) {
                 var isResizing = false;
                 judyChatResizer.addEventListener('mousedown', function (e) {
                     isResizing = true;
                     judyChatResizer.classList.add('active');
                     document.body.style.cursor = 'ew-resize';
-                    document.body.style.userSelect = 'none'; // text selection 방지
+                    document.body.style.userSelect = 'none';
                 });
                 document.addEventListener('mousemove', function (e) {
                     if (!isResizing) return;
@@ -5397,17 +5949,39 @@
                 });
             }
 
+            // ═══ 패널 열기/닫기 (수정: 복원 로직 추가) ═══
             window.toggleJudyChat = function () {
                 judyChatOpen = !judyChatOpen;
                 judyChatPanel.classList.toggle('open', judyChatOpen);
                 judyChatOverlay.classList.toggle('show', judyChatOpen);
                 if (judyChatOpen) {
+                    // 패널 열 때 세션 로드 + 복원
+                    loadSessions();
+                    var session = getActiveSession();
+                    if (session) {
+                        restoreSession(session);
+                        updateSessionBar();
+                    } else if (_sessions.length > 0) {
+                        // activeSessionId가 없으면 가장 최신 세션
+                        _sessions.sort(function (a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+                        _activeSessionId = _sessions[0].id;
+                        restoreSession(_sessions[0]);
+                        updateSessionBar();
+                        saveSessions();
+                    } else {
+                        // 세션이 하나도 없으면 새 세션 생성
+                        window.startNewChat();
+                    }
+                    // 히스토리 드로어 닫기
+                    _historyOpen = false;
+                    if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                    if (judySessionChevron) judySessionChevron.classList.remove('open');
                     setTimeout(function () { judyChatInput.focus(); }, 300);
                 }
             };
 
             window.handleJudyChatKey = function (e) {
-                if (e.isComposing) return; // 한글 IME 입력 중복 트리거 방지
+                if (e.isComposing) return;
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     window.sendJudyChat();
@@ -5426,9 +6000,10 @@
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
             }
 
-            // 출근 키워드 목록 (추후 확장 가능)
+            // 출근 키워드 목록
             var CHECKIN_KEYWORDS = ['출근'];
 
+            // ═══ 메시지 전송 (수정: 세션 저장 추가) ═══
             window.sendJudyChat = function () {
                 var query = (judyChatInput.value || '').trim();
                 if (!query) return;
@@ -5438,17 +6013,42 @@
                     return;
                 }
 
+                // 활성 세션 없으면 새로 생성
+                var session = getActiveSession();
+                if (!session) {
+                    var newId = generateSessionId();
+                    session = {
+                        id: newId,
+                        title: '새 대화',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        messages: []
+                    };
+                    _sessions.push(session);
+                    _activeSessionId = newId;
+                }
+
                 appendJudyMsg(query, 'user');
+
+                // 세션에 사용자 메시지 추가
+                session.messages.push({ role: 'user', content: query, ts: Date.now() });
+                // 첫 사용자 메시지면 제목 자동 생성 (QA m-001)
+                var userMsgCount = session.messages.filter(function (m) { return m.role === 'user'; }).length;
+                if (userMsgCount === 1) {
+                    session.title = generateTitle(query);
+                    updateSessionBar();
+                }
+                session.updatedAt = new Date().toISOString();
+                saveSessions();
+
                 judyChatInput.value = '';
                 judyChatInput.style.height = 'auto';
                 judyChatSend.disabled = true;
 
-                // 질문 아래 왼쪽(AI 방향)에 당근펜 로딩 표시를 동적 배치
                 judyChatMessages.appendChild(judyTyping);
                 judyTyping.classList.add('show');
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
 
-                // 출근 키워드 감지 → 전용 핸들러 (AI 미사용, 빠른 응답)
                 var isCheckIn = CHECKIN_KEYWORDS.indexOf(query) !== -1;
 
                 var successHandler = function (response) {
@@ -5460,17 +6060,31 @@
                         msgText = response.response || JSON.stringify(response);
                     }
 
-                    if (msgText) {
-                        appendJudyMsg(msgText, 'ai');
-                    } else {
-                        appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
+                    var aiContent = msgText || '응답을 받지 못했습니다. 다시 시도해주세요.';
+                    appendJudyMsg(aiContent, 'ai');
+
+                    // AI 응답도 세션에 저장
+                    var s = getActiveSession();
+                    if (s) {
+                        s.messages.push({ role: 'ai', content: aiContent, ts: Date.now() });
+                        s.updatedAt = new Date().toISOString();
+                        saveSessions();
                     }
                 };
 
                 var failureHandler = function (err) {
                     judyTyping.classList.remove('show');
                     judyChatSend.disabled = false;
-                    appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
+                    var errMsg = '⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류');
+                    appendJudyMsg(errMsg, 'ai');
+
+                    // 에러도 세션에 기록
+                    var s = getActiveSession();
+                    if (s) {
+                        s.messages.push({ role: 'ai', content: errMsg, ts: Date.now() });
+                        s.updatedAt = new Date().toISOString();
+                        saveSessions();
+                    }
                 };
 
                 if (isCheckIn) {
@@ -5492,13 +6106,15 @@
                 this.style.height = Math.min(this.scrollHeight, 80) + 'px';
             });
 
-            console.log('[JudyChat] 패널 초기화 완료');
+            // ═══ 초기화 ═══
+            loadSessions();
+            console.log('[JudyChat] 패널 초기화 완료 (히스토리 v3.2.0, 세션 ' + _sessions.length + '개)');
         })();
     </script>
 
     <!-- Issue Board Module -->
     <script>
-        (function() {
+        (function () {
             // 상태 관리
             window._issueState = 'open';
             window._issuePage = 1;
@@ -5507,13 +6123,13 @@
 
             // 원래 switchMainView를 래핑하여 현재 탭 추적
             const _origSwitchMainView = window.switchMainView;
-            window.switchMainView = function(viewName) {
+            window.switchMainView = function (viewName) {
                 window._currentActiveView = viewName;
                 _origSwitchMainView(viewName);
             };
 
             // 이슈 목록 로드
-            window.loadIssues = function() {
+            window.loadIssues = function () {
                 if (window._issueLoading) return;
                 window._issueLoading = true;
                 window._issuePage = 1;
@@ -5522,7 +6138,7 @@
                 listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">불러오는 중...</div>';
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         window._issueLoading = false;
                         if (!result || !result.success) {
                             listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">이슈를 불러올 수 없습니다.</div>';
@@ -5531,7 +6147,7 @@
                         renderIssueList(result.issues, false);
                         document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         window._issueLoading = false;
                         listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">오류: ' + err.message + '</div>';
                     })
@@ -5539,25 +6155,25 @@
             };
 
             // 더보기
-            window.loadMoreIssues = function() {
+            window.loadMoreIssues = function () {
                 if (window._issueLoading) return;
                 window._issueLoading = true;
                 window._issuePage++;
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         window._issueLoading = false;
                         if (result && result.success) {
                             renderIssueList(result.issues, true);
                             document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                         }
                     })
-                    .withFailureHandler(function() { window._issueLoading = false; })
+                    .withFailureHandler(function () { window._issueLoading = false; })
                     .getGitHubIssues(window._issueState, window._issuePage);
             };
 
             // 탭 전환
-            window.switchIssueTab = function(state) {
+            window.switchIssueTab = function (state) {
                 window._issueState = state;
                 document.getElementById('issueTabOpen').classList.toggle('active', state === 'open');
                 document.getElementById('issueTabClosed').classList.toggle('active', state === 'closed');
@@ -5577,14 +6193,14 @@
                     return;
                 }
 
-                issues.forEach(function(issue) {
+                issues.forEach(function (issue) {
                     var card = document.createElement('div');
                     card.className = 'issue-card';
-                    card.onclick = function() { openIssueDetail(issue.number); };
+                    card.onclick = function () { openIssueDetail(issue.number); };
 
                     var labelsHtml = '';
                     if (issue.labels) {
-                        issue.labels.forEach(function(l) {
+                        issue.labels.forEach(function (l) {
                             if (l.name === 'from-workspace') return; // 내부 라벨은 숨김
                             labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + l.name + '</span>';
                         });
@@ -5596,9 +6212,9 @@
                     card.innerHTML =
                         '<div class="issue-card-title">' + stateIcon + ' #' + issue.number + ' ' + escapeHtml(issue.title) + '</div>' +
                         '<div class="issue-card-meta">' +
-                            '<span>' + timeAgo + '</span>' +
-                            (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
-                            labelsHtml +
+                        '<span>' + timeAgo + '</span>' +
+                        (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
+                        labelsHtml +
                         '</div>';
 
                     listEl.appendChild(card);
@@ -5606,7 +6222,7 @@
             }
 
             // 이슈 제보 폼 열기
-            window.openIssueForm = function() {
+            window.openIssueForm = function () {
                 // 발생 위치 자동 감지
                 var locationInput = document.getElementById('issueLocation');
                 var viewMap = { note: '노트', tasks: '업무', kanban: '칸반', calendar: '달력', issues: '이슈' };
@@ -5615,7 +6231,7 @@
                 document.getElementById('issueFormModal').style.display = 'flex';
             };
 
-            window.closeIssueForm = function() {
+            window.closeIssueForm = function () {
                 document.getElementById('issueFormModal').style.display = 'none';
                 // 폼 리셋
                 document.getElementById('issueTitle').value = '';
@@ -5628,7 +6244,7 @@
             };
 
             // 이미지 미리보기
-            window.previewIssueImage = function(input) {
+            window.previewIssueImage = function (input) {
                 var preview = document.getElementById('issueImagePreview');
                 var previewImg = document.getElementById('issueImagePreviewImg');
                 if (input.files && input.files[0]) {
@@ -5639,7 +6255,7 @@
                         return;
                     }
                     var reader = new FileReader();
-                    reader.onload = function(e) {
+                    reader.onload = function (e) {
                         previewImg.src = e.target.result;
                         preview.style.display = 'block';
                     };
@@ -5650,7 +6266,7 @@
             };
 
             // 이슈 제출
-            window.submitIssue = function() {
+            window.submitIssue = function () {
                 var title = document.getElementById('issueTitle').value.trim();
                 if (!title) { showToast('제목을 입력해 주세요.', 'error'); return; }
 
@@ -5678,7 +6294,7 @@
                 }
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '제보하기';
                         if (result && result.success) {
@@ -5690,7 +6306,7 @@
                             showToast(result ? result.error : '등록 실패', 'error');
                         }
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '제보하기';
                         showToast('오류: ' + err.message, 'error');
@@ -5699,13 +6315,13 @@
             };
 
             // 이슈 상세 보기
-            window.openIssueDetail = function(issueNumber) {
+            window.openIssueDetail = function (issueNumber) {
                 document.getElementById('issueDetailTitle').textContent = '불러오는 중...';
                 document.getElementById('issueDetailBody').innerHTML = '';
                 document.getElementById('issueDetailModal').style.display = 'flex';
 
                 google.script.run
-                    .withSuccessHandler(function(result) {
+                    .withSuccessHandler(function (result) {
                         if (result && result.success) {
                             var issue = result.issue;
                             var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
@@ -5713,18 +6329,18 @@
 
                             // body에서 METADATA 블록 제거하고 표시
                             var body = (issue.body || '').replace(/<!-- METADATA[\s\S]*?-->/, '').trim();
-                            // 간단한 마크다운 → HTML 변환
-                            body = body
-                                .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-                                .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
-                                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                                .replace(/\n/g, '<br>');
+                                // 간단한 마크다운 → HTML 변환
+                                body = body
+                                    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+                                    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+                                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin:8px 0;">')
+                                    .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                    .replace(/\n/g, '<br>');
 
                             var labelsHtml = '';
                             if (issue.labels) {
-                                issue.labels.forEach(function(l) {
+                                issue.labels.forEach(function (l) {
                                     if (l.name === 'from-workspace') return;
                                     labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + '; margin-right:4px;">' + l.name + '</span>';
                                 });
@@ -5743,14 +6359,14 @@
                             document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
                         }
                     })
-                    .withFailureHandler(function() {
+                    .withFailureHandler(function () {
                         document.getElementById('issueDetailTitle').textContent = '오류';
                         document.getElementById('issueDetailBody').innerHTML = '<p>이슈를 불러올 수 없습니다.</p>';
                     })
                     .getGitHubIssueDetail(issueNumber);
             };
 
-            window.closeIssueDetail = function() {
+            window.closeIssueDetail = function () {
                 document.getElementById('issueDetailModal').style.display = 'none';
             };
 
@@ -5787,7 +6403,7 @@
 
     <!-- ═══ 📈 토큰 사용량 모듈 ═══ -->
     <script>
-        (function() {
+        (function () {
             'use strict';
 
             // 토큰 탭 접근 허용 사용자
@@ -5809,7 +6425,7 @@
             };
 
             // 권한 체크 후 탭 표시 — setAuthenticatedUser()에서 호출
-            window.checkAndShowTokenTab = function(uName) {
+            window.checkAndShowTokenTab = function (uName) {
                 if (TOKEN_ALLOWED_USERS.indexOf(uName) !== -1) {
                     var gnbBtn = document.getElementById('navTokens');
                     var bottomBtn = document.getElementById('btnNavTokens');
@@ -5822,23 +6438,23 @@
             function ensureGoogleCharts(callback) {
                 if (_googleChartsLoaded) { callback(); return; }
                 google.charts.load('current', { packages: ['corechart'] });
-                google.charts.setOnLoadCallback(function() {
+                google.charts.setOnLoadCallback(function () {
                     _googleChartsLoaded = true;
                     callback();
                 });
             }
 
             // 토큰 모듈 초기화
-            window.initTokenModule = function() {
-                ensureGoogleCharts(function() {
+            window.initTokenModule = function () {
+                ensureGoogleCharts(function () {
                     loadTokenStats();
                 });
             };
 
             // 기간 필터 전환
-            window.switchTokenPeriod = function(period) {
+            window.switchTokenPeriod = function (period) {
                 _tokenCurrentPeriod = period;
-                [1, 7, 15, 30].forEach(function(p) {
+                [1, 7, 15, 30].forEach(function (p) {
                     var btn = document.getElementById('tokenPeriod' + p);
                     if (btn) btn.classList.toggle('active', p === period);
                 });
@@ -5846,14 +6462,14 @@
             };
 
             // 데이터 로드
-            window.loadTokenStats = function() {
+            window.loadTokenStats = function () {
                 var uName = (typeof g_userName !== 'undefined' && g_userName) ? g_userName : ((typeof initUserName !== 'undefined') ? initUserName : '');
                 console.log('[TokenModule] loadTokenStats called, userName:', uName, ', period:', _tokenCurrentPeriod);
                 var container = document.getElementById('tokenSummaryCards');
                 if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--hint-color);">데이터 불러오는 중...</div>';
 
                 google.script.run
-                    .withSuccessHandler(function(data) {
+                    .withSuccessHandler(function (data) {
                         console.log('[TokenModule] 응답 수신:', data);
                         if (!data || data.error) {
                             if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ ' + (data ? data.error : '데이터 로드 실패 (userName: ' + uName + ')') + '</div>';
@@ -5861,7 +6477,7 @@
                         }
                         renderTokenDashboard(data);
                     })
-                    .withFailureHandler(function(err) {
+                    .withFailureHandler(function (err) {
                         console.error('[TokenModule] 호출 실패:', err);
                         if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--danger);">⚠️ 오류: ' + err.message + '</div>';
                     })
@@ -5890,7 +6506,7 @@
                     { label: '예상 비용', value: '$' + (s.estimatedCostUSD || 0).toFixed(3), icon: '💰' },
                     { label: '일 평균', value: formatNum(s.dailyAvgTokens || 0), icon: '📊' }
                 ];
-                el.innerHTML = cards.map(function(c) {
+                el.innerHTML = cards.map(function (c) {
                     return '<div style="background:var(--card-bg); border-radius:12px; padding:16px; text-align:center;">'
                         + '<div style="font-size:20px; margin-bottom:4px;">' + c.icon + '</div>'
                         + '<div style="font-size:22px; font-weight:700; color:var(--text-color);">' + c.value + '</div>'
@@ -5907,7 +6523,7 @@
                     return;
                 }
                 var rows = [['날짜', 'Input', 'Output']];
-                daily.forEach(function(d) {
+                daily.forEach(function (d) {
                     var dateLabel = d.date.substring(5); // MM-DD
                     rows.push([dateLabel, d.inputTokens, d.outputTokens]);
                 });
@@ -5934,7 +6550,7 @@
                     return;
                 }
                 var rows = [['기능', '토큰']];
-                byFunc.forEach(function(f) {
+                byFunc.forEach(function (f) {
                     rows.push([FUNC_LABELS[f.name] || f.name, f.totalTokens]);
                 });
                 var dataTable = google.visualization.arrayToDataTable(rows);
@@ -5962,7 +6578,7 @@
                     + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">토큰</th>'
                     + '<th style="text-align:right; padding:8px 4px; color:var(--hint-color);">비율</th>'
                     + '</tr></thead><tbody>';
-                byUser.forEach(function(u) {
+                byUser.forEach(function (u) {
                     html += '<tr style="border-bottom:1px solid var(--border);">'
                         + '<td style="padding:8px 4px;">' + u.name + '</td>'
                         + '<td style="text-align:right; padding:8px 4px;">' + formatNum(u.calls) + '</td>'
@@ -5988,7 +6604,7 @@
                     + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">Output</th>'
                     + '<th style="text-align:right; padding:6px 4px; color:var(--hint-color);">합계</th>'
                     + '</tr></thead><tbody>';
-                logs.forEach(function(lg) {
+                logs.forEach(function (lg) {
                     var ts = String(lg.timestamp);
                     var timeStr = ts.length > 10 ? ts.substring(5, 16) : ts;
                     html += '<tr style="border-bottom:1px solid var(--border);">'

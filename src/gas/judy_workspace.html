@@ -3,25 +3,26 @@
  * 📋 배포 이력 (Deploy Header)
  * ============================================
  * @file        judy_workspace.html
- * @version     v3.1.0
- * @updated     2026-03-09 (KST)
- * @author      클로이 & 에이다 (자비스팀)
+ * @version     v3.2.0
+ * @updated     2026-03-11 22:30 (KST)
+ * @author      클로이 (자비스팀, 꼼꼼이 문서팀 검토)
  * @ordered-by  용남 대표
- * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 패널.
- *              프로젝트 직접 등록, 담당자 수락 프로세스, 참고사항 히스토리, 시작예정일.
+ * @description 주디 워크스페이스 — 업무 관리 v3.1 + 마크다운 노트 v2 + 주디 AI 비서 챗봇 히스토리 v3.2.0.
+ *              대화 내역 저장, 복원, 세션 관리, 드로어 UI 추가.
  *
  * @change-summary
- *   AS-IS: v2.9.2 — 기본 업무 등록 (프로젝트 선택만, 담당자 본인 고정)
- *   TO-BE: v3.1.0 — 업무 관리 고도화 (프로젝트 생성, 수락 프로세스, 참고사항 CRUD, 시작예정일)
+ *   AS-IS: v3.1.0 — 채팅 내용 휘발 (새로고침 시 초기화)
+ *   TO-BE: v3.2.0 — 채팅 히스토리 기능 (localStorage 기반 세션 보관 및 전환)
  *
  * @features
- *   - [추가] 프로젝트 직접 등록 인라인 UI (+ 새 프로젝트 버튼)
- *   - [추가] 담당자 셀렉트 + 수락대기 상태 + [✅ 수락] 버튼
- *   - [추가] 시작예정일 필드 (업무 등록 모달)
- *   - [추가] 참고사항 타임라인 UI (추가/수정/삭제 + 링크 자동 감지)
- *   - [추가] 요약바 수락대기 카운트 표시
+ *   - [추가] 📋 히스토리/➕ 새 대화/✕ 닫기 3버튼 헤더 UI
+ *   - [추가] 대화 세션 관리 (localStorage 기반 safeSetItem 적용)
+ *   - [추가] 세션 히스토리 드로어 (사이드 메뉴 전환 및 삭제)
+ *   - [추가] 삭제 취소(Undo) 토스트 기능
+ *   - [수정] 패널 오픈 시 마지막 활성 세션 자동 복원 로직
  *
  * ── 변경 이력 ──────────────────────────
+ * v3.2.0 | 2026-03-11 | 클로이 FE | 주디 채팅 히스토리 기능 (v3.2.0)
  * v3.1.0 | 2026-03-09 | 클로이 FE | 업무 관리 v3.1 고도화 (JARVIS-2026-03-09-001)
  * v2.9.2 | 2026-03-09 | 클로이 FE | 풀스크린 모달 에디터 (PRD-2026-03-09-001)
  * v2.9.1 | 2026-03-09 | 클로이 FE | 채팅 패널 리사이즈 잔상 수정 — CSS transform 전환
@@ -358,6 +359,152 @@
 
         .judy-chat-close:hover {
             background: var(--surface-elevated);
+        }
+
+        /* ═══ 히스토리 드로어 + 헤더 버튼 ═══ */
+        .judy-chat-header-btns {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .judy-chat-history-btn,
+        .judy-chat-new-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 17px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .judy-chat-history-btn:hover,
+        .judy-chat-new-btn:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-session-bar {
+            padding: 6px 16px;
+            font-size: 13px;
+            color: var(--hint-color);
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .judy-chat-session-bar:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-session-bar .chevron {
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .judy-chat-session-bar .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .judy-chat-history-drawer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-color);
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-drawer.open {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .judy-chat-history-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 8px;
+        }
+
+        .judy-chat-history-item:hover {
+            background: var(--surface-elevated);
+        }
+
+        .judy-chat-history-item.active {
+            background: rgba(187, 134, 252, 0.12);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .judy-chat-history-item .hist-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .judy-chat-history-item .hist-meta {
+            font-size: 11px;
+            color: var(--hint-color);
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-delete {
+            opacity: 0;
+            border: none;
+            background: transparent;
+            color: var(--danger, #e74c3c);
+            cursor: pointer;
+            font-size: 13px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+
+        .judy-chat-history-item:hover .judy-chat-history-delete {
+            opacity: 0.6;
+        }
+
+        .judy-chat-history-delete:hover {
+            opacity: 1 !important;
+            background: rgba(231, 76, 60, 0.15);
+        }
+
+        .judy-chat-history-empty {
+            padding: 20px 16px;
+            text-align: center;
+            color: var(--hint-color);
+            font-size: 13px;
+        }
+
+        /* 모바일: 오버레이 방식 드로어 */
+        @media (max-width: 768px) {
+            .judy-chat-history-drawer.open {
+                position: absolute;
+                left: 0;
+                right: 0;
+                max-height: 60vh;
+                background: var(--surface, var(--bg-color));
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                z-index: 10;
+            }
         }
 
         .judy-chat-messages {
@@ -3253,6 +3400,19 @@
         </div>
     </div>
 
+    <!-- 메모 삭제 확인 모달 -->
+    <div class="dash-modal-overlay" id="confirmModal" onclick="if(event.target===this)closeConfirmModal()"
+        style="z-index: 200;">
+        <div class="dash-modal" style="width: 400px; border-top: 4px solid var(--danger);">
+            <h2>🗑️ 메모 삭제</h2>
+            <p id="confirmMsg" style="margin-bottom: 16px; color: var(--text-secondary); white-space: pre-wrap;"></p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn-cancel" id="confirmCancelBtn">취소</button>
+                <button class="btn-submit" id="confirmOkBtn" style="background: var(--danger);">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PWA Install Guide -->
     <div id="pwaGuideOverlay" class="pwa-modal-overlay">
         <div class="pwa-modal">
@@ -3305,9 +3465,13 @@
                 <textarea id="memoEditTextarea" class="memo-edit-modal-textarea"
                     placeholder="메모 내용을 입력하세요..."></textarea>
             </div>
-            <div class="memo-edit-modal-footer">
-                <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
-                <button class="btn-save-sm" id="memoEditSaveBtn" onclick="saveMemoEditModal()">💾 저장</button>
+            <div class="memo-edit-modal-footer" style="justify-content: space-between;">
+                <button class="btn-cancel-sm" id="memoEditDelBtn" onclick="deleteMemoFromEditModal()"
+                    style="color: #dc3545; border-color: rgba(220,53,69,0.3);">🗑️ 삭제</button>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-cancel-sm" onclick="closeMemoEditModal(false)">취소</button>
+                    <button class="btn-save-sm" id="memoEditSaveBtn" onclick="saveMemoEditModal()">💾 저장</button>
+                </div>
             </div>
         </div>
     </div>
@@ -3346,12 +3510,20 @@
     <div class="judy-chat-panel" id="judyChatPanel" style="width: 380px;">
         <div class="judy-chat-resizer" id="judyChatResizer"></div>
         <div class="judy-chat-header">
-            <h3>🐰 주디 (v2.8.7)</h3>
-            <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
+            <h3>🐰 주디 (v3.2.0)</h3>
+            <div class="judy-chat-header-btns">
+                <button class="judy-chat-history-btn" id="judyHistoryBtn" onclick="toggleHistoryDrawer()"
+                    title="대화 이력">📋</button>
+                <button class="judy-chat-new-btn" id="judyNewChatBtn" onclick="startNewChat()" title="새 대화">＋</button>
+                <button class="judy-chat-close" onclick="toggleJudyChat()" title="닫기">✕</button>
+            </div>
         </div>
-        <div class="judy-chat-messages" id="judyChatMessages">
-            <div class="judy-msg ai">안녕하세요! 주디입니다 🐰<br>업무, 일정, 메모를 물어보세요.</div>
+        <div class="judy-chat-session-bar" id="judySessionBar" onclick="toggleHistoryDrawer()">
+            <span id="judySessionTitle">새 대화</span>
+            <span class="chevron" id="judySessionChevron">▾</span>
         </div>
+        <div class="judy-chat-history-drawer" id="judyHistoryDrawer"></div>
+        <div class="judy-chat-messages" id="judyChatMessages"></div>
         <div class="judy-typing-carrot" id="judyTyping">
             <img class="carrot-spinner"
                 src="data:image/jpeg;base64,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"
@@ -4283,8 +4455,7 @@
 
             const counts = { '진행중': 0, '대기': 0, '보류': 0, '완료': 0, '수락대기': 0, '전달': 0 };
             tasks.forEach(t => {
-                // v3.1.3: 신청자 업무도 실제 상태로 집계하되, 수락 전(수락대기)만 '전달'로 별도 표시
-                if (t.isRequester && t.status === '수락대기') { counts['전달']++; }
+                if (t.isRequester) { counts['전달']++; }
                 else if (counts[t.status] !== undefined) { counts[t.status]++; }
             });
             const activeCount = counts['진행중'] + counts['대기'] + counts['보류'] + counts['수락대기'] + counts['전달'];
@@ -4368,10 +4539,10 @@
                     </td>
                     <td style="color:var(--hint-color); font-size:13px;">${t.project}</td>
                     <td>${dueHtml}</td>
-                    <td><span class="status-badge badge-${(t.isRequester && t.status === '수락대기') ? '전달' : t.status}">${(t.isRequester && t.status === '수락대기') ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
+                    <td><span class="status-badge badge-${t.isRequester ? '전달' : t.status}">${t.isRequester ? '📤 전달' : getStatusEmoji(t.status) + ' ' + t.status}</span></td>
                     <td onclick="event.stopPropagation()">
                         ${t.isRequester ?
-                        '<div style="color:var(--hint-color); font-size:12px; display:flex; align-items:center; gap:4px;"><span style="font-size:10px;">👤</span> ' + t.assignee + '</div>' :
+                        '<span style="color:var(--hint-color); font-size:12px;">👤 ' + t.assignee + '</span>' :
                         t.status === '수락대기' && t.assignee === g_userName ?
                             '<button class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="acceptTask(' + t.row + ')">✅ 수락</button>' :
                             '<select class="status-select" onchange="changeTaskStatus(' + t.row + ', this.value, \'' + t.id + '\')">' +
@@ -4707,26 +4878,20 @@
             document.getElementById('editDue').value = task.rawDueStr || '';
             document.getElementById('editStatus').value = task.status || '대기';
 
-            // v3.1.4: 발행자(전달 업무) → 읽기 전용 처리
+            // v3.1.8: 발행자(전달 업무)도 수정/삭제 가능
             const isRequester = task.isRequester === true;
             const modalTitle = document.querySelector('#editModalOverlay .dash-modal h2');
-            modalTitle.textContent = isRequester ? '📋 전달 업무 상세 (읽기 전용)' : '📝 업무 상세 및 수정';
-            document.getElementById('editTitle').readOnly = isRequester;
-            document.getElementById('editDesc').readOnly = isRequester;
-            document.getElementById('editDue').readOnly = isRequester;
-            document.getElementById('editStatus').disabled = isRequester;
-            document.getElementById('submitEditBtn').style.display = isRequester ? 'none' : '';
-            document.querySelector('#editModalOverlay .btn-delete').style.display = isRequester ? 'none' : '';
-            // 참고사항 추가 버튼도 숨김
+            modalTitle.textContent = isRequester ? '📋 전달 업무 상세' : '📝 업무 상세 및 수정';
+            document.getElementById('editTitle').readOnly = false;
+            document.getElementById('editDesc').readOnly = false;
+            document.getElementById('editDue').readOnly = false;
+            document.getElementById('editStatus').disabled = false;
+            document.getElementById('submitEditBtn').style.display = '';
+            document.querySelector('#editModalOverlay .btn-delete').style.display = '';
             const refAddBtn = document.querySelector('#editModalOverlay .form-group [onclick="toggleRefInput()"]');
-            if (refAddBtn) refAddBtn.style.display = isRequester ? 'none' : '';
-            if (isRequester) {
-                document.getElementById('editTitle').style.opacity = '0.7';
-                document.getElementById('editDesc').style.opacity = '0.7';
-            } else {
-                document.getElementById('editTitle').style.opacity = '1';
-                document.getElementById('editDesc').style.opacity = '1';
-            }
+            if (refAddBtn) refAddBtn.style.display = '';
+            document.getElementById('editTitle').style.opacity = '1';
+            document.getElementById('editDesc').style.opacity = '1';
 
             document.getElementById('editModalOverlay').classList.add('show');
 
@@ -5222,6 +5387,47 @@
                 });
         }
 
+        function deleteMemoFromEditModal() {
+            if (!_memoEditCtx) return;
+            var ctx = _memoEditCtx;
+            var content = ctx.getCurrentContent();
+            var preview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+
+            if (!confirm('다음 메모를 삭제하시겠습니까?\n\n"' + preview + '"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return;
+
+            var delBtn = document.getElementById('memoEditDelBtn');
+            if (delBtn) { delBtn.disabled = true; delBtn.textContent = '삭제 중...'; }
+
+            google.script.run
+                .withSuccessHandler(function (res) {
+                    if (res.success) {
+                        // DOM 제거 먼저 (모달 닫기 전에 참조 확보)
+                        var blockToRemove = null;
+                        if (ctx.contentDiv && ctx.contentDiv.parentElement) {
+                            blockToRemove = ctx.contentDiv.closest('.memo-block');
+                        }
+                        closeMemoEditModal(true);
+                        if (blockToRemove) blockToRemove.remove();
+                        cachedSidebarData = null;
+                        loadSidebarData(g_userName);
+                        showToast('🗑️ 메모가 삭제되었습니다.');
+                    } else {
+                        if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
+                        showToast('❌ 삭제 실패: ' + (res.message || '알 수 없는 오류'), true);
+                    }
+                })
+                .withFailureHandler(function () {
+                    if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
+                    showToast('❌ 서버 통신 에러', true);
+                })
+                .deleteArchivedMemo({
+                    userName: g_userName,
+                    dateStr: ctx.dateStr,
+                    timeStr: ctx.timeStr,
+                    originalContent: content
+                });
+        }
+
         function insertMemoMarkdown(before, after) {
             var textarea = document.getElementById('memoEditTextarea');
             var start = textarea.selectionStart;
@@ -5384,21 +5590,24 @@
         }
 
         let currentDeleteAction = null;
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+            currentDeleteAction = null;
+        }
         function executeDeleteFlow(memoBlock, userName, dateStr, timeStr, originalContent) {
             const preview = originalContent.length > 50 ? originalContent.substring(0, 50) + "..." : originalContent;
             document.getElementById('confirmMsg').innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
             currentDeleteAction = () => {
-                document.getElementById('confirmModal').style.display = 'none';
+                closeConfirmModal();
                 const btnDel = memoBlock.querySelector('.action-delete');
                 if (btnDel) btnDel.disabled = true;
                 google.script.run
                     .withSuccessHandler(res => {
                         if (res.success) {
-                            memoBlock.style.transition = 'opacity 0.3s';
-                            memoBlock.style.opacity = '0';
-                            setTimeout(() => memoBlock.remove(), 300);
+                            memoBlock.remove();
                             showToast('🗑️ 메모가 삭제되었습니다.');
                             cachedSidebarData = null;
+                            loadSidebarData(g_userName);
                         } else {
                             if (btnDel) btnDel.disabled = false;
                             showToast('❌ 삭제 실패: ' + res.message, true);
@@ -5410,13 +5619,12 @@
                     })
                     .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
             }
-            document.getElementById('confirmModal').style.display = 'flex';
+            document.getElementById('confirmModal').classList.add('show');
             document.getElementById('confirmCancelBtn').focus();
         }
 
         document.getElementById('confirmCancelBtn').addEventListener('click', () => {
-            document.getElementById('confirmModal').style.display = 'none';
-            currentDeleteAction = null;
+            closeConfirmModal();
         });
         document.getElementById('confirmOkBtn').addEventListener('click', () => {
             if (currentDeleteAction) currentDeleteAction();
@@ -5438,21 +5646,291 @@
             var judyTyping = document.getElementById('judyTyping');
             var judyChatOpen = false;
             var judyChatResizer = document.getElementById('judyChatResizer');
+            var judyHistoryDrawer = document.getElementById('judyHistoryDrawer');
+            var judySessionTitle = document.getElementById('judySessionTitle');
+            var judySessionChevron = document.getElementById('judySessionChevron');
 
             if (!judyChatPanel || !judyChatInput) {
                 console.warn('[JudyChat] 패널 DOM 요소를 찾을 수 없습니다.');
                 return;
             }
 
+            // ═══ 세션 상태 관리 ═══
+            var MAX_SESSIONS = 30;
+            var _sessions = [];       // 세션 배열
+            var _activeSessionId = null;
+            var _historyOpen = false;
+            var _deleteUndoTimer = null;
 
-            // Resizer logic
+            // ─── localStorage 안전 저장 (QA C-001) ───
+            function _getStorageKey() {
+                var userName = localStorage.getItem('judy_userName') || 'default';
+                return 'judy_chat_' + userName;
+            }
+
+            function safeSetItem(key, data) {
+                var json = JSON.stringify(data);
+                try {
+                    localStorage.setItem(key, json);
+                    return true;
+                } catch (e) {
+                    if ((e.name === 'QuotaExceededError' || e.code === 22) && data.sessions && data.sessions.length > 1) {
+                        data.sessions.sort(function (a, b) { return new Date(a.updatedAt) - new Date(b.updatedAt); });
+                        var removed = data.sessions.shift();
+                        if (data.activeSessionId === removed.id) {
+                            data.activeSessionId = data.sessions[0] ? data.sessions[0].id : null;
+                        }
+                        showToast('💾 저장 공간 부족 — "' + (removed.title || '오래된 대화') + '" 자동 정리됨');
+                        return safeSetItem(key, data);
+                    }
+                    showToast('⚠️ 대화 저장에 실패했습니다.', true);
+                    console.error('[JudyChat] localStorage 저장 실패:', e);
+                    return false;
+                }
+            }
+
+            // ─── 세션 로드/저장 ───
+            function loadSessions() {
+                try {
+                    var raw = localStorage.getItem(_getStorageKey());
+                    if (raw) {
+                        var data = JSON.parse(raw);
+                        _sessions = data.sessions || [];
+                        _activeSessionId = data.activeSessionId || null;
+                    } else {
+                        _sessions = [];
+                        _activeSessionId = null;
+                    }
+                } catch (e) {
+                    console.error('[JudyChat] 세션 로드 실패:', e);
+                    _sessions = [];
+                    _activeSessionId = null;
+                }
+            }
+
+            function saveSessions() {
+                var data = {
+                    sessions: _sessions,
+                    activeSessionId: _activeSessionId,
+                    maxSessions: MAX_SESSIONS
+                };
+                safeSetItem(_getStorageKey(), data);
+            }
+
+            function getActiveSession() {
+                if (!_activeSessionId) return null;
+                for (var i = 0; i < _sessions.length; i++) {
+                    if (_sessions[i].id === _activeSessionId) return _sessions[i];
+                }
+                return null;
+            }
+
+            // ─── 유틸리티 ───
+            function generateSessionId() {
+                return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            function generateTitle(firstUserMessage) {
+                var text = (firstUserMessage || '새 대화').trim();
+                if (text.length <= 20) return text;
+                var truncated = '';
+                var words = text.split(' ');
+                for (var i = 0; i < words.length; i++) {
+                    var next = truncated ? truncated + ' ' + words[i] : words[i];
+                    if (next.length > 18) break;
+                    truncated = next;
+                }
+                return (truncated || text.substr(0, 18)) + '...';
+            }
+
+            function formatTime(dateStr) {
+                try {
+                    var d = new Date(dateStr);
+                    var now = new Date();
+                    var isToday = d.toDateString() === now.toDateString();
+                    if (isToday) {
+                        return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                    }
+                    return (d.getMonth() + 1) + '/' + d.getDate();
+                } catch (e) { return ''; }
+            }
+
+            // ─── 세션 복원 (QA M-002: appendJudyMsg 재사용 필수) ───
+            function restoreSession(session) {
+                judyChatMessages.innerHTML = '';
+                if (!session || !session.messages || session.messages.length === 0) {
+                    appendJudyMsg('안녕하세요! 주디입니다 🐰\n업무, 일정, 메모를 물어보세요.', 'ai');
+                    return;
+                }
+                session.messages.forEach(function (msg) {
+                    appendJudyMsg(msg.content, msg.role);
+                });
+                judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
+            }
+
+            function updateSessionBar() {
+                var session = getActiveSession();
+                if (judySessionTitle) {
+                    judySessionTitle.textContent = session ? session.title : '새 대화';
+                }
+            }
+
+            // ─── 히스토리 드로어 렌더링 ───
+            function renderHistoryDrawer() {
+                if (!judyHistoryDrawer) return;
+                if (_sessions.length === 0) {
+                    judyHistoryDrawer.innerHTML = '<div class="judy-chat-history-empty">대화 이력이 없습니다</div>';
+                    return;
+                }
+                var sorted = _sessions.slice().sort(function (a, b) {
+                    return new Date(b.updatedAt) - new Date(a.updatedAt);
+                });
+                var html = '';
+                sorted.forEach(function (s) {
+                    var isActive = s.id === _activeSessionId;
+                    html += '<div class="judy-chat-history-item' + (isActive ? ' active' : '') + '" onclick="switchSession(\'' + s.id + '\')">';
+                    html += '<span class="hist-title">' + (s.title || '새 대화').replace(/</g, '&lt;') + '</span>';
+                    html += '<span class="hist-meta">' + formatTime(s.updatedAt || s.createdAt) + '</span>';
+                    html += '<button class="judy-chat-history-delete" onclick="event.stopPropagation(); deleteSession(\'' + s.id + '\')" title="삭제">🗑️</button>';
+                    html += '</div>';
+                });
+                judyHistoryDrawer.innerHTML = html;
+            }
+
+            // ═══ 이벤트 핸들러 ═══
+
+            // 히스토리 드로어 토글
+            window.toggleHistoryDrawer = function () {
+                _historyOpen = !_historyOpen;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.toggle('open', _historyOpen);
+                if (judySessionChevron) judySessionChevron.classList.toggle('open', _historyOpen);
+                if (_historyOpen) renderHistoryDrawer();
+            };
+
+            // 새 대화 시작
+            window.startNewChat = function () {
+                // 현재 세션이 빈 세션(메시지 0건)이면 저장하지 않고 삭제 (QA m-002)
+                var current = getActiveSession();
+                if (current && (!current.messages || current.messages.length === 0)) {
+                    _sessions = _sessions.filter(function (s) { return s.id !== current.id; });
+                }
+                var newSession = {
+                    id: generateSessionId(),
+                    title: '새 대화',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    messages: []
+                };
+                // 세션 수 제한
+                if (_sessions.length >= MAX_SESSIONS) {
+                    _sessions.sort(function (a, b) { return new Date(a.updatedAt) - new Date(b.updatedAt); });
+                    _sessions.shift();
+                }
+                _sessions.push(newSession);
+                _activeSessionId = newSession.id;
+                saveSessions();
+                restoreSession(newSession);
+                updateSessionBar();
+                if (_historyOpen) renderHistoryDrawer();
+                // 드로어 닫기
+                _historyOpen = false;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                if (judySessionChevron) judySessionChevron.classList.remove('open');
+                judyChatInput.focus();
+            };
+
+            // 대화 전환
+            window.switchSession = function (sessionId) {
+                if (sessionId === _activeSessionId) {
+                    // 같은 세션이면 드로어만 닫기
+                    window.toggleHistoryDrawer();
+                    return;
+                }
+                _activeSessionId = sessionId;
+                var session = getActiveSession();
+                if (session) {
+                    restoreSession(session);
+                    updateSessionBar();
+                    saveSessions();
+                }
+                // 드로어 닫기
+                _historyOpen = false;
+                if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                if (judySessionChevron) judySessionChevron.classList.remove('open');
+            };
+
+            // 대화 삭제 (Undo 토스트 3초 — QA m-003)
+            window.deleteSession = function (sessionId) {
+                var sessionIdx = -1;
+                var sessionToDelete = null;
+                for (var i = 0; i < _sessions.length; i++) {
+                    if (_sessions[i].id === sessionId) {
+                        sessionIdx = i;
+                        sessionToDelete = _sessions[i];
+                        break;
+                    }
+                }
+                if (sessionIdx === -1) return;
+
+                // 즉시 UI에서 제거
+                _sessions.splice(sessionIdx, 1);
+                var wasActive = (sessionId === _activeSessionId);
+                if (wasActive) {
+                    _activeSessionId = _sessions.length > 0 ? _sessions[_sessions.length - 1].id : null;
+                    var next = getActiveSession();
+                    if (next) {
+                        restoreSession(next);
+                    } else {
+                        window.startNewChat();
+                    }
+                    updateSessionBar();
+                }
+                saveSessions();
+                renderHistoryDrawer();
+
+                // Undo 토스트
+                if (_deleteUndoTimer) clearTimeout(_deleteUndoTimer);
+
+                // 토스트에 Undo 버튼 포함
+                var toastEl = document.getElementById('toast');
+                var toastMsgEl = document.getElementById('toastMsg');
+                if (toastEl && toastMsgEl) {
+                    toastMsgEl.innerHTML = '🗑️ "' + (sessionToDelete.title || '대화').replace(/</g, '&lt;') + '" 삭제됨 <button onclick="undoDeleteSession()" style="margin-left:8px;padding:2px 10px;border:1px solid var(--primary);background:transparent;color:var(--primary);border-radius:4px;cursor:pointer;font-size:12px;">취소</button>';
+                    toastEl.classList.add('show');
+
+                    // 3초 후 토스트 닫기 (되돌리기 불가)
+                    _deleteUndoTimer = setTimeout(function () {
+                        toastEl.classList.remove('show');
+                        sessionToDelete = null; // 참조 해제
+                    }, 3000);
+
+                    // Undo 핸들러
+                    window.undoDeleteSession = function () {
+                        if (!sessionToDelete) return;
+                        clearTimeout(_deleteUndoTimer);
+                        _sessions.push(sessionToDelete);
+                        if (wasActive) {
+                            _activeSessionId = sessionToDelete.id;
+                            restoreSession(sessionToDelete);
+                            updateSessionBar();
+                        }
+                        saveSessions();
+                        renderHistoryDrawer();
+                        toastEl.classList.remove('show');
+                        showToast('↩️ 삭제가 취소되었습니다.');
+                        sessionToDelete = null;
+                    };
+                }
+            };
+
+            // ═══ Resizer logic ═══
             if (judyChatResizer) {
                 var isResizing = false;
                 judyChatResizer.addEventListener('mousedown', function (e) {
                     isResizing = true;
                     judyChatResizer.classList.add('active');
                     document.body.style.cursor = 'ew-resize';
-                    document.body.style.userSelect = 'none'; // text selection 방지
+                    document.body.style.userSelect = 'none';
                 });
                 document.addEventListener('mousemove', function (e) {
                     if (!isResizing) return;
@@ -5471,17 +5949,39 @@
                 });
             }
 
+            // ═══ 패널 열기/닫기 (수정: 복원 로직 추가) ═══
             window.toggleJudyChat = function () {
                 judyChatOpen = !judyChatOpen;
                 judyChatPanel.classList.toggle('open', judyChatOpen);
                 judyChatOverlay.classList.toggle('show', judyChatOpen);
                 if (judyChatOpen) {
+                    // 패널 열 때 세션 로드 + 복원
+                    loadSessions();
+                    var session = getActiveSession();
+                    if (session) {
+                        restoreSession(session);
+                        updateSessionBar();
+                    } else if (_sessions.length > 0) {
+                        // activeSessionId가 없으면 가장 최신 세션
+                        _sessions.sort(function (a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+                        _activeSessionId = _sessions[0].id;
+                        restoreSession(_sessions[0]);
+                        updateSessionBar();
+                        saveSessions();
+                    } else {
+                        // 세션이 하나도 없으면 새 세션 생성
+                        window.startNewChat();
+                    }
+                    // 히스토리 드로어 닫기
+                    _historyOpen = false;
+                    if (judyHistoryDrawer) judyHistoryDrawer.classList.remove('open');
+                    if (judySessionChevron) judySessionChevron.classList.remove('open');
                     setTimeout(function () { judyChatInput.focus(); }, 300);
                 }
             };
 
             window.handleJudyChatKey = function (e) {
-                if (e.isComposing) return; // 한글 IME 입력 중복 트리거 방지
+                if (e.isComposing) return;
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     window.sendJudyChat();
@@ -5500,9 +6000,10 @@
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
             }
 
-            // 출근 키워드 목록 (추후 확장 가능)
+            // 출근 키워드 목록
             var CHECKIN_KEYWORDS = ['출근'];
 
+            // ═══ 메시지 전송 (수정: 세션 저장 추가) ═══
             window.sendJudyChat = function () {
                 var query = (judyChatInput.value || '').trim();
                 if (!query) return;
@@ -5512,17 +6013,42 @@
                     return;
                 }
 
+                // 활성 세션 없으면 새로 생성
+                var session = getActiveSession();
+                if (!session) {
+                    var newId = generateSessionId();
+                    session = {
+                        id: newId,
+                        title: '새 대화',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        messages: []
+                    };
+                    _sessions.push(session);
+                    _activeSessionId = newId;
+                }
+
                 appendJudyMsg(query, 'user');
+
+                // 세션에 사용자 메시지 추가
+                session.messages.push({ role: 'user', content: query, ts: Date.now() });
+                // 첫 사용자 메시지면 제목 자동 생성 (QA m-001)
+                var userMsgCount = session.messages.filter(function (m) { return m.role === 'user'; }).length;
+                if (userMsgCount === 1) {
+                    session.title = generateTitle(query);
+                    updateSessionBar();
+                }
+                session.updatedAt = new Date().toISOString();
+                saveSessions();
+
                 judyChatInput.value = '';
                 judyChatInput.style.height = 'auto';
                 judyChatSend.disabled = true;
 
-                // 질문 아래 왼쪽(AI 방향)에 당근펜 로딩 표시를 동적 배치
                 judyChatMessages.appendChild(judyTyping);
                 judyTyping.classList.add('show');
                 judyChatMessages.scrollTop = judyChatMessages.scrollHeight;
 
-                // 출근 키워드 감지 → 전용 핸들러 (AI 미사용, 빠른 응답)
                 var isCheckIn = CHECKIN_KEYWORDS.indexOf(query) !== -1;
 
                 var successHandler = function (response) {
@@ -5534,17 +6060,31 @@
                         msgText = response.response || JSON.stringify(response);
                     }
 
-                    if (msgText) {
-                        appendJudyMsg(msgText, 'ai');
-                    } else {
-                        appendJudyMsg('응답을 받지 못했습니다. 다시 시도해주세요.', 'ai');
+                    var aiContent = msgText || '응답을 받지 못했습니다. 다시 시도해주세요.';
+                    appendJudyMsg(aiContent, 'ai');
+
+                    // AI 응답도 세션에 저장
+                    var s = getActiveSession();
+                    if (s) {
+                        s.messages.push({ role: 'ai', content: aiContent, ts: Date.now() });
+                        s.updatedAt = new Date().toISOString();
+                        saveSessions();
                     }
                 };
 
                 var failureHandler = function (err) {
                     judyTyping.classList.remove('show');
                     judyChatSend.disabled = false;
-                    appendJudyMsg('⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'), 'ai');
+                    var errMsg = '⚠️ 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류');
+                    appendJudyMsg(errMsg, 'ai');
+
+                    // 에러도 세션에 기록
+                    var s = getActiveSession();
+                    if (s) {
+                        s.messages.push({ role: 'ai', content: errMsg, ts: Date.now() });
+                        s.updatedAt = new Date().toISOString();
+                        saveSessions();
+                    }
                 };
 
                 if (isCheckIn) {
@@ -5566,7 +6106,9 @@
                 this.style.height = Math.min(this.scrollHeight, 80) + 'px';
             });
 
-            console.log('[JudyChat] 패널 초기화 완료');
+            // ═══ 초기화 ═══
+            loadSessions();
+            console.log('[JudyChat] 패널 초기화 완료 (히스토리 v3.2.0, 세션 ' + _sessions.length + '개)');
         })();
     </script>
 
