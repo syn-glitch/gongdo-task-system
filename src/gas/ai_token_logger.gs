@@ -79,8 +79,7 @@ function callClaudeAPI(url, options, functionName, userName) {
       
       logTokenUsage(functionName, userName, inputTokens, outputTokens, model);
       
-      // [v1.1] 가상 잔액 차감 연동
-      updateVirtualBalance(inputTokens, outputTokens);
+
     }
   } catch (logErr) {
     console.error("[TokenLogger] 로깅 실패 (AI 응답은 정상 반환):", logErr.message);
@@ -151,16 +150,7 @@ function ensureTokenUsageSheet() {
     sheet.setColumnWidth(8, 220); // model
     sheet.setFrozenRows(1);
     
-    // [v1.1] 최초 생성 시 J1:K1 셀에 원장 메타데이터 생성
-    sheet.getRange("J1").setValue("VirtualBalance").setFontWeight("bold").setBackground("#34a853").setFontColor("white");
-    sheet.getRange("K1").setValue(0.0).setNumberFormat("$#,##0.0000"); // 초기 잔액 0.0
-  }
-  
-  // v1.1 업데이트 대응 (기존 시트인 경우 J1 셀 구조 추가)
-  if (sheet.getRange("J1").getValue() !== "VirtualBalance") {
-       sheet.getRange("J1").setValue("VirtualBalance").setFontWeight("bold").setBackground("#34a853").setFontColor("white");
-       sheet.getRange("K1").setValue(0.0).setNumberFormat("$#,##0.0000");
-  }
+
 
   return sheet;
 }
@@ -169,87 +159,7 @@ function ensureTokenUsageSheet() {
 // 3. 토큰 가상 잔액(Virtual Balance) 관리
 // ═══════════════════════════════════════════
 
-/**
- * 📈 현재 가상 잔액을 조회한다.
- * @returns {number} 현재 잔액 (USD)
- */
-function getVirtualBalance() {
-  var sheet = ensureTokenUsageSheet();
-  var balance = Number(sheet.getRange("K1").getValue());
-  return isNaN(balance) ? 0.0 : balance;
-}
 
-/**
- * 💸 사용된 비용만큼 가상 잔액을 차감하고, 임계값 도달 시 경고를 발송한다.
- * callClaudeAPI 등에서 사용량을 산출한 직후 호출됨을 가정함.
- * 
- * @param {number} inputTokens 
- * @param {number} outputTokens 
- */
-function updateVirtualBalance(inputTokens, outputTokens) {
-  var priceIn = DEFAULT_TOKEN_PRICE_INPUT;
-  var priceOut = DEFAULT_TOKEN_PRICE_OUTPUT;
-  try {
-    var props = PropertiesService.getScriptProperties();
-    if (props.getProperty("TOKEN_PRICE_INPUT")) priceIn = Number(props.getProperty("TOKEN_PRICE_INPUT"));
-    if (props.getProperty("TOKEN_PRICE_OUTPUT")) priceOut = Number(props.getProperty("TOKEN_PRICE_OUTPUT"));
-  } catch(e) {}
-
-  var costIn = (inputTokens / 1000000) * priceIn;
-  var costOut = (outputTokens / 1000000) * priceOut;
-  var totalCost = costIn + costOut;
-
-  if (totalCost <= 0) return; // 비용 발생 없으면 무시
-
-  var sheet = ensureTokenUsageSheet();
-  var currentBalance = getVirtualBalance();
-  var newBalance = currentBalance - totalCost;
-  
-  sheet.getRange("K1").setValue(newBalance);
-
-  // 🚨 임계값 경고 시스템 (QA 의견 반영)
-  if (newBalance < BALANCE_ALERT_THRESHOLD && currentBalance >= BALANCE_ALERT_THRESHOLD) {
-    try {
-      sendSlackNotification("🚨 *[긴급] Claude API 가상 잔액 경고* 🚨\n잔액이 임계값(" + BALANCE_ALERT_THRESHOLD + "$) 이하로 떨어졌습니다!\n- 현재 예상 잔액: `$" + newBalance.toFixed(4) + "`\n- 시스템 중단 방지를 위해 신속한 충전 및 원장 갱신(resetVirtualBalance)이 필요합니다.", "danger");
-    } catch(e) {
-      console.error("Slack 알림 실패: " + e.message);
-    }
-  }
-}
-
-/**
- * 💰 (관리자용) 가상 잔액 수동 동기화 (원장 초기화/갱신)
- * @param {number} newAmount 설정할 새로운 달러(USD) 잔액
- */
-function resetVirtualBalance(newAmount) {
-  // [보안] 권한 체크 (간소화된 대표 계정 식별)
-  var email = Session.getActiveUser().getEmail();
-  var isGoogleEnv = email !== ""; // 앱스 스크립트 실행 컨텍스트 내
-  
-  // 실제 허용된 사용자 (여기서는 로그로 대체하고 하드블록을 원할 경우 throw)
-  if (isGoogleEnv && !ALLOWED_TOKEN_VIEWERS.includes(email.split('@')[0]) && /* fallback */ email !== "") {
-    // throw new Error("가상 잔액 수정 권한이 없습니다."); // 엄격 권한시 활성화
-  }
-
-  var sheet = ensureTokenUsageSheet();
-  sheet.getRange("K1").setValue(newAmount);
-  
-  // 리셋 이력 로깅
-  sheet.appendRow([
-    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"),
-    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-    "[ADMIN_BALANCE_RESET]",
-    email || "ADMIN",
-    0, 0, 0,
-    "New Balance set to: $" + newAmount
-  ]);
-  
-  try {
-    sendSlackNotification("✅ *가상 잔액 동기화 완료*\n새로운 잔액이 설정되었습니다: `$" + Number(newAmount).toFixed(2) + "` (처리자: " + (email || "관리자") + ")", "good");
-  } catch(e) {}
-  
-  return "잔액이 $" + newAmount + " 로 변경되었습니다.";
-}
 
 // ═══════════════════════════════════════════
 // 4. 토큰 사용량 통계 조회 API

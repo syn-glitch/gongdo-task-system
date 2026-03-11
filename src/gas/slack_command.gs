@@ -64,10 +64,7 @@ function doPost(e) {
         return handleIssueTeamAssignment(action, payload);
       }
       
-      // [BUNKER v1.1] 비용 게이트 조건부 통과 승인/거절 버튼
-      if (action && action.action_id && (action.action_id === "resume_auto_analysis" || action.action_id === "cancel_auto_analysis")) {
-        return handleGateDecision(action, payload);
-      }
+
 
       // [4단계] 배포 승인/보류 버튼
       if (action && action.action_id && (action.action_id === "deploy_approve_" || action.action_id === "deploy_hold_")) {
@@ -1346,79 +1343,7 @@ function handleDeployDecision(action, slackPayload) {
   return ContentService.createTextOutput("");
 }
 
-/**
- * [BUNKER v1.1] 비용 예측 게이트 승인/거절 처리 (Event-Driven Resume)
- */
-function handleGateDecision(action, slackPayload) {
-  try {
-    var userId = slackPayload.user.id;
-    var CEO_SLACK_ID = "U02S3CN9E6R"; // 대표님만 승인 가능
 
-    if (userId !== CEO_SLACK_ID) {
-      sendSlackResponse_(userId, "❌ 비용 승인/거절은 대표만 가능합니다.");
-      return ContentService.createTextOutput("");
-    }
-
-    var issueNumber = action.value;
-    var githubToken = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
-    var owner = "syn-glitch";
-    var repo = "gongdo-task-system";
-
-    if (action.action_id === "resume_auto_analysis") {
-      // 1. 이슈 라벨 업데이트 (analyzing 제거, qa-reviewed 추가)
-      var labelUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/labels";
-      UrlFetchApp.fetch(labelUrl, {
-        method: "post",
-        contentType: "application/json",
-        headers: { "Authorization": "token " + githubToken },
-        payload: JSON.stringify({ labels: ["qa-reviewed"] }),
-        muteHttpExceptions: true
-      });
-      // (analyzing 라벨 제거는 404 무시용)
-      var delLabelUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/labels/analyzing";
-      UrlFetchApp.fetch(delLabelUrl, { method: "delete", headers: { "Authorization": "token " + githubToken }, muteHttpExceptions: true });
-
-      // 2. jarvis-issue-response.yml 워크플로우를 workflow_dispatch 로 명시적 호출 (Event-Driven 방식)
-      var dispatchUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/actions/workflows/jarvis-issue-response.yml/dispatches";
-      var dispatchResp = UrlFetchApp.fetch(dispatchUrl, {
-        method: "post",
-        contentType: "application/json",
-        headers: { "Authorization": "token " + githubToken },
-        payload: JSON.stringify({
-          ref: "main",
-          inputs: { issue_number: String(issueNumber) }
-        }),
-        muteHttpExceptions: true
-      });
-
-      if (dispatchResp.getResponseCode() === 204 || dispatchResp.getResponseCode() === 200) {
-        sendSlackResponse_(userId, "✅ *[강제 재개 승인 완료]*\n이슈 #" + issueNumber + "에 대한 자동 분석 파이프라인(자비스 이해보고서)을 재개합니다.");
-      } else {
-        sendSlackResponse_(userId, "❌ 워크플로우 재개 실패 (" + dispatchResp.getResponseCode() + "): " + dispatchResp.getContentText());
-      }
-
-    } else if (action.action_id === "cancel_auto_analysis") {
-      // 취소 
-      var msgUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments";
-      UrlFetchApp.fetch(msgUrl, {
-        method: "post",
-        contentType: "application/json",
-        headers: { "Authorization": "token " + githubToken },
-        payload: JSON.stringify({
-          body: "## ⚠️ 분석 중단 (비용 초과)\n대표님의 판단 하에 **비용 과다 예상**으로 자동 분석을 중단했습니다."
-        }),
-        muteHttpExceptions: true
-      });
-      
-      sendSlackResponse_(userId, "⛔ *[분석 취소]*\n이슈 #" + issueNumber + " 파이프라인을 안전하게 중단했습니다.");
-    }
-  } catch (e) {
-    Logger.log("[ERROR] handleGateDecision: " + e.message);
-    sendSlackResponse_(slackPayload.user.id, "❌ 승인 게이트 처리 중 오류: " + e.message);
-  }
-
-  return ContentService.createTextOutput("");
-}
 
 /**
  * 자비스 자동 코드 수정 워크플로우 트리거
