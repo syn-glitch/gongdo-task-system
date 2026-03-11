@@ -1704,52 +1704,118 @@
                 filter: drop-shadow(0 0 5px rgba(148, 97, 253, 0.5));
             }
 
-            /* Issue Board Styles */
-            .issue-tab-btn {
-                padding: 6px 16px;
-                border: 1px solid var(--border);
-                border-radius: 20px;
-                background: var(--card-bg);
+            /* Issue Board Styles (GitHub-style v2) */
+            .issue-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 20px 12px 20px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .issue-tab-group {
+                display: flex;
+                gap: 16px;
+            }
+
+            .issue-tab-v2 {
+                background: none;
+                border: none;
                 color: var(--hint-color);
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 0;
             }
 
-            .issue-tab-btn.active {
-                background: var(--primary-mobile);
-                color: #fff;
-                border-color: var(--primary-mobile);
+            .issue-tab-v2.active {
+                color: var(--text-color);
             }
 
-            .issue-card {
-                background: var(--card-bg);
+            .issue-state-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+
+            .issue-state-dot.open {
+                background: #3fb950;
+            }
+
+            .issue-state-dot.closed {
+                background: #a371f7;
+            }
+
+            .issue-count-badge {
+                background: rgba(255, 255, 255, 0.08);
+                padding: 0 6px;
+                border-radius: 10px;
+                font-size: 11px;
+                min-width: 18px;
+                text-align: center;
+            }
+
+            .issue-filter-group {
+                display: flex;
+                gap: 8px;
+            }
+
+            .issue-filter-select {
+                padding: 5px 10px;
                 border: 1px solid var(--border);
-                border-radius: 12px;
-                padding: 14px 16px;
-                margin-bottom: 10px;
+                border-radius: 6px;
+                background: var(--card-bg);
+                color: var(--text-color);
+                font-size: 12px;
                 cursor: pointer;
-                transition: border-color 0.2s;
             }
 
-            .issue-card:hover {
-                border-color: var(--primary-mobile);
+            .issue-row {
+                display: flex;
+                align-items: flex-start;
+                padding: 14px 16px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                margin-bottom: 8px;
+                cursor: pointer;
+                transition: border-color 0.15s;
+                gap: 12px;
+                background: var(--card-bg);
             }
 
-            .issue-card-title {
+            .issue-row:hover {
+                border-color: var(--primary);
+            }
+
+            .issue-row-icon {
+                flex-shrink: 0;
+                margin-top: 3px;
+                width: 16px;
+                height: 16px;
+            }
+
+            .issue-row-body {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .issue-row-title-line {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 4px;
+            }
+
+            .issue-row-title {
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--text-color);
-                margin-bottom: 6px;
-            }
-
-            .issue-card-meta {
-                font-size: 12px;
-                color: var(--hint-color);
-                display: flex;
-                gap: 10px;
-                flex-wrap: wrap;
-                align-items: center;
             }
 
             .issue-label {
@@ -1759,6 +1825,23 @@
                 font-size: 11px;
                 font-weight: 600;
                 color: #fff;
+                line-height: 1.5;
+            }
+
+            .issue-row-meta {
+                font-size: 12px;
+                color: var(--hint-color);
+                line-height: 1.4;
+            }
+
+            .issue-row-comments {
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--hint-color);
+                margin-top: 3px;
             }
 
             .view-panel {
@@ -2635,17 +2718,135 @@
 
         .fc .fc-event {
             border: none;
-            padding: 2px 4px;
-            border-radius: 4px;
+            padding: 0;
+            border-radius: 6px;
             font-size: 11px;
             cursor: pointer;
             overflow: hidden;
+            background: transparent !important;
         }
 
         .fc .fc-event-title {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        /* ===== Calendar v2: Notion-style Mini Card ===== */
+        .cal-card {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 1.4;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+        }
+
+        .cal-card .cal-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .cal-card .cal-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .cal-card .cal-initial {
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--primary);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .cal-card .cal-dday {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .dday-overdue {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b7a;
+        }
+
+        .dday-today {
+            background: rgba(187, 134, 252, 0.2);
+            color: var(--primary);
+        }
+
+        .dday-soon {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .dday-normal {
+            background: rgba(100, 181, 246, 0.15);
+            color: #64b5f6;
+        }
+
+        /* 완료 업무 토글 버튼 */
+        .toggle-completed-btn {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--hint-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-completed-btn.active {
+            background: rgba(76, 175, 80, 0.15);
+            color: #66bb6a;
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        /* 칸반 담당자 아바타 */
+        .kanban-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .kanban-card .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .kanban-card .dday-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
 
         .fc .fc-day-today {
@@ -2897,7 +3098,7 @@
     <!-- Global Navigation Bar -->
     <div class="gnb">
         <div class="gnb-left">
-            <div class="gnb-brand">
+            <div class="gnb-brand" onclick="switchMainView('tasks')" style="cursor:pointer;" title="내 업무로 이동">
                 <span>🐰</span> Judy Workspace
             </div>
             <div class="gnb-tabs">
@@ -3065,6 +3266,8 @@
                 <div class="dash-header">
                     <h1>📋 <span>칸반 보드</span></h1>
                     <div class="dash-actions">
+                        <button class="toggle-completed-btn" id="kanbanCompletedToggle"
+                            onclick="toggleKanbanCompleted()">✅ 완료 업무</button>
                         <button class="refresh-btn" onclick="loadKanban()">🔄 새로고침</button>
                     </div>
                 </div>
@@ -3080,6 +3283,8 @@
                 <div class="dash-header">
                     <h1>📅 <span>업무 캘린더</span></h1>
                     <div class="dash-actions">
+                        <button class="toggle-completed-btn" id="calCompletedToggle"
+                            onclick="toggleCalendarCompleted()">✅ 완료 업무</button>
                         <button class="refresh-btn" onclick="loadCalendar()">🔄 새로고침</button>
                     </div>
                 </div>
@@ -3088,33 +3293,48 @@
             </div>
         </div>
 
-        <!-- View 5: Issues Board -->
-        <div id="viewIssues" class="view-panel" style="background-color: var(--bg-color); overflow:hidden;">
-            <div style="display:flex; flex-direction:column; height:100%;">
-                <div class="dash-header">
-                    <h1>🐛 <span>이슈 제보</span></h1>
-                    <div class="dash-actions">
-                        <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
-                        <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;"
-                            onclick="openIssueForm()">+ 이슈 제보</button>
-                    </div>
+        <!-- View 5: Issues Board (GitHub-style v2) -->
+        <div id="viewIssues" class="view-panel" style="background-color: var(--bg-color); overflow-y:auto;">
+            <!-- 헤더 -->
+            <div class="dash-header">
+                <h1>🐛 <span>이슈 제보</span></h1>
+                <div class="dash-actions">
+                    <button class="refresh-btn" onclick="loadIssues()">🔄 새로고침</button>
+                    <button class="refresh-btn" style="background:var(--primary-mobile); color:#fff;"
+                        onclick="openIssueForm()">+ 이슈 제보</button>
                 </div>
+            </div>
 
-                <!-- 이슈 탭 (open/closed) -->
-                <div style="display:flex; gap:8px; padding:0 20px 12px 20px;">
-                    <button id="issueTabOpen" class="issue-tab-btn active" onclick="switchIssueTab('open')">🟢
-                        Open</button>
-                    <button id="issueTabClosed" class="issue-tab-btn" onclick="switchIssueTab('closed')">🔴
-                        Closed</button>
+            <!-- 필터 + 탭 바 -->
+            <div class="issue-toolbar">
+                <div class="issue-tab-group">
+                    <button id="issueTabOpen" class="issue-tab-v2 active" onclick="switchIssueTab('open')">
+                        <span class="issue-state-dot open"></span>
+                        Open <span id="issueOpenCount" class="issue-count-badge">0</span>
+                    </button>
+                    <button id="issueTabClosed" class="issue-tab-v2" onclick="switchIssueTab('closed')">
+                        <span class="issue-state-dot closed"></span>
+                        Closed <span id="issueClosedCount" class="issue-count-badge">0</span>
+                    </button>
                 </div>
-
-                <!-- 이슈 목록 -->
-                <div id="issueList" style="flex:1; overflow-y:auto; padding:0 20px 20px 20px;"></div>
-
-                <!-- 더보기 -->
-                <div id="issueLoadMore" style="display:none; text-align:center; padding:12px;">
-                    <button class="refresh-btn" onclick="loadMoreIssues()">더 보기</button>
+                <div class="issue-filter-group">
+                    <select id="issueLabelFilter" class="issue-filter-select" onchange="applyIssueFilters()">
+                        <option value="">Labels</option>
+                    </select>
+                    <select id="issueSortSelect" class="issue-filter-select" onchange="applyIssueFilters()">
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="comments">Most commented</option>
+                    </select>
                 </div>
+            </div>
+
+            <!-- 이슈 목록 -->
+            <div id="issueList" style="padding:0 20px 20px 20px;"></div>
+
+            <!-- 더보기 -->
+            <div id="issueLoadMore" style="display:none; text-align:center; padding:12px 20px 24px 20px;">
+                <button class="refresh-btn" onclick="loadMoreIssues()">더 보기</button>
             </div>
         </div>
 
@@ -3773,25 +3993,38 @@
         /* [Phase 26] 특정 날짜 업무 바텀 시트 표시 */
         function showDayTasksInBottomSheet(dateStr) {
             if (!calendar) return;
-            const dayEvents = calendar.getEvents().filter(e => e.startStr.split('T')[0] === dateStr);
+            const dayEvents = calendar.getEvents().filter(e => {
+                const evStart = e.startStr.split('T')[0];
+                const evEnd = e.endStr ? e.endStr.split('T')[0] : evStart;
+                return dateStr >= evStart && dateStr <= evEnd;
+            });
 
-            let html = `<div style="margin-bottom:16px; color:var(--hint-color); font-size:13px;">${dateStr} 일정 ${dayEvents.length}건</div>`;
+            let html = `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--hint-color); font-size:13px;">${dateStr} 일정 ${dayEvents.length}건</span>
+                <button onclick="closeBottomSheet(); openRegModal({due:'${dateStr}'});" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid var(--primary); background:transparent; color:var(--primary); cursor:pointer;">+ 업무 등록</button>
+            </div>`;
 
             if (dayEvents.length === 0) {
                 html += `<div style="padding:40px 0; text-align:center; color:var(--hint-color);">일정이 없습니다.</div>`;
             } else {
                 dayEvents.forEach(evt => {
-                    const status = evt.extendedProps.status;
+                    const ep = evt.extendedProps;
+                    const status = ep.status;
                     const badgeClass = `badge-${status}`;
-                    const row = evt.extendedProps.row;
+                    const row = ep.row;
+                    const dday = getDdayInfo(ep.dDays);
+                    const ddayHtml = dday ? `<span class="dday-badge ${dday.cls}" style="margin-left:8px;">${dday.text}</span>` : '';
+                    const assigneeHtml = ep.assignee ? `<span style="font-size:11px; color:var(--hint-color); margin-left:auto;">${ep.assignee}</span>` : '';
 
                     html += `
                         <div class="memo-block" style="cursor:pointer; margin-bottom:12px; padding:16px;" onclick="closeBottomSheet(); openEditModal(${row});">
-                            <div class="memo-header" style="margin-bottom:8px;">
+                            <div class="memo-header" style="margin-bottom:8px; display:flex; align-items:center; gap:6px;">
                                 <span class="status-badge ${badgeClass}">${status}</span>
-                                <span class="memo-time" style="font-size:12px; color:var(--primary);">${evt.title.split('] ')[0] + ']'}</span>
+                                <span style="font-size:12px; color:var(--primary); font-weight:600;">${ep.project || ''}</span>
+                                ${ddayHtml}
+                                ${assigneeHtml}
                             </div>
-                            <div style="font-size:15px; font-weight:600; color:var(--text-color);">${evt.title.split('] ')[1]}</div>
+                            <div style="font-size:15px; font-weight:600; color:var(--text-color);">${ep.taskTitle || evt.title}</div>
                         </div>
                     `;
                 });
@@ -5006,9 +5239,58 @@
         }
 
         // ==========================================
+        // Common Utilities (Kanban + Calendar 공용)
+        // ==========================================
+        const AVATAR_COLORS = {
+            '대표': '#bb86fc',
+            '송PO': '#64b5f6',
+            '자비스': '#66bb6a',
+            '김감사': '#ffb74d',
+            '강철': '#ef5350',
+            '꼼꼼이': '#ab47bc'
+        };
+        function getAvatarColor(name) {
+            if (!name) return '#888';
+            if (AVATAR_COLORS[name]) return AVATAR_COLORS[name];
+            let h = 0;
+            for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+            const hue = Math.abs(h) % 360;
+            return `hsl(${hue}, 60%, 55%)`;
+        }
+        function getInitial(name) {
+            if (!name) return '?';
+            return name.charAt(0);
+        }
+        function getDdayInfo(dDays) {
+            if (dDays === null || dDays === undefined) return null;
+            if (dDays < 0) return { text: `D+${Math.abs(dDays)}`, cls: 'dday-overdue' };
+            if (dDays === 0) return { text: 'D-Day', cls: 'dday-today' };
+            if (dDays <= 3) return { text: `D-${dDays}`, cls: 'dday-soon' };
+            return { text: `D-${dDays}`, cls: 'dday-normal' };
+        }
+        function getStatusColor(status) {
+            switch (status) {
+                case '진행중': return '#64b5f6';
+                case '대기': return '#ffb74d';
+                case '보류': return '#ef5350';
+                case '완료': return '#66bb6a';
+                default: return '#888';
+            }
+        }
+
+        // ==========================================
         // Kanban Module Logic [Phase 23]
         // ==========================================
         let kanbanTasks = [];
+
+        let kanbanShowCompleted = false;
+
+        function toggleKanbanCompleted() {
+            kanbanShowCompleted = !kanbanShowCompleted;
+            const btn = document.getElementById('kanbanCompletedToggle');
+            btn.classList.toggle('active', kanbanShowCompleted);
+            renderKanban();
+        }
 
         function loadKanban() {
             const board = document.getElementById('kanbanBoard');
@@ -5034,6 +5316,9 @@
                 { id: '진행중', title: '▶ 진행 중', emoji: '▶' },
                 { id: '보류', title: '🔴 보류', emoji: '🔴' }
             ];
+            if (kanbanShowCompleted) {
+                columns.push({ id: '완료', title: '✅ 완료', emoji: '✅' });
+            }
 
             columns.forEach(col => {
                 const colEl = document.createElement('div');
@@ -5072,14 +5357,31 @@
             card.dataset.id = task.id;
             card.dataset.status = task.status;
 
-            const dueHtml = task.dDays !== null ? `<span class="${task.dDays < 0 ? 'due-overdue' : ''}">${task.dueDate}</span>` : '-';
+            // D-day 뱃지
+            let ddayHtml = '';
+            const dday = getDdayInfo(task.dDays);
+            if (dday) {
+                ddayHtml = `<span class="dday-badge ${dday.cls}">${dday.text}</span>`;
+            }
+
+            // 담당자 아바타
+            let avatarHtml = '';
+            if (task.assignee) {
+                const color = getAvatarColor(task.assignee);
+                const safeName = task.assignee.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                avatarHtml = `<span class="kanban-avatar" style="background:${color}" title="${safeName}">${getInitial(task.assignee)}</span>`;
+            }
+
+            const footerHtml = (ddayHtml || avatarHtml)
+                ? `<div class="card-footer">${ddayHtml}${avatarHtml}</div>` : '';
 
             card.innerHTML = `
                 <div class="title">${task.title}</div>
                 <div class="meta">
                     <span class="project-tag">${task.project}</span>
-                    <span class="due-tag">${dueHtml}</span>
+                    <span class="due-tag">${task.dueDate || '-'}</span>
                 </div>
+                ${footerHtml}
             `;
 
             card.ondragstart = handleDragStart;
@@ -5193,9 +5495,11 @@
         }
 
         // ==========================================
-        // Calendar Module Logic [Phase 23]
+        // Calendar Module Logic [Phase 23 → v2]
         // ==========================================
         let calendar = null;
+        let calShowCompleted = false;
+        let calAllTasks = []; // 캘린더용 전체 태스크 캐시
 
         function initCalendarModule() {
             const calendarEl = document.getElementById('calendar');
@@ -5212,21 +5516,57 @@
                 height: 'parent',
                 editable: true,
                 droppable: true,
-                /* [Phase 26] 모바일 최적화 설정 */
                 displayEventTime: false,
                 dayMaxEvents: window.innerWidth < 768 ? 4 : 3,
                 eventContent: function (arg) {
+                    const ep = arg.event.extendedProps;
+                    // 모바일: 도트만 표시
                     if (window.innerWidth < 768) {
                         const dot = document.createElement('div');
                         dot.className = 'fc-event-dot-mobile';
-                        dot.style.backgroundColor = arg.event.backgroundColor;
+                        dot.style.backgroundColor = getStatusColor(ep.status);
                         return { domNodes: [dot] };
                     }
-                    return null; // 기본 렌더링
+                    // 데스크탑: Notion-style 미니카드
+                    const card = document.createElement('div');
+                    card.className = 'cal-card';
+
+                    const dotEl = document.createElement('span');
+                    dotEl.className = 'cal-dot';
+                    dotEl.style.backgroundColor = getStatusColor(ep.status);
+                    card.appendChild(dotEl);
+
+                    const titleEl = document.createElement('span');
+                    titleEl.className = 'cal-title';
+                    titleEl.textContent = ep.taskTitle || arg.event.title;
+                    card.appendChild(titleEl);
+
+                    // 담당자 이니셜
+                    if (ep.assignee) {
+                        const ini = document.createElement('span');
+                        ini.className = 'cal-initial';
+                        ini.style.background = getAvatarColor(ep.assignee);
+                        ini.textContent = getInitial(ep.assignee);
+                        card.appendChild(ini);
+                    }
+
+                    // D-day 뱃지
+                    const dday = getDdayInfo(ep.dDays);
+                    if (dday) {
+                        const badge = document.createElement('span');
+                        badge.className = 'cal-dday ' + dday.cls;
+                        badge.textContent = dday.text;
+                        card.appendChild(badge);
+                    }
+
+                    return { domNodes: [card] };
                 },
                 dateClick: function (info) {
                     if (window.innerWidth < 768) {
                         showDayTasksInBottomSheet(info.dateStr);
+                    } else {
+                        // 데스크탑: 날짜 클릭 → 업무 등록 모달 (마감일 prefill)
+                        openRegModal({ due: info.dateStr });
                     }
                 },
                 eventClick: function (info) {
@@ -5243,29 +5583,67 @@
             loadCalendar();
         }
 
+        function toggleCalendarCompleted() {
+            if (!calAllTasks.length) return; // 로딩 전 클릭 무시
+            calShowCompleted = !calShowCompleted;
+            const btn = document.getElementById('calCompletedToggle');
+            btn.classList.toggle('active', calShowCompleted);
+            renderCalendarEvents();
+        }
+
         function loadCalendar() {
             if (!calendar) return;
 
             showToast('📅 일정 불러오는 중...');
+            document.getElementById('calCompletedToggle').disabled = true;
             google.script.run
                 .withSuccessHandler(tasks => {
-                    const events = tasks.filter(t => t.rawDueStr).map(t => ({
-                        id: t.id,
-                        title: `[${t.project}] ${t.title}`,
-                        start: t.rawDueStr,
-                        allDay: true,
-                        extendedProps: {
-                            row: t.row,
-                            status: t.status
-                        },
-                        color: t.status === '진행중' ? '#64b5f6' : (t.status === '대기' ? '#ffb74d' : '#888888')
-                    }));
-
-                    calendar.removeAllEvents();
-                    calendar.addEventSource(events);
+                    calAllTasks = tasks || [];
+                    document.getElementById('calCompletedToggle').disabled = false;
+                    renderCalendarEvents();
                 })
                 .withFailureHandler(err => showToast('❌ 캘린더 로드 실패: ' + err.message, true))
                 .getAllTasksForWeb(g_userId || g_userName);
+        }
+
+        function renderCalendarEvents() {
+            if (!calendar) return;
+            const filtered = calAllTasks.filter(t => {
+                if (!t.rawDueStr) return false;
+                if (!calShowCompleted && t.status === '완료') return false;
+                return true;
+            });
+
+            const events = filtered.map(t => {
+                const ev = {
+                    id: t.id,
+                    title: `[${t.project}] ${t.title}`,
+                    allDay: true,
+                    extendedProps: {
+                        row: t.row,
+                        status: t.status,
+                        taskTitle: t.title,
+                        project: t.project,
+                        assignee: t.assignee,
+                        dDays: t.dDays
+                    },
+                    color: getStatusColor(t.status)
+                };
+                // 멀티데이: 시작예정일 ~ 마감일
+                if (t.startDate && t.startDate !== t.rawDueStr) {
+                    ev.start = t.startDate;
+                    // FullCalendar end는 exclusive이므로 마감일 +1일
+                    const endDate = new Date(t.rawDueStr);
+                    endDate.setDate(endDate.getDate() + 1);
+                    ev.end = endDate.toISOString().split('T')[0];
+                } else {
+                    ev.start = t.rawDueStr;
+                }
+                return ev;
+            });
+
+            calendar.removeAllEvents();
+            calendar.addEventSource(events);
         }
 
         function handleCalendarEventDrop(info) {
@@ -5407,30 +5785,27 @@
 
             if (!confirm('다음 메모를 삭제하시겠습니까?\n\n"' + preview + '"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return;
 
-            var delBtn = document.getElementById('memoEditDelBtn');
-            if (delBtn) { delBtn.disabled = true; delBtn.textContent = '삭제 중...'; }
+            // Optimistic UI: 즉시 모달 닫기 + DOM 제거
+            var blockToRemove = null;
+            if (ctx.contentDiv && ctx.contentDiv.parentElement) {
+                blockToRemove = ctx.contentDiv.closest('.memo-block');
+            }
+            closeMemoEditModal(true);
+            if (blockToRemove) blockToRemove.remove();
+            showToast('🗑️ 메모 삭제 중...');
+            cachedSidebarData = null;
 
             google.script.run
                 .withSuccessHandler(function (res) {
                     if (res.success) {
-                        // DOM 제거 먼저 (모달 닫기 전에 참조 확보)
-                        var blockToRemove = null;
-                        if (ctx.contentDiv && ctx.contentDiv.parentElement) {
-                            blockToRemove = ctx.contentDiv.closest('.memo-block');
-                        }
-                        closeMemoEditModal(true);
-                        if (blockToRemove) blockToRemove.remove();
-                        cachedSidebarData = null;
                         loadSidebarData(g_userName);
-                        showToast('🗑️ 메모가 삭제되었습니다.');
+                        showToast('🗑️ 삭제 완료');
                     } else {
-                        if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
-                        showToast('❌ 삭제 실패: ' + (res.message || '알 수 없는 오류'), true);
+                        showToast('❌ 삭제 실패: ' + (res.message || '알 수 없는 오류') + ' (새로고침 필요)', true);
                     }
                 })
                 .withFailureHandler(function () {
-                    if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑️ 삭제'; }
-                    showToast('❌ 서버 통신 에러', true);
+                    showToast('❌ 서버 통신 에러 (새로고침 필요)', true);
                 })
                 .deleteArchivedMemo({
                     userName: g_userName,
@@ -5611,23 +5986,21 @@
             document.getElementById('confirmMsg').innerText = `다음 메모를 삭제하시겠습니까?\n\n"${preview}"\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
             currentDeleteAction = () => {
                 closeConfirmModal();
-                const btnDel = memoBlock.querySelector('.action-delete');
-                if (btnDel) btnDel.disabled = true;
+                // Optimistic UI: 즉시 제거 후 서버 비동기 처리
+                memoBlock.remove();
+                showToast('🗑️ 메모 삭제 중...');
+                cachedSidebarData = null;
                 google.script.run
                     .withSuccessHandler(res => {
                         if (res.success) {
-                            memoBlock.remove();
-                            showToast('🗑️ 메모가 삭제되었습니다.');
-                            cachedSidebarData = null;
                             loadSidebarData(g_userName);
+                            showToast('🗑️ 삭제 완료');
                         } else {
-                            if (btnDel) btnDel.disabled = false;
-                            showToast('❌ 삭제 실패: ' + res.message, true);
+                            showToast('❌ 삭제 실패: ' + res.message + ' (새로고침 필요)', true);
                         }
                     })
                     .withFailureHandler(() => {
-                        if (btnDel) btnDel.disabled = false;
-                        showToast('❌ 통신 에러', true);
+                        showToast('❌ 통신 에러 (새로고침 필요)', true);
                     })
                     .deleteArchivedMemo({ userName, dateStr, timeStr, originalContent });
             }
@@ -6145,10 +6518,12 @@
                 if (window._issueLoading) return;
                 window._issueLoading = true;
                 window._issuePage = 1;
+                window._allIssues = [];
 
                 var listEl = document.getElementById('issueList');
                 listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">불러오는 중...</div>';
 
+                // 카운트 업데이트를 위해 양쪽 탭 로드
                 google.script.run
                     .withSuccessHandler(function (result) {
                         window._issueLoading = false;
@@ -6156,7 +6531,12 @@
                             listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">이슈를 불러올 수 없습니다.</div>';
                             return;
                         }
-                        renderIssueList(result.issues, false);
+                        window._allIssues = result.issues || [];
+                        collectLabels(window._allIssues);
+                        // 현재 탭 카운트 업데이트
+                        var countId = window._issueState === 'open' ? 'issueOpenCount' : 'issueClosedCount';
+                        document.getElementById(countId).textContent = window._allIssues.length + (result.hasMore ? '+' : '');
+                        applyIssueFilters();
                         document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                     })
                     .withFailureHandler(function (err) {
@@ -6176,13 +6556,19 @@
                     .withSuccessHandler(function (result) {
                         window._issueLoading = false;
                         if (result && result.success) {
-                            renderIssueList(result.issues, true);
+                            window._allIssues = window._allIssues.concat(result.issues || []);
+                            collectLabels(result.issues || []);
+                            applyIssueFilters();
                             document.getElementById('issueLoadMore').style.display = result.hasMore ? 'block' : 'none';
                         }
                     })
                     .withFailureHandler(function () { window._issueLoading = false; })
                     .getGitHubIssues(window._issueState, window._issuePage);
             };
+
+            // 전체 이슈 캐시 (필터/정렬용)
+            window._allIssues = [];
+            window._allLabels = new Set();
 
             // 탭 전환
             window.switchIssueTab = function (state) {
@@ -6192,7 +6578,59 @@
                 loadIssues();
             };
 
-            // 이슈 목록 렌더링
+            // 필터/정렬 적용
+            window.applyIssueFilters = function () {
+                var labelFilter = document.getElementById('issueLabelFilter').value;
+                var sortBy = document.getElementById('issueSortSelect').value;
+
+                var filtered = window._allIssues.slice();
+
+                // 라벨 필터
+                if (labelFilter) {
+                    filtered = filtered.filter(function (issue) {
+                        return issue.labels && issue.labels.some(function (l) { return l.name === labelFilter; });
+                    });
+                }
+
+                // 정렬
+                if (sortBy === 'oldest') {
+                    filtered.sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+                } else if (sortBy === 'comments') {
+                    filtered.sort(function (a, b) { return (b.comments || 0) - (a.comments || 0); });
+                } else {
+                    filtered.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+                }
+
+                renderIssueList(filtered, false);
+            };
+
+            // 라벨 필터 드롭다운 업데이트
+            function updateLabelFilter() {
+                var select = document.getElementById('issueLabelFilter');
+                var current = select.value;
+                select.innerHTML = '<option value="">Labels</option>';
+                window._allLabels.forEach(function (label) {
+                    var opt = document.createElement('option');
+                    opt.value = label;
+                    opt.textContent = label;
+                    select.appendChild(opt);
+                });
+                select.value = current;
+            }
+
+            // 라벨 수집
+            function collectLabels(issues) {
+                issues.forEach(function (issue) {
+                    if (issue.labels) {
+                        issue.labels.forEach(function (l) {
+                            if (l.name !== 'from-workspace') window._allLabels.add(l.name);
+                        });
+                    }
+                });
+                updateLabelFilter();
+            }
+
+            // 이슈 목록 렌더링 (GitHub-style 행)
             function renderIssueList(issues, append) {
                 var listEl = document.getElementById('issueList');
                 if (!append) listEl.innerHTML = '';
@@ -6200,36 +6638,50 @@
                 if (!issues || issues.length === 0) {
                     if (!append) {
                         listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--hint-color);">' +
-                            (window._issueState === 'open' ? '열린 이슈가 없습니다. 🎉' : '닫힌 이슈가 없습니다.') + '</div>';
+                            (window._issueState === 'open' ? '열린 이슈가 없습니다.' : '닫힌 이슈가 없습니다.') + '</div>';
                     }
                     return;
                 }
 
                 issues.forEach(function (issue) {
-                    var card = document.createElement('div');
-                    card.className = 'issue-card';
-                    card.onclick = function () { openIssueDetail(issue.number); };
+                    var row = document.createElement('div');
+                    row.className = 'issue-row';
+                    row.onclick = function () { openIssueDetail(issue.number); };
 
+                    // 상태 도트
+                    var iconClass = issue.state === 'open' ? 'open' : 'closed';
+
+                    // 라벨
                     var labelsHtml = '';
                     if (issue.labels) {
                         issue.labels.forEach(function (l) {
-                            if (l.name === 'from-workspace') return; // 내부 라벨은 숨김
-                            labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + l.name + '</span>';
+                            if (l.name === 'from-workspace') return;
+                            labelsHtml += '<span class="issue-label" style="background:#' + (l.color || '666') + ';">' + escapeHtml(l.name) + '</span>';
                         });
                     }
 
+                    // 메타 텍스트
                     var timeAgo = getTimeAgo(issue.created_at);
-                    var stateIcon = issue.state === 'open' ? '🟢' : '🔴';
+                    var metaText = '#' + issue.number + ' opened ' + timeAgo;
 
-                    card.innerHTML =
-                        '<div class="issue-card-title">' + stateIcon + ' #' + issue.number + ' ' + escapeHtml(issue.title) + '</div>' +
-                        '<div class="issue-card-meta">' +
-                        '<span>' + timeAgo + '</span>' +
-                        (issue.comments > 0 ? '<span>💬 ' + issue.comments + '</span>' : '') +
+                    // 댓글
+                    var commentsHtml = '';
+                    if (issue.comments > 0) {
+                        commentsHtml = '<div class="issue-row-comments">💬 ' + issue.comments + '</div>';
+                    }
+
+                    row.innerHTML =
+                        '<span class="issue-state-dot ' + iconClass + '" style="margin-top:4px;"></span>' +
+                        '<div class="issue-row-body">' +
+                        '<div class="issue-row-title-line">' +
+                        '<span class="issue-row-title">' + escapeHtml(issue.title) + '</span>' +
                         labelsHtml +
-                        '</div>';
+                        '</div>' +
+                        '<div class="issue-row-meta">' + metaText + '</div>' +
+                        '</div>' +
+                        commentsHtml;
 
-                    listEl.appendChild(card);
+                    listEl.appendChild(row);
                 });
             }
 

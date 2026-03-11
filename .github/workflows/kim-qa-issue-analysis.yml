@@ -82,9 +82,34 @@ jobs:
               core.setOutput('exceeded', 'false');
             }
 
-      # 4. Claude API로 이슈 분석 [CI-01 수정: 환경변수로 안전하게 전달]
-      - name: Analyze issue with Claude
+      # 4. 토큰 사용량 및 비용 사전 예측 (Bunker Team / Phase 2)
+      - name: Estimate Token Cost (Pre-Flight)
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        id: estimator
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          TARGET_STAGES: "issue-analysis,issue-response,auto-fix"
+        run: |
+          python3 .github/scripts/estimator.py
+
+      # 5. [게이트 평가] 고비용 시 자동 중단 및 슬랙 대기 (JARVIS-SPEC-2026-03-11)
+      - name: Cost Gate Check
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        id: cost_gate
+        run: |
+          ACTION="${{ steps.estimator.outputs.action }}"
+          if [ "$ACTION" == "WAIT_APPROVAL" ]; then
+            echo "⛔ 비용이 $0.1 이상(대규모 작업)으로 예상되어 승인 게이트에서 일시 정지(중단)합니다."
+            echo "continue_analysis=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ 비용 승인 조건 충족 ($ACTION). 분석을 시작합니다."
+            echo "continue_analysis=true" >> $GITHUB_OUTPUT
+          fi
+
+      # 6. Claude API로 이슈 분석 [CI-01 수정: 환경변수로 안전하게 전달]
+      - name: Analyze issue with Claude
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.cost_gate.outputs.continue_analysis == 'true'
         id: claude_analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -180,9 +205,9 @@ jobs:
               f.write(f"cost_usd={cost_usd:.4f}\n")
           PYTHON_SCRIPT
 
-      # 5. GitHub Issue에 QA 보고서 코멘트 추가
+      # 7. GitHub Issue에 QA 보고서 코멘트 추가
       - name: Post QA report as comment
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.cost_gate.outputs.continue_analysis == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -198,9 +223,9 @@ jobs:
         env:
           ANALYSIS_RESULT: ${{ steps.claude_analysis.outputs.analysis }}
 
-      # 6. 라벨 교체 [CI-03 수정: 분석 실패 시 qa-failed 라벨]
+      # 8. 라벨 교체 [CI-03 수정: 분석 실패 시 qa-failed 라벨]
       - name: Update labels on success
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success == 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.cost_gate.outputs.continue_analysis == 'true' && steps.claude_analysis.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -236,7 +261,7 @@ jobs:
             });
 
       - name: Update labels on failure
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success != 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.cost_gate.outputs.continue_analysis == 'true' && steps.claude_analysis.outputs.success != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -271,7 +296,7 @@ jobs:
               labels: ['qa-failed']
             });
 
-      # 7. 슬랙 DM 발송 (Block Kit 버튼 — 팀 배정 선택)
+      # 9. 슬랙 DM 발송 (Block Kit 버튼 — Pre-Flight / 팀 배정 혼합)
       - name: Send Slack DM to CEO
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false'
         env:
@@ -281,10 +306,16 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+          # 기존 (분석 후 결과)
           ANALYSIS_SUCCESS: ${{ steps.claude_analysis.outputs.success }}
           COST_USD: ${{ steps.claude_analysis.outputs.cost_usd }}
           INPUT_TOKENS: ${{ steps.claude_analysis.outputs.input_tokens }}
           OUTPUT_TOKENS: ${{ steps.claude_analysis.outputs.output_tokens }}
+          # 신규 (Pre-Flight 예측 결과)
+          GATE_CONTINUED: ${{ steps.cost_gate.outputs.continue_analysis }}
+          EST_COST: ${{ steps.estimator.outputs.est_cost_usd }}
+          EST_INFO: "Est: In ${{ steps.estimator.outputs.est_input_tokens }} / Out ${{ steps.estimator.outputs.est_output_tokens }}"
+          EST_EFFICIENCY: ${{ steps.estimator.outputs.efficiency }}
         run: |
           python3 << 'PYTHON_SCRIPT'
           import os, json, urllib.request
@@ -295,72 +326,121 @@ jobs:
           issue_title = os.environ["ISSUE_TITLE"]
           issue_url = os.environ["ISSUE_URL"]
           labels = os.environ["ISSUE_LABELS"]
-          success = os.environ.get("ANALYSIS_SUCCESS", "false") == "true"
-          cost_usd = os.environ.get("COST_USD", "0")
-          input_tokens = os.environ.get("INPUT_TOKENS", "0")
-          output_tokens = os.environ.get("OUTPUT_TOKENS", "0")
-
-          cost_val = float(cost_usd) if cost_usd else 0
-          cost_krw = int(cost_val * 1400)
-
-          if success:
-              status = "✅ 분석 완료"
-          else:
-              status = "⚠️ 분석 실패 (수동 검토 필요)"
-
-          fallback_text = (
-              f"🕵️ 김감사 QA 자동 분석 | "
-              f"이슈 #{issue_number}: {issue_title} | "
-              f"상태: {status}"
-          )
-
-          blocks = [
-              {
-                  "type": "section",
-                  "text": {
-                      "type": "mrkdwn",
-                      "text": (
-                          f"━━━━━━━━━━━━━━━━━━━━\n"
-                          f"🕵️ *김감사 QA 자동 분석*\n"
-                          f"━━━━━━━━━━━━━━━━━━━━\n"
-                          f"🔢 이슈 #{issue_number}: {issue_title}\n"
-                          f"🏷️ 라벨: {labels}\n"
-                          f"📋 상태: {status}\n"
-                          f"💰 토큰: {input_tokens} in + {output_tokens} out | ${cost_val:.4f} (₩{cost_krw:,})\n\n"
-                          f"🔗 <{issue_url}|보고서 확인>"
-                      )
-                  }
-              }
-          ]
-
-          # 분석 성공 시 팀 배정 버튼 추가
-          if success:
-              blocks.append({
-                  "type": "section",
-                  "text": {
-                      "type": "mrkdwn",
-                      "text": "📋 *이슈 처리 담당팀을 선택해주세요:*"
-                  }
-              })
-              blocks.append({
-                  "type": "actions",
-                  "elements": [
-                      {
-                          "type": "button",
-                          "text": {"type": "plain_text", "text": "🤵 자비스 개발팀"},
-                          "style": "primary",
-                          "action_id": "assign_team_jarvis",
-                          "value": f"{issue_number}"
-                      },
-                      {
-                          "type": "button",
-                          "text": {"type": "plain_text", "text": "🔧 강철 AX팀"},
-                          "action_id": "assign_team_gangcheol",
-                          "value": f"{issue_number}"
+          
+          # 게이트 통과 여부에 따라 분기
+          gate_continued = os.environ.get("GATE_CONTINUED", "true") == "true"
+          
+          if not gate_continued:
+              # [Pre-Flight] 승인 대기 상태
+              est_cost = float(os.environ.get("EST_COST", "0"))
+              cost_krw = int(est_cost * 1400)
+              est_eff = os.environ.get("EST_EFFICIENCY", "N/A")
+              
+              fallback_text = f"💡 [승인대기] 이슈 #{issue_number}: 파이프라인 예측 비용 초과 (${est_cost:.2f})"
+              status_text = "⚠️ 비용 초과 대기 (승인 시 깃허브 액션 재개)"
+              
+              blocks = [
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": (
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
+                              f"💡 *[PRE-FLIGHT] 작업 비용 예측 (대기)*\n"
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
+                              f"🔢 이슈 #{issue_number}: {issue_title}\n"
+                              f"💰 예상 비용(전체): *${est_cost:.4f}* (약 ₩{cost_krw:,})\n"
+                              f"🚀 효율성: [{est_eff}]\n\n"
+                              f"🔗 <{issue_url}|이슈 보기>"
+                          )
                       }
-                  ]
-              })
+                  },
+                  {
+                      "type": "actions",
+                      "elements": [
+                          {
+                              "type": "button",
+                              "text": {"type": "plain_text", "text": "✅ 조건부 승인 (분석 강제 재개)"},
+                              "style": "primary",
+                              "action_id": "resume_auto_analysis",
+                              "value": f"{issue_number}"
+                          },
+                          {
+                              "type": "button",
+                              "text": {"type": "plain_text", "text": "❌ 이번 작업 취소"},
+                              "style": "danger",
+                              "action_id": "cancel_auto_analysis",
+                              "value": f"{issue_number}"
+                          }
+                      ]
+                  }
+              ]
+          else:
+              # 기존: [분석 완료] 결과 보고
+              success = os.environ.get("ANALYSIS_SUCCESS", "false") == "true"
+              cost_usd = os.environ.get("COST_USD", "0")
+              input_tokens = os.environ.get("INPUT_TOKENS", "0")
+              output_tokens = os.environ.get("OUTPUT_TOKENS", "0")
 
+              cost_val = float(cost_usd) if cost_usd else 0
+              cost_krw = int(cost_val * 1400)
+
+              if success:
+                  status = "✅ 분석 완료"
+              else:
+                  status = "⚠️ 분석 실패 (수동 검토 필요)"
+
+              fallback_text = (
+                  f"🕵️ 김감사 QA 자동 분석 | "
+                  f"이슈 #{issue_number}: {issue_title} | "
+                  f"상태: {status}"
+              )
+
+              blocks = [
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": (
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
+                              f"🕵️ *김감사 QA 자동 분석*\n"
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
+                              f"🔢 이슈 #{issue_number}: {issue_title}\n"
+                              f"🏷️ 라벨: {labels}\n"
+                              f"📋 상태: {status}\n"
+                              f"💰 실소모: {input_tokens} in + {output_tokens} out | *${cost_val:.4f}* (₩{cost_krw:,})\n\n"
+                              f"🔗 <{issue_url}|보고서 확인>"
+                          )
+                      }
+                  }
+              ]
+
+              if success:
+                  blocks.append({
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": "📋 *이슈 처리 담당팀을 선택해주세요:*"
+                      }
+                  })
+                  blocks.append({
+                      "type": "actions",
+                      "elements": [
+                          {
+                              "type": "button",
+                              "text": {"type": "plain_text", "text": "🤵 자비스 개발팀"},
+                              "style": "primary",
+                              "action_id": "assign_team_jarvis",
+                              "value": f"{issue_number}"
+                          },
+                          {
+                              "type": "button",
+                              "text": {"type": "plain_text", "text": "🔧 강철 AX팀"},
+                              "action_id": "assign_team_gangcheol",
+                              "value": f"{issue_number}"
+                          }
+                      ]
+          # Slack API 전송
           payload = json.dumps({
               "channel": ceo_id,
               "text": fallback_text,
@@ -384,9 +464,9 @@ jobs:
               print(f"Slack DM 발송 실패: {e}")
           PYTHON_SCRIPT
 
-      # 8. 자비스 이해보고서 워크플로우 자동 호출
+      # 10. 자비스 이해보고서 워크플로우 자동 호출
       - name: Trigger Jarvis workflow
-        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.claude_analysis.outputs.success == 'true'
+        if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'false' && steps.cost_gate.outputs.continue_analysis == 'true' && steps.claude_analysis.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -401,7 +481,7 @@ jobs:
             });
             console.log(`Triggered jarvis workflow for issue #${context.issue.number}`);
 
-      # 9. 일일 한도 초과 시 라벨 정리
+      # 11. 일일 한도 초과 시 라벨 정리
       - name: Clean up on rate limit
         if: steps.check_reviewed.outputs.skip == 'false' && steps.rate_limit.outputs.exceeded == 'true'
         uses: actions/github-script@v7
