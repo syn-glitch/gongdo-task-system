@@ -1615,6 +1615,11 @@
             padding: 4px;
         }
 
+        /* 모바일 하단 탭바 — 데스크톱에서 기본 숨김 */
+        .bottom-nav {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .gnb-tabs {
                 display: none;
@@ -2634,6 +2639,13 @@
             border-radius: 4px;
             font-size: 11px;
             cursor: pointer;
+            overflow: hidden;
+        }
+
+        .fc .fc-event-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .fc .fc-day-today {
@@ -5202,7 +5214,7 @@
                 droppable: true,
                 /* [Phase 26] 모바일 최적화 설정 */
                 displayEventTime: false,
-                dayMaxEvents: window.innerWidth < 768 ? 4 : true,
+                dayMaxEvents: window.innerWidth < 768 ? 4 : 3,
                 eventContent: function (arg) {
                     if (window.innerWidth < 768) {
                         const dot = document.createElement('div');
