@@ -5619,7 +5619,7 @@
 
             const events = filtered.map(t => {
                 const ev = {
-                    id: t.id,
+                    id: t.id || ('temp-' + t.row),
                     title: `[${t.project}] ${t.title}`,
                     allDay: true,
                     extendedProps: {
