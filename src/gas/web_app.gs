@@ -567,15 +567,32 @@ function changeTaskDueDateFromWeb(rowNum, newDate, userName) {
 
   return withTaskLock(function(sheet) {
     var taskId = sheet.getRange(rowNum, 1).getValue();
-    var oldDate = sheet.getRange(rowNum, 9).getValue();
+    var oldDue = sheet.getRange(rowNum, 9).getValue();
+    var oldStart = sheet.getRange(rowNum, 19).getValue();
+    
+    var newDueObj = new Date(newDate);
+    sheet.getRange(rowNum, 9).setValue(newDueObj);
 
-    sheet.getRange(rowNum, 9).setValue(new Date(newDate));
+    // [v3.1.4] 드래그 앤 드롭 시 시작예정일(S열, 19)도 동일한 간격으로 이동시켜 캘린더에서 여러 칸을 차지하는 버그 방지
+    if (oldDue instanceof Date && !isNaN(oldDue.getTime())) {
+      var deltaMs = newDueObj.getTime() - oldDue.getTime();
+      if (oldStart instanceof Date && !isNaN(oldStart.getTime())) {
+        var newStartObj = new Date(oldStart.getTime() + deltaMs);
+        sheet.getRange(rowNum, 19).setValue(newStartObj);
+      } else {
+        // 시작일이 없었던 경우 마감일과 일치시킴
+        sheet.getRange(rowNum, 19).setValue(newDueObj);
+      }
+    } else {
+      // 기존에 마감일조차 없던 케이스
+      sheet.getRange(rowNum, 19).setValue(newDueObj);
+    }
 
     logActionV2({
       userId: userName, action: "DUEDATE_CHANGE", targetId: taskId,
-      oldValue: oldDate, newValue: newDate, source: "CALENDAR_DRAG"
+      oldValue: oldDue, newValue: newDate, source: "CALENDAR_DRAG"
     });
-    return { message: "마감일 변경 완료" };
+    return { message: "마감일과 일정이 이동되었습니다" };
   }, { rowNum: rowNum, syncCalendar: true });
 }
 
