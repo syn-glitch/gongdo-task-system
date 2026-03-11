@@ -124,7 +124,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: ${{ steps.prep.outputs.full_prompt }}
           claude_args: |
-            --max-turns 40
+            --max-turns 300
             --allowedTools Edit,Read,Write,Glob,Grep,Bash
 
       # 5. 변경사항 확인
