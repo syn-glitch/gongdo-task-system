@@ -149,8 +149,7 @@ function ensureTokenUsageSheet() {
     sheet.setColumnWidth(7, 100); // totalTokens
     sheet.setColumnWidth(8, 220); // model
     sheet.setFrozenRows(1);
-    
-
+  }
 
   return sheet;
 }
