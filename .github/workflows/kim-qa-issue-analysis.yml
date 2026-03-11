@@ -440,6 +440,7 @@ jobs:
                               "value": f"{issue_number}"
                           }
                       ]
+                  })
           # Slack API 전송
           payload = json.dumps({
               "channel": ceo_id,
