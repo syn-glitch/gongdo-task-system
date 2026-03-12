@@ -1,0 +1,192 @@
+name: "🚀 GAS 자동 배포 (5단계)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '이슈 번호'
+        required: true
+        type: string
+      pr_number:
+        description: 'PR 번호'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 체크아웃
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Node.js + clasp 설치
+      - name: Setup Node.js and clasp
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install -g @google/clasp
+
+      # 3. clasp 인증
+      - name: Setup clasp auth
+        run: echo "$CLASPRC" > ~/.clasprc.json
+        env:
+          CLASPRC: ${{ secrets.CLASPRC_JSON }}
+
+      # 4. clasp push
+      - name: Push to GAS
+        id: push
+        run: |
+          cd src/gas
+          OUTPUT=$(clasp push --force 2>&1) || true
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "Pushed"; then
+            echo "push_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "push_success=false" >> $GITHUB_OUTPUT
+            echo "push_error<<EOF" >> $GITHUB_OUTPUT
+            echo "$OUTPUT" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      # 5. clasp deploy (배포 버전 업데이트)
+      - name: Deploy new version
+        if: steps.push.outputs.push_success == 'true'
+        id: deploy
+        run: |
+          cd src/gas
+          OUTPUT=$(clasp deploy -i "$DEPLOY_ID" -d "자동 배포 — 이슈 #${{ inputs.issue_number }}" 2>&1) || true
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "Created version"; then
+            VERSION=$(echo "$OUTPUT" | grep -oP '(?<=Created version )\d+')
+            echo "deploy_success=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "deploy_success=false" >> $GITHUB_OUTPUT
+            echo "deploy_error<<EOF" >> $GITHUB_OUTPUT
+            echo "$OUTPUT" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+        env:
+          DEPLOY_ID: ${{ secrets.GAS_DEPLOY_ID }}
+
+      # 6. 이슈에 배포 결과 코멘트
+      - name: Comment on issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}');
+            const pushOk = '${{ steps.push.outputs.push_success }}' === 'true';
+            const deployOk = '${{ steps.deploy.outputs.deploy_success }}' === 'true';
+            const version = '${{ steps.deploy.outputs.version }}' || '';
+
+            let body = '';
+            if (pushOk && deployOk) {
+              body = `## 🚀 GAS 자동 배포 완료\n\n`;
+              body += `✅ clasp push 완료\n`;
+              body += `✅ 배포 버전 업데이트 완료${version ? ' (v' + version + ')' : ''}\n\n`;
+              body += `이슈 등록 → 분석 → 코드 수정 → 리뷰 → 배포까지 **자동 완료**되었습니다.\n`;
+
+              // deployed 라벨 추가
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: ['deployed']
+                });
+              } catch (e) {}
+            } else if (pushOk && !deployOk) {
+              body = `## ⚠️ GAS 배포 부분 실패\n\n`;
+              body += `✅ clasp push 완료\n`;
+              body += `❌ clasp deploy 실패\n\n`;
+              body += `수동으로 Apps Script 에디터에서 배포 업데이트가 필요합니다.`;
+            } else {
+              body = `## ❌ GAS 배포 실패\n\n`;
+              body += `❌ clasp push 실패\n\n`;
+              body += `CLASPRC_JSON 토큰이 만료되었을 수 있습니다.\n`;
+              body += `로컬에서 \`clasp login\` 후 토큰을 갱신해주세요.`;
+            }
+
+            body += `\n\n---\n*🤖 GAS 자동 배포 (5단계) | [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
+
+      # 7. 슬랙 배포 결과 보고
+      - name: Slack deploy report
+        if: always()
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CEO_ID: "U02S3CN9E6R"
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os, json, urllib.request
+
+          slack_token = os.environ["SLACK_TOKEN"]
+          ceo_id = os.environ["SLACK_CEO_ID"]
+          issue_number = "${{ inputs.issue_number }}"
+          pr_number = "${{ inputs.pr_number }}"
+          push_ok = "${{ steps.push.outputs.push_success }}" == "true"
+          deploy_ok = "${{ steps.deploy.outputs.deploy_success }}" == "true"
+          version = "${{ steps.deploy.outputs.version }}" or ""
+
+          if push_ok and deploy_ok:
+              msg = (
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  "🚀 *GAS 배포 완료*\n"
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  f"🔢 이슈 #{issue_number} / PR #{pr_number}\n"
+                  "✅ clasp push 완료\n"
+                  f"✅ 배포 버전 업데이트 완료{' (v' + version + ')' if version else ''}\n\n"
+                  "🎉 이슈 등록 → 배포까지 전자동 완료!"
+              )
+          elif push_ok:
+              msg = (
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  "⚠️ *GAS 배포 부분 실패*\n"
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  f"🔢 이슈 #{issue_number}\n"
+                  "✅ clasp push 완료\n"
+                  "❌ clasp deploy 실패\n\n"
+                  "Apps Script 에디터에서 수동 배포 필요"
+              )
+          else:
+              msg = (
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  "❌ *GAS 배포 실패*\n"
+                  "━━━━━━━━━━━━━━━━━━━━\n"
+                  f"🔢 이슈 #{issue_number}\n"
+                  "❌ clasp push 실패\n\n"
+                  "CLASPRC_JSON 토큰 만료 가능성.\n"
+                  "로컬에서 `clasp login` 후 토큰 갱신 필요"
+              )
+
+          payload = json.dumps({
+              "channel": ceo_id,
+              "text": msg
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {slack_token}",
+                  "Content-Type": "application/json"
+              }
+          )
+          try:
+              urllib.request.urlopen(req)
+          except Exception as e:
+              print(f"Slack 발송 실패: {e}")
+          PYTHON_SCRIPT

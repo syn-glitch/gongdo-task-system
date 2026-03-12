@@ -71,6 +71,24 @@ function doPost(e) {
         return handleDeployDecision(action, payload);
       }
 
+      // [5단계] GAS 배포 선택 버튼 (김민석 검토 / 바로 배포 / 보류)
+      if (action && action.action_id && (
+        action.action_id === "gas_deploy_now" ||
+        action.action_id === "gas_deploy_review" ||
+        action.action_id === "gas_deploy_hold" ||
+        action.action_id === "gas_deploy_after_review"
+      )) {
+        return handleGasDeployChoice(action, payload);
+      }
+
+      // [5단계] 김민석 교차 검토 완료 버튼
+      if (action && action.action_id && (
+        action.action_id === "kim_review_ok" ||
+        action.action_id === "kim_review_ng"
+      )) {
+        return handleKimReviewResult(action, payload);
+      }
+
       // 기존 버튼 방식 호환 (필요시)
       if (action && action.action_id === "change_status_action") {
         const parts = action.value.split("|");
@@ -1293,23 +1311,31 @@ function handleDeployDecision(action, slackPayload) {
           muteHttpExceptions: true
         });
 
-        // 이슈에 배포 완료 코멘트
+        // PR에 auto-deploy 라벨 부착
+        var labelUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + prNumber + "/labels";
+        ensureGitHubLabel_(githubToken, owner, repo, "auto-deploy", "0e8a16", "GAS 자동 배포 대상");
+        UrlFetchApp.fetch(labelUrl, {
+          method: "post",
+          contentType: "application/json",
+          headers: { "Authorization": "token " + githubToken },
+          payload: JSON.stringify({ labels: ["auto-deploy"] }),
+          muteHttpExceptions: true
+        });
+
+        // 이슈에 머지 완료 코멘트
         var commentUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments";
         UrlFetchApp.fetch(commentUrl, {
           method: "post",
           contentType: "application/json",
           headers: { "Authorization": "token " + githubToken },
           payload: JSON.stringify({
-            body: "## 🚀 배포 완료\n\nPR #" + prNumber + " 머지 완료.\n대표 승인에 의해 배포되었습니다.\n\n> ⚠️ clasp push는 별도 수동 실행이 필요합니다."
+            body: "## 🚀 배포 승인 완료\n\nPR #" + prNumber + " → main 머지 완료.\n\n⏳ GAS 배포 선택 대기 중 (슬랙 DM 발송됨)"
           }),
           muteHttpExceptions: true
         });
 
-        sendSlackResponse_(userId,
-          "🚀 *배포 승인 완료*\n" +
-          "• PR #" + prNumber + " → main 머지 완료\n" +
-          "• 이슈 #" + issueNumber + " 닫힘\n\n" +
-          "⚠️ GAS 반영은 `clasp pull && clasp push` 필요");
+        // [5단계] GAS 배포 3버튼 슬랙 DM 발송
+        sendGasDeployChoiceMessage_(userId, issueNumber, prNumber);
       } else {
         var errMsg = mergeResp.getContentText();
         Logger.log("[ERROR] PR 머지 실패: " + errMsg);
@@ -1404,4 +1430,322 @@ function sendSlackResponse_(userId, message) {
     payload: JSON.stringify({ channel: userId, text: message }),
     muteHttpExceptions: true
   });
+}
+
+// ============================================================
+// [5단계] GAS 자동 배포 — 슬랙 버튼 핸들러
+// ============================================================
+
+/**
+ * 머지 후 대표에게 GAS 배포 3버튼 DM 발송
+ * [김민석 검토 요청] [바로 배포] [보류]
+ */
+function sendGasDeployChoiceMessage_(userId, issueNumber, prNumber) {
+  var token = getSlackToken();
+  if (!token) return;
+
+  var blocks = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: "🚀 GAS 배포 준비 완료" }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "🔢 이슈 #" + issueNumber + "\n" +
+              "✅ PR #" + prNumber + " → main 머지 완료\n" +
+              "✅ 김감사 AI QA 리뷰 통과"
+      }
+    },
+    {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: { type: "plain_text", text: "👨‍💻 김민석 검토 요청" },
+          action_id: "gas_deploy_review",
+          value: issueNumber + "|" + prNumber
+        },
+        {
+          type: "button",
+          text: { type: "plain_text", text: "🚀 바로 배포" },
+          style: "primary",
+          action_id: "gas_deploy_now",
+          value: issueNumber + "|" + prNumber
+        },
+        {
+          type: "button",
+          text: { type: "plain_text", text: "❌ 보류" },
+          action_id: "gas_deploy_hold",
+          value: issueNumber + "|" + prNumber
+        }
+      ]
+    }
+  ];
+
+  UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + token },
+    payload: JSON.stringify({
+      channel: userId,
+      text: "🚀 GAS 배포 준비 완료 — 이슈 #" + issueNumber,
+      blocks: blocks
+    }),
+    muteHttpExceptions: true
+  });
+}
+
+/**
+ * 대표의 GAS 배포 선택 처리
+ * gas_deploy_now → 즉시 배포 워크플로우 트리거
+ * gas_deploy_review → 김민석에게 검토 요청 DM
+ * gas_deploy_hold → 보류
+ * gas_deploy_after_review → 김민석 검토 후 배포 승인
+ */
+function handleGasDeployChoice(action, slackPayload) {
+  try {
+    var userId = slackPayload.user.id;
+    var CEO_SLACK_ID = "U02S3CN9E6R";
+
+    if (userId !== CEO_SLACK_ID && action.action_id !== "gas_deploy_after_review") {
+      sendSlackResponse_(userId, "❌ GAS 배포는 대표만 결정할 수 있습니다.");
+      return ContentService.createTextOutput("");
+    }
+
+    var parts = action.value.split("|");
+    var issueNumber = parts[0];
+    var prNumber = parts[1];
+
+    var githubToken = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+    var owner = "syn-glitch";
+    var repo = "gongdo-task-system";
+
+    if (action.action_id === "gas_deploy_now" || action.action_id === "gas_deploy_after_review") {
+      // GAS 배포 워크플로우 트리거
+      var url = "https://api.github.com/repos/" + owner + "/" + repo + "/actions/workflows/gas-auto-deploy.yml/dispatches";
+      var resp = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": "token " + githubToken },
+        payload: JSON.stringify({
+          ref: "main",
+          inputs: { issue_number: String(issueNumber), pr_number: String(prNumber) }
+        }),
+        muteHttpExceptions: true
+      });
+
+      if (resp.getResponseCode() === 204) {
+        sendSlackResponse_(CEO_SLACK_ID,
+          "🚀 *GAS 자동 배포 시작*\n" +
+          "• 이슈 #" + issueNumber + "\n" +
+          "• clasp push + deploy 진행 중...\n" +
+          "완료 시 슬랙으로 알려드리겠습니다.");
+      } else {
+        Logger.log("[ERROR] GAS 배포 트리거 실패: " + resp.getContentText());
+        sendSlackResponse_(CEO_SLACK_ID, "❌ GAS 배포 워크플로우 트리거 실패. GitHub Actions를 확인해주세요.");
+      }
+
+    } else if (action.action_id === "gas_deploy_review") {
+      // 김민석에게 교차 검토 요청
+      var KIM_MINSEOK_SLACK_ID = getKimMinseokSlackId_();
+      sendKimReviewRequestMessage_(KIM_MINSEOK_SLACK_ID, issueNumber, prNumber);
+      sendSlackResponse_(CEO_SLACK_ID,
+        "👨‍💻 *김민석 교차 검토 요청 완료*\n" +
+        "• 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+        "김민석 검토 완료 시 재승인 요청이 옵니다.");
+
+    } else if (action.action_id === "gas_deploy_hold") {
+      sendSlackResponse_(CEO_SLACK_ID,
+        "❌ *GAS 배포 보류*\n" +
+        "• 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+        "필요 시 GitHub에서 수동 배포하세요.");
+    }
+
+  } catch (e) {
+    Logger.log("[ERROR] handleGasDeployChoice: " + e.message);
+    sendSlackResponse_(slackPayload.user.id, "❌ GAS 배포 처리 오류: " + e.message);
+  }
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * 김민석에게 교차 검토 요청 DM 발송
+ */
+function sendKimReviewRequestMessage_(kimSlackId, issueNumber, prNumber) {
+  var token = getSlackToken();
+  if (!token) return;
+
+  var owner = "syn-glitch";
+  var repo = "gongdo-task-system";
+  var prUrl = "https://github.com/" + owner + "/" + repo + "/pull/" + prNumber;
+
+  var blocks = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: "👨‍💻 교차 검토 요청" }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "🔢 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+              "✅ 김감사 AI QA 리뷰 통과\n" +
+              "✅ PR → main 머지 완료\n\n" +
+              "🔗 <" + prUrl + "|PR 코드 확인>\n\n" +
+              "📋 배포 전 코드 확인 부탁드립니다."
+      }
+    },
+    {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: { type: "plain_text", text: "✅ 검토 완료 — 이상 없음" },
+          style: "primary",
+          action_id: "kim_review_ok",
+          value: issueNumber + "|" + prNumber
+        },
+        {
+          type: "button",
+          text: { type: "plain_text", text: "⚠️ 수정 필요" },
+          style: "danger",
+          action_id: "kim_review_ng",
+          value: issueNumber + "|" + prNumber
+        }
+      ]
+    }
+  ];
+
+  UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + token },
+    payload: JSON.stringify({
+      channel: kimSlackId,
+      text: "👨‍💻 교차 검토 요청 — 이슈 #" + issueNumber,
+      blocks: blocks
+    }),
+    muteHttpExceptions: true
+  });
+}
+
+/**
+ * 김민석 교차 검토 결과 처리
+ * kim_review_ok → 대표에게 배포 승인 요청
+ * kim_review_ng → 대표에게 수정 필요 보고
+ */
+function handleKimReviewResult(action, slackPayload) {
+  try {
+    var reviewerId = slackPayload.user.id;
+    var parts = action.value.split("|");
+    var issueNumber = parts[0];
+    var prNumber = parts[1];
+
+    var CEO_SLACK_ID = "U02S3CN9E6R";
+    var token = getSlackToken();
+    if (!token) return ContentService.createTextOutput("");
+
+    if (action.action_id === "kim_review_ok") {
+      // 대표에게 배포 승인 버튼 재발송
+      var blocks = [
+        {
+          type: "header",
+          text: { type: "plain_text", text: "🚀 GAS 배포 승인 요청" }
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "🔢 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+                  "👨‍💻 김민석 검토 결과: ✅ *이상 없음*\n\n" +
+                  "배포를 진행하시겠습니까?"
+          }
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "🚀 배포 승인" },
+              style: "primary",
+              action_id: "gas_deploy_after_review",
+              value: issueNumber + "|" + prNumber
+            },
+            {
+              type: "button",
+              text: { type: "plain_text", text: "❌ 보류" },
+              action_id: "gas_deploy_hold",
+              value: issueNumber + "|" + prNumber
+            }
+          ]
+        }
+      ];
+
+      UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": "Bearer " + token },
+        payload: JSON.stringify({
+          channel: CEO_SLACK_ID,
+          text: "🚀 GAS 배포 승인 요청 — 김민석 검토 완료",
+          blocks: blocks
+        }),
+        muteHttpExceptions: true
+      });
+
+      sendSlackResponse_(reviewerId, "✅ 검토 결과가 대표에게 전달되었습니다. 감사합니다!");
+
+    } else if (action.action_id === "kim_review_ng") {
+      // 대표에게 수정 필요 보고
+      sendSlackResponse_(CEO_SLACK_ID,
+        "⚠️ *김민석 교차 검토 결과: 수정 필요*\n" +
+        "• 이슈 #" + issueNumber + " / PR #" + prNumber + "\n" +
+        "김민석이 코드에서 문제를 발견했습니다.\n" +
+        "GitHub PR 코멘트를 확인해주세요.");
+      sendSlackResponse_(reviewerId, "⚠️ 수정 필요 의견이 대표에게 전달되었습니다. 감사합니다!");
+    }
+
+  } catch (e) {
+    Logger.log("[ERROR] handleKimReviewResult: " + e.message);
+    sendSlackResponse_(slackPayload.user.id, "❌ 검토 결과 처리 오류: " + e.message);
+  }
+
+  return ContentService.createTextOutput("");
+}
+
+/**
+ * 김민석 슬랙 ID 조회
+ */
+function getKimMinseokSlackId_() {
+  // SLACK_USER_MAP에서 김민석 ID 조회
+  if (typeof SLACK_USER_MAP !== "undefined") {
+    for (var uid in SLACK_USER_MAP) {
+      if (SLACK_USER_MAP[uid] === "김민석") return uid;
+    }
+  }
+  // 못 찾으면 스크립트 속성에서 조회
+  var id = PropertiesService.getScriptProperties().getProperty("KIM_MINSEOK_SLACK_ID");
+  return id || "";
+}
+
+/**
+ * GAS 배포 워크플로우 트리거 (GitHub Actions)
+ */
+function triggerGasAutoDeploy_(githubToken, owner, repo, issueNumber, prNumber) {
+  var url = "https://api.github.com/repos/" + owner + "/" + repo + "/actions/workflows/gas-auto-deploy.yml/dispatches";
+  var resp = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "token " + githubToken },
+    payload: JSON.stringify({
+      ref: "main",
+      inputs: { issue_number: String(issueNumber), pr_number: String(prNumber) }
+    }),
+    muteHttpExceptions: true
+  });
+  Logger.log("[triggerGasAutoDeploy_] 이슈 #" + issueNumber + " → HTTP " + resp.getResponseCode());
+  return resp.getResponseCode() === 204;
 }
