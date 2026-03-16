@@ -5126,20 +5126,21 @@
             const regCcAssignees = getRegCcAssignees();
             if (regCcAssignees.length > 0) opts.ccAssignees = regCcAssignees;
 
+            // [v3.2.1] Optimistic UI — 즉시 모달 닫고 백그라운드 처리
+            showToast('⏳ 업무 등록 중...');
+            closeRegModal();
+
             google.script.run
                 .withSuccessHandler(res => {
-                    btn.disabled = false; btn.textContent = '등록하기';
                     if (res.success) {
                         showToast('✅ ' + res.message);
-                        closeRegModal(); loadTasks();
-
+                        loadTasks();
                         if (window._kanbanInitialized) loadKanban();
                         if (window._calendarInitialized) loadCalendar();
                     } else { showToast('❌ ' + res.message, true); }
                 })
                 .withFailureHandler(err => {
-                    btn.disabled = false; btn.textContent = '등록하기';
-                    showToast('❌ ' + err.message, true);
+                    showToast('❌ 등록 실패: ' + err.message, true);
                 })
                 .registerTaskFromWeb(g_userId || g_userName, projectCode, projectName, title, desc, due, status, opts);
         }
@@ -5354,36 +5355,24 @@
         function executeDeleteTask() {
             const rowNum = parseInt(document.getElementById('editRowNum').value, 10);
             const title = document.getElementById('editTitle').value.trim();
-            const btn = document.getElementById('confirmDeleteBtn');
-            btn.disabled = true; btn.textContent = '삭제 중...';
+
+            // [v3.2.1] Optimistic UI — 즉시 모달 닫고 백그라운드 처리
+            showToast('🗑️ ' + title + ' 삭제 중...');
+            closeDeleteConfirm();
+            closeEditModal();
 
             google.script.run
                 .withSuccessHandler(res => {
-                    btn.disabled = false; btn.textContent = '삭제하기';
                     if (res.success) {
                         showToast('🗑️ ' + (res.title || title) + ' 삭제 완료');
-                        closeDeleteConfirm();
-                        closeEditModal();
-                        setTimeout(() => {
-                            loadTasks();
-                            if (window._kanbanInitialized) loadKanban();
-                            if (window._calendarInitialized) loadCalendar();
-                        }, 500);
-
-                        google.script.run.logActionV2({
-                            userId: g_userName,
-                            action: 'TASK_DELETE',
-                            targetId: res.taskId || title,
-                            oldValue: '',
-                            newValue: '삭제됨',
-                            source: 'EDIT_MODAL',
-                            details: '업무 삭제: ' + (res.title || title) + ' (Row: ' + rowNum + ')'
-                        });
-                    } else { handleApiError(res.message); }
+                        loadTasks();
+                        if (window._kanbanInitialized) loadKanban();
+                        if (window._calendarInitialized) loadCalendar();
+                    } else { showToast('❌ 삭제 실패: ' + res.message, true); loadTasks(); }
                 })
                 .withFailureHandler(err => {
-                    btn.disabled = false; btn.textContent = '삭제하기';
-                    handleApiError(err.message);
+                    showToast('❌ 삭제 실패: ' + err.message, true);
+                    loadTasks();
                 })
                 .deleteTaskFromWeb(rowNum, g_userName);
         }

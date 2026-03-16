@@ -1,11 +1,75 @@
 // [🚨 복구용] 이 코드를 전체 복사해서 GAS의 'Setup Structure.gs'에 그대로 덮어쓰기 하세요!
 /**
- * [코드 버전]: v2.1 (Projects 시트 자동 코드 안내 트리거 추가)
- * [기능 설명]: 1. 시트 구조 안전 업데이트 (setupDatabase) — 기존 데이터 보호 + 변경 미리보기
- *             2. 드롭다운 메뉴 적용 (applyValidations)
- *             3. 메뉴바 통합 관리 (onOpen)
- *             4. 프로젝트 코드 누락 시 자동 안내 (onEdit)
+ * ============================================
+ * 📋 배포 이력 (Deploy Header)
+ * ============================================
+ * @file        setup_structure.gs
+ * @version     v2.2.0
+ * @updated     2026-03-16 (KST)
+ * @agent       에이다 BE (자비스 개발팀)
+ * @ordered-by  용남 대표
+ * @description 시트 구조 관리 + 드롭다운 + 메뉴바 + Supabase 듀얼 모드 설정
+ *
+ * @change-summary
+ *   AS-IS: v2.1 — Sheets 전용 DB_CONFIG
+ *   TO-BE: v2.2 — SUPABASE_MODE 듀얼 모드 플래그 추가 (Phase 1)
+ *
+ * @features
+ *   - [추가] SUPABASE_MODE — 데이터 소스 전환 플래그 ("sheets" | "dual" | "supabase")
+ *   - [추가] getDataSource() — 현재 모드 확인 헬퍼
+ *   - [추가] isSupabaseEnabled() — Supabase 활성 여부 확인
+ *
+ * ── 변경 이력 ──────────────────────────
+ * v2.2.0 | 2026-03-16 | 에이다 BE | Supabase 듀얼 모드 설정 추가 (Phase 1)
+ * v2.1.0 | 2026-03-02 | 에이다 BE | Projects 시트 자동 코드 안내 트리거
+ * ============================================
  */
+
+// ═══════════════════════════════════════════
+// Supabase 듀얼 모드 설정 (Phase 1)
+// ═══════════════════════════════════════════
+
+/**
+ * 데이터 소스 모드:
+ *   "sheets"   — Google Sheets only (기존 동작, 기본값)
+ *   "dual"     — 읽기: Supabase 우선 + Sheets 폴백 / 쓰기: Supabase only
+ *   "supabase" — Supabase only (Phase 5 완전 전환 후)
+ */
+var SUPABASE_MODE = "dual";
+
+/**
+ * 현재 데이터 소스 모드를 반환한다.
+ * Script Properties에 SUPABASE_MODE가 있으면 그 값을 사용하고,
+ * 없으면 위 전역 변수 기본값("sheets")을 사용한다.
+ * @returns {string} "sheets" | "dual" | "supabase"
+ */
+function getDataSource() {
+  var props = PropertiesService.getScriptProperties();
+  var mode = props.getProperty("SUPABASE_MODE");
+  return mode || SUPABASE_MODE;
+}
+
+/**
+ * Supabase가 활성화되어 있는지 확인한다. (dual 또는 supabase 모드)
+ * @returns {boolean}
+ */
+function isSupabaseEnabled() {
+  var mode = getDataSource();
+  return mode === "dual" || mode === "supabase";
+}
+
+/**
+ * Sheets 폴백이 가능한지 확인한다. (sheets 또는 dual 모드)
+ * @returns {boolean}
+ */
+function isSheetsFallbackEnabled() {
+  var mode = getDataSource();
+  return mode === "sheets" || mode === "dual";
+}
+
+// ═══════════════════════════════════════════
+// DB 구조 설정
+// ═══════════════════════════════════════════
 
 const DB_CONFIG = {
   TASKS: {

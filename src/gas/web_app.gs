@@ -161,6 +161,11 @@ function finalizeTaskRow(sheet, rowNum, opts) {
 // ═══════════════════════════════════════════
 
 function doGet(e) {
+  // 회의록 MVP 샌드박스 라우팅
+  if (e.parameter.page === 'meeting_mvp') {
+    return serveMeetingMvp(e);
+  }
+
   var template = HtmlService.createTemplateFromFile('judy_workspace');
   template.initialPage = e.parameter.page || 'tasks';
   template.userId = e.parameter.user || '';
@@ -404,6 +409,7 @@ function withTaskLock(callback, options) {
 
 /**
  * 모든 업무 데이터 반환 (캐시 5분 TTL)
+ * [v3.2.0] Supabase 듀얼 모드 지원
  */
 function getAllTasksForWeb(userId) {
   var cache = CacheService.getScriptCache();
@@ -411,6 +417,19 @@ function getAllTasksForWeb(userId) {
 
   if (cachedData) {
     try { return JSON.parse(cachedData); } catch (e) {}
+  }
+
+  // [v3.2.0] Supabase 듀얼 모드
+  if (isSupabaseEnabled()) {
+    try {
+      var allTasks = getAllTasksFromSupabase_();
+      cache.put("ALL_TASKS_CACHE", JSON.stringify(allTasks), TASKS_CACHE_TTL);
+      return allTasks;
+    } catch (e) {
+      console.error("[Supabase 읽기 실패] Sheets 폴백 전환: " + e.message);
+      if (!isSheetsFallbackEnabled()) throw e;
+      // 폴백: 아래 Sheets 로직으로 계속
+    }
   }
 
   var ss = getTargetSpreadsheet();
@@ -469,6 +488,78 @@ function getAllTasksForWeb(userId) {
 }
 
 /**
+ * [v3.2.0] Supabase에서 전체 업무를 조회하여 프론트엔드 형식으로 변환한다.
+ * 프론트엔드 호환: 기존 getAllTasksForWeb()과 동일한 객체 형식 반환.
+ * row 필드에 Supabase DB id를 사용 (write 함수에서 이 값으로 조회).
+ * [v3.2.1] 성능 최적화: projects 매핑 캐시(5분) + 필요 컬럼만 SELECT
+ */
+function getAllTasksFromSupabase_() {
+  // projects 매핑 (id → name) — 5분 캐시
+  var cache = CacheService.getScriptCache();
+  var projectIdToName = {};
+  var cachedProjects = cache.get("PROJ_ID_MAP");
+  if (cachedProjects) {
+    try { projectIdToName = JSON.parse(cachedProjects); } catch (e) {}
+  }
+  if (Object.keys(projectIdToName).length === 0) {
+    var projects = supabaseGet("projects", "select=id,name");
+    for (var p = 0; p < projects.length; p++) {
+      projectIdToName[projects[p].id] = projects[p].name;
+    }
+    cache.put("PROJ_ID_MAP", JSON.stringify(projectIdToName), 300);
+  }
+
+  var rows = supabaseGet("tasks", "select=id,task_id,title,status,project_id,description,assignee,requester,due_date,priority,start_time,duration_min,start_date,cc_assignees&status=neq.삭제됨&order=due_date.asc.nullslast");
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var allTasks = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var dueDate = "";
+    var rawDueStr = "";
+    var dDays = null;
+
+    if (r.due_date) {
+      var d = new Date(r.due_date + "T00:00:00");
+      if (!isNaN(d.getTime())) {
+        d.setHours(0, 0, 0, 0);
+        dDays = Math.round((d - today) / 86400000);
+        dueDate = (d.getMonth() + 1) + "/" + d.getDate();
+        rawDueStr = r.due_date;
+      }
+    }
+
+    var startTimeMs = null;
+    if (r.start_time) {
+      var st = new Date(r.start_time);
+      if (!isNaN(st.getTime())) startTimeMs = st.getTime();
+    }
+
+    allTasks.push({
+      row: r.id,  // Supabase PK — write 함수에서 task 식별용
+      id: r.task_id,
+      title: r.title || "",
+      project: projectIdToName[r.project_id] || "",
+      status: r.status || "대기",
+      dueDate: dueDate,
+      rawDueStr: rawDueStr,
+      desc: r.description || "",
+      dDays: dDays,
+      assignee: r.assignee || "",
+      requester: r.requester || "",
+      startTime: startTimeMs,
+      durationMin: r.duration_min,
+      startDate: r.start_date || "",
+      ccAssignees: r.cc_assignees || ""
+    });
+  }
+
+  allTasks.sort(function(a, b) { return (a.dDays != null ? a.dDays : 9999) - (b.dDays != null ? b.dDays : 9999); });
+  return allTasks;
+}
+
+/**
  * 내 업무 필터링
  */
 function getMyTasksForWeb(userId) {
@@ -497,10 +588,46 @@ function getMyTasksForWeb(userId) {
 
 /**
  * 상태 변경
+ * [v3.2.0] Supabase 듀얼 모드 지원
  */
 function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
   var validation = validateTaskInput({ status: newStatus });
   if (!validation.valid) return { success: false, message: validation.reason };
+
+  // [v3.2.0] Supabase 모드
+  if (isSupabaseEnabled()) {
+    try {
+      var task = supabaseGet("tasks", "select=task_id,status&id=eq." + rowNum);
+      if (!task || task.length === 0) throw new Error("업무를 찾을 수 없습니다.");
+      var oldStatus = task[0].status;
+      var taskId = task[0].task_id;
+
+      var updateData = { status: newStatus, updated_at: new Date().toISOString() };
+      if (newStatus === "진행중") updateData.start_time = new Date().toISOString();
+      if (newStatus === "완료") {
+        updateData.end_time = new Date().toISOString();
+        // 완료 DM은 Sheets 모드와 동일하게 처리
+        var fullTask = supabaseGet("tasks", "select=*&id=eq." + rowNum);
+        if (fullTask && fullTask.length > 0) {
+          var ft = fullTask[0];
+          if (ft.requester && ft.requester !== userName) {
+            try {
+              var webAppUrl = ScriptApp.getService().getUrl();
+              sendTaskDM(ft.requester, "✅ *업무가 완료되었습니다*\n🆔 " + taskId + " | 📝 " + ft.title + "\n👤 담당자: " + userName + "님이 업무를 완료했습니다.\n\n🔗 <" + webAppUrl + "|내 주디 워크스페이스 열기>");
+            } catch (dmErr) { console.error("완료 DM 발송 실패:", dmErr); }
+          }
+        }
+      }
+
+      supabaseUpdate("tasks", "id=eq." + rowNum, updateData);
+      logActionV2({ userId: userName, action: "STATUS_CHANGE", targetId: taskId, oldValue: oldStatus, newValue: newStatus, details: "웹 대시보드에서 상태 변경 (Supabase)" });
+      CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+      return { success: true, message: "상태 변경 완료" };
+    } catch (e) {
+      console.error("[Supabase 상태 변경 실패] " + e.message);
+      return { success: false, message: "상태 변경 실패: " + e.message };
+    }
+  }
 
   return withTaskLock(function(sheet) {
     var taskId = sheet.getRange(rowNum, 1).getValue();
@@ -546,10 +673,38 @@ function changeTaskStatusFromWeb(rowNum, newStatus, userName) {
 
 /**
  * 업무 수정 — QA M-10: 화이트리스트 필드만 수용 + 길이 제한
+ * [v3.2.0] Supabase 듀얼 모드 지원
  */
 function updateTaskFromWeb(rowNum, title, desc, dueDate, status, userName, ccAssignees) {
   var validation = validateTaskInput({ title: title, desc: desc, dueDate: dueDate, status: status });
   if (!validation.valid) return { success: false, message: validation.reason };
+
+  // [v3.2.0] Supabase 모드
+  if (isSupabaseEnabled()) {
+    try {
+      var task = supabaseGet("tasks", "select=task_id,title&id=eq." + rowNum);
+      if (!task || task.length === 0) throw new Error("업무를 찾을 수 없습니다.");
+      var taskId = task[0].task_id;
+      var oldTitle = task[0].title;
+
+      var updateData = {
+        title: String(title).substring(0, MAX_TITLE_LENGTH),
+        description: String(desc || "").substring(0, MAX_DESC_LENGTH),
+        due_date: dueDate ? dueDate : null,
+        status: status,
+        updated_at: new Date().toISOString()
+      };
+      if (ccAssignees !== undefined) updateData.cc_assignees = String(ccAssignees || "").substring(0, 500);
+
+      supabaseUpdate("tasks", "id=eq." + rowNum, updateData);
+      logActionV2({ userId: userName, action: "UPDATE", targetId: taskId, oldValue: oldTitle, newValue: title, details: "웹 대시보드에서 업무 수정 (Supabase)" });
+      CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+      return { success: true, message: "수정 완료" };
+    } catch (e) {
+      console.error("[Supabase 업무 수정 실패] " + e.message);
+      return { success: false, message: "수정 실패: " + e.message };
+    }
+  }
 
   return withTaskLock(function(sheet) {
     var taskId = sheet.getRange(rowNum, 1).getValue();
@@ -611,8 +766,28 @@ function changeTaskDueDateFromWeb(rowNum, newDate, userName) {
 
 /**
  * 업무 삭제
+ * [v3.2.0] Supabase 듀얼 모드 지원
  */
 function deleteTaskFromWeb(rowNum, userName) {
+  // [v3.2.0] Supabase 모드 — soft delete (status → 삭제됨)
+  if (isSupabaseEnabled()) {
+    try {
+      var task = supabaseGet("tasks", "select=task_id,title,status&id=eq." + rowNum);
+      if (!task || task.length === 0) throw new Error("업무를 찾을 수 없습니다.");
+      var taskId = task[0].task_id;
+      var title = task[0].title;
+      var oldStatus = task[0].status;
+
+      supabaseUpdate("tasks", "id=eq." + rowNum, { status: "삭제됨", updated_at: new Date().toISOString() });
+      logActionV2({ userId: userName, action: "DELETE", targetId: taskId, oldValue: oldStatus, newValue: "삭제됨", details: "업무 삭제: " + title + " (Supabase)" });
+      CacheService.getScriptCache().remove("ALL_TASKS_CACHE");
+      return { success: true, message: "삭제 완료", taskId: taskId, title: title };
+    } catch (e) {
+      console.error("[Supabase 삭제 실패] " + e.message);
+      return { success: false, message: "삭제 실패: " + e.message };
+    }
+  }
+
   return withTaskLock(function(sheet) {
     var rowData = sheet.getRange(rowNum, 1, 1, 5).getValues()[0];
     var taskId = rowData[0];
@@ -1333,4 +1508,49 @@ function handleCheckIn(userName) {
     console.error("handleCheckIn Error:", err);
     return { success: true, response: "🌅 **" + userName + "**님, 좋은 아침이에요! 🐰\n\n⚠️ 업무 데이터를 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요." };
   }
+}
+
+// ═══════════════════════════════════════════
+// 유틸리티 — 속성 정리 (1회성)
+// ═══════════════════════════════════════════
+
+/**
+ * 스크립트 속성 정리 — 필수 키만 남기고 전부 삭제.
+ * STORED_SS_ID, SUPABASE_* 만 보존. 나머지(SESSION, MAGIC 등) 모두 삭제.
+ */
+function cleanupOldProperties() {
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties();
+  var keys = Object.keys(all);
+
+  // 보존할 키 목록
+  var KEEP_PREFIXES = ["STORED_SS_ID", "SUPABASE_", "SLACK_BOT_TOKEN", "SLACK_WEBHOOK", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GITHUB_"];
+
+  var deleted = 0;
+  var kept = [];
+
+  console.log("전체 속성 수: " + keys.length);
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var shouldKeep = false;
+
+    for (var j = 0; j < KEEP_PREFIXES.length; j++) {
+      if (key === KEEP_PREFIXES[j] || key.indexOf(KEEP_PREFIXES[j]) === 0) {
+        shouldKeep = true;
+        break;
+      }
+    }
+
+    if (shouldKeep) {
+      kept.push(key);
+    } else {
+      props.deleteProperty(key);
+      deleted++;
+    }
+  }
+
+  console.log("✅ 삭제: " + deleted + "개");
+  console.log("✅ 보존: " + kept.length + "개 → " + kept.join(", "));
+  console.log("이제 프로젝트 설정에서 SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY를 추가하세요.");
 }
